@@ -1,0 +1,1 @@
+print("Inicio del proyecto Puntos Vive Digital")

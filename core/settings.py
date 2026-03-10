@@ -74,11 +74,14 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'puntos_vive_digital',  # Pon aquí el nombre exacto de tu base de datos
+        'USER': 'root',                 # Tu usuario de HeidiSQL (por defecto es root)
+        'PASSWORD': '',                 # Tu contraseña (déjalo vacío si en HeidiSQL entrabas sin contraseña)
+        'HOST': '127.0.0.1',            
+        'PORT': '3306',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -102,9 +105,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# Cambiado a Español de Colombia
+LANGUAGE_CODE = 'es-co'
 
-TIME_ZONE = 'UTC'
+# Cambiado a la zona horaria local
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 

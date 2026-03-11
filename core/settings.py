@@ -24,8 +24,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'modulo_puntos.apps.ModuloPuntosConfig', 
+    'modulo_puntos.apps.ModuloPuntosConfig',
 ]
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -59,9 +61,9 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'modeladobd',  # El nombre exacto de tu base de datos
-        'USER': 'root',        # Tu usuario en HeidiSQL
-        'PASSWORD': 'root',    # Tu contraseña en HeidiSQL
+        'NAME': 'modeladobd',  
+        'USER': 'root',        
+        'PASSWORD': 'root',    
         'HOST': '127.0.0.1',   
         'PORT': '3306',        
     }

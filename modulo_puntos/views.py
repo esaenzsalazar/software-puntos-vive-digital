@@ -15,4 +15,5 @@ def registrar_ciudadano(request):
             return redirect('home')
     else:
         form = CiudadanoForm()
+    # Asegúrate de que el nombre coincida con el archivo en tu carpeta de templates
     return render(request, 'modulo_puntos/registrar_ciudadano.html', {'form': form})

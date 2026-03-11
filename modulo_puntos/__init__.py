@@ -1,0 +1,1 @@
+default_app_config = 'modulo_puntos.apps.ModuloPuntosConfig'

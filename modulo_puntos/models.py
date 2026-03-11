@@ -9,7 +9,9 @@ class ListaValor(models.Model):
     lva_estdo = models.CharField(max_length=1, db_column='LVA_ESTDO')
 
     class Meta:
+        managed = False
         db_table = 'lva_listavalor'
+        app_label = 'modulo_puntos'
 
 class ListaValorDetalle(models.Model):
     lvd_cdgo = models.IntegerField(primary_key=True, db_column='LVD_CDGO')
@@ -19,7 +21,9 @@ class ListaValorDetalle(models.Model):
     lvd_estdo = models.CharField(max_length=1, db_column='LVD_ESTDO')
 
     class Meta:
+        managed = False
         db_table = 'lvd_listavalordetalle'
+        app_label = 'modulo_puntos'
 
 # --- Usuarios y Roles ---
 
@@ -30,7 +34,9 @@ class UsuarioSistema(models.Model):
     usu_estdo = models.CharField(max_length=1, db_column='USU_ESTDO')
 
     class Meta:
+        managed = False
         db_table = 'usu_usuariosistema'
+        app_label = 'modulo_puntos'
 
 class Rol(models.Model):
     rol_cdgo = models.IntegerField(primary_key=True, db_column='ROL_CDGO')
@@ -39,7 +45,9 @@ class Rol(models.Model):
     rol_descr = models.CharField(max_length=256, db_column='ROL_DESCR')
 
     class Meta:
+        managed = False
         db_table = 'rol_rol'
+        app_label = 'modulo_puntos'
 
 # --- Núcleo del Sistema (Atención y Préstamos) ---
 
@@ -50,7 +58,9 @@ class PrestamoRecurso(models.Model):
     prs_obs = models.CharField(max_length=512, blank=True, null=True, db_column='PRS_OBS')
 
     class Meta:
+        managed = False
         db_table = 'prs_prestamorecurso'
+        app_label = 'modulo_puntos'
 
 class Satisfaccion(models.Model):
     sat_cdgo = models.IntegerField(primary_key=True, db_column='SAT_CDGO')
@@ -59,7 +69,9 @@ class Satisfaccion(models.Model):
     sat_fecha = models.DateTimeField(db_column='SAT_FECHA')
 
     class Meta:
+        managed = False
         db_table = 'sat_satisfaccion'
+        app_label = 'modulo_puntos'
 
 class Atencion(models.Model):
     atn_cdgo = models.IntegerField(primary_key=True, db_column='ATN_CDGO')
@@ -72,7 +84,9 @@ class Atencion(models.Model):
     atn_obs = models.CharField(max_length=512, blank=True, null=True, db_column='ATN_OBS')
 
     class Meta:
+        managed = False
         db_table = 'atn_atencion'
+        app_label = 'modulo_puntos'
 
 # --- Ciudadanos y Operadores ---
 
@@ -93,7 +107,9 @@ class Ciudadano(models.Model):
     ciu_tlfno = models.CharField(max_length=32, db_column='CIU_TLFNO')
 
     class Meta:
+        managed = False
         db_table = 'ciu_ciudadano'
+        app_label = 'modulo_puntos'
 
 class Operador(models.Model):
     opr_cdgo = models.IntegerField(primary_key=True, db_column='OPR_CDGO')
@@ -108,7 +124,9 @@ class Operador(models.Model):
     opr_estdo = models.CharField(max_length=1, db_column='OPR_ESTDO')
 
     class Meta:
+        managed = False
         db_table = 'opr_operador'
+        app_label = 'modulo_puntos'
 
 # --- Recursos, Servicios y Puntos ---
 
@@ -119,7 +137,9 @@ class Recurso(models.Model):
     rec_estdo = models.CharField(max_length=1, db_column='REC_ESTDO')
 
     class Meta:
+        managed = False
         db_table = 'rec_recurso'
+        app_label = 'modulo_puntos'
 
 class Servicio(models.Model):
     srv_cdgo = models.IntegerField(primary_key=True, db_column='SRV_CDGO')
@@ -131,7 +151,9 @@ class Servicio(models.Model):
     srv_estdo = models.CharField(max_length=1, db_column='SRV_ESTDO')
 
     class Meta:
+        managed = False
         db_table = 'srv_servicio'
+        app_label = 'modulo_puntos'
 
 class PuntoViveDigital(models.Model):
     pvd_cdgo = models.IntegerField(primary_key=True, db_column='PVD_CDGO')
@@ -145,4 +167,6 @@ class PuntoViveDigital(models.Model):
     pvd_correo = models.CharField(max_length=128, db_column='PVD_CORREO')
 
     class Meta:
+        managed = False
         db_table = 'pvd_puntovivedigital'
+        app_label = 'modulo_puntos'

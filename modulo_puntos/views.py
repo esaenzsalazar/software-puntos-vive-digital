@@ -1,19 +1,17 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
 from .forms import CiudadanoForm
+from django.contrib import messages
 
-@login_required
-def home(request):
-    return render(request, 'modulo_puntos/home.html')
-
-@login_required
 def registrar_ciudadano(request):
     if request.method == 'POST':
         form = CiudadanoForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('home')
+            messages.success(request, "¡Ciudadano registrado exitosamente!")
+            return redirect('registrar_ciudadano')
     else:
         form = CiudadanoForm()
-    # Asegúrate de que el nombre coincida con el archivo en tu carpeta de templates
     return render(request, 'modulo_puntos/registrar_ciudadano.html', {'form': form})
+
+def home(request):
+    return render(request, 'modulo_puntos/home.html')

@@ -1,7 +1,14 @@
 @echo off
-:: 1. Abrir la URL del proyecto en el navegador predeterminado
-start http://127.0.0.1:8000/registrar/
-
-:: 2. Ejecutar el servidor de Django
-echo Iniciando el servidor para el Punto Vive Digital Bugalagrande...
+echo ============================================
+echo   Sistema PVD - Bugalagrande
+echo ============================================
+echo.
+call entorno\Scripts\activate
+echo Verificando base de datos...
+python manage.py migrate --run-syncdb
+echo.
+start http://127.0.0.1:8000/
+echo Servidor iniciando en http://127.0.0.1:8000/
+echo Presiona Ctrl+C para detener.
+echo.
 python manage.py runserver

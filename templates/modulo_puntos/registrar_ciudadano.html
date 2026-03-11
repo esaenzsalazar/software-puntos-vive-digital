@@ -1,5 +1,93 @@
-<form method="POST" action="{% url 'registrar_ciudadano' %}">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Guardar y Enlazar</button>
-</form>
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Registrar Ciudadano{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Registrar Ciudadano</h2>
+    <p class="muted">Completa la información del ciudadano para almacenarla en el sistema.</p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="grid">
+            <div class="form-group">
+                <label for="{{ form.ciu_tpodoc.id_for_label }}">Tipo de documento</label>
+                {{ form.ciu_tpodoc }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_numdoc.id_for_label }}">Número de documento</label>
+                {{ form.ciu_numdoc }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_nmbres.id_for_label }}">Nombres</label>
+                {{ form.ciu_nmbres }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_aplldos.id_for_label }}">Apellidos</label>
+                {{ form.ciu_aplldos }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_fchancm.id_for_label }}">Fecha de nacimiento</label>
+                {{ form.ciu_fchancm }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_email.id_for_label }}">Correo electrónico</label>
+                {{ form.ciu_email }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_tlfno.id_for_label }}">Teléfono</label>
+                {{ form.ciu_tlfno }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_genro.id_for_label }}">Género</label>
+                {{ form.ciu_genro }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_etnia.id_for_label }}">Etnia</label>
+                {{ form.ciu_etnia }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_nvleduc.id_for_label }}">Nivel educativo</label>
+                {{ form.ciu_nvleduc }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_ocpcion.id_for_label }}">Ocupación</label>
+                {{ form.ciu_ocpcion }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_estrato.id_for_label }}">Estrato</label>
+                {{ form.ciu_estrato }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.ciu_estdo.id_for_label }}">Estado</label>
+                {{ form.ciu_estdo }}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>
+                {{ form.ciu_discapacidad }}
+                Presenta discapacidad
+            </label>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn">Guardar ciudadano</button>
+            <a href="{% url 'panel_control' %}" class="btn btn-secondary">Volver</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

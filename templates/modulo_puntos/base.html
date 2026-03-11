@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Puntos Vive Digital{% endblock %}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, #0f172a, #1d4ed8);
+            color: white;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 16px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-card {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+            transition: 0.2s ease;
+            border-left: 6px solid #2563eb;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .menu-card h3 {
+            margin-top: 0;
+            color: #1d4ed8;
+        }
+
+        .menu-card p {
+            color: #4b5563;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-check-input {
+            transform: scale(1.2);
+            margin-right: 8px;
+        }
+
+        .page-title {
+            margin-top: 0;
+            color: #0f172a;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>Puntos Vive Digital</h1>
+        <div>
+            <a href="{% url 'panel_control' %}">Panel</a>
+            <a href="/accounts/logout/">Salir</a>
+        </div>
+    </div>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

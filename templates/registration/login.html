@@ -3,23 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso - Puntos Vive Digital Bugalagrande</title>
+    <title>Iniciar sesión | Puntos Vive Digital</title>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f9; }
-        .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; color: #333; }
-        .btn { width: 100%; padding: 10px; background-color: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        .btn:hover { background-color: #004494; }
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1d4ed8);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 35px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .login-box h1 {
+            margin: 0 0 10px;
+            text-align: center;
+            color: #0f172a;
+            font-size: 28px;
+        }
+
+        .login-box p {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn {
+            width: 100%;
+            border: none;
+            background: #2563eb;
+            color: white;
+            padding: 13px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .errorlist,
+        .error-msg {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            list-style: none;
+        }
+
+        .footer-text {
+            margin-top: 18px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>Ingreso al Sistema</h2>
+    <div class="login-box">
+        <h1>Puntos Vive Digital</h1>
+        <p>Ingresa con tu usuario y contraseña</p>
+
+        {% if form.errors %}
+            <div class="error-msg">
+                Usuario o contraseña incorrectos.
+            </div>
+        {% endif %}
+
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn">Iniciar Sesión</button>
+
+            <div class="form-group">
+                <label for="id_username">Usuario</label>
+                <input type="text" name="username" id="id_username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="id_password">Contraseña</label>
+                <input type="password" name="password" id="id_password" required>
+            </div>
+
+            <button type="submit" class="btn">Iniciar sesión</button>
         </form>
+
+        <div class="footer-text">
+            Sistema de gestión de atención
+        </div>
     </div>
 </body>
 </html>

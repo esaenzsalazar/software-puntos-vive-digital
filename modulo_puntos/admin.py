@@ -1,29 +1,28 @@
 from django.contrib import admin
-from .models import (
-    Ciudadano, Atencion, Operador, PuntoViveDigital, 
-    Servicio, Recurso, UsuarioSistema, Rol, 
-    ListaValor, ListaValorDetalle, PrestamoRecurso, Satisfaccion
-)
+from .models import Ciudadano, Operador, Atencion, Servicio, Satisfaccion
+
 
 @admin.register(Ciudadano)
 class CiudadanoAdmin(admin.ModelAdmin):
-    list_display = ('ciu_numdoc', 'ciu_nmbres', 'ciu_aplldos', 'ciu_email')
+    list_display = ('ciu_numdoc', 'ciu_nmbres', 'ciu_aplldos', 'ciu_estdo')
+    list_display_links = ('ciu_numdoc', 'ciu_nmbres')
+    search_fields = ('ciu_numdoc', 'ciu_nmbres', 'ciu_aplldos')
+    list_filter = ('ciu_genro', 'ciu_nvleduc', 'ciu_estrato')
 
-@admin.register(Atencion)
-class AtencionAdmin(admin.ModelAdmin):
-    list_display = ('atn_cdgo', 'atn_fecha', 'atn_hrini', 'atn_estdo')
+    fieldsets = (
+        ('Datos de Identificación', {
+            'fields': ('ciu_tpodoc', 'ciu_numdoc', 'ciu_nmbres', 'ciu_aplldos', 'ciu_fchancm')
+        }),
+        ('Caracterización Socio-demográfica', {
+            'fields': ('ciu_genro', 'ciu_etnia', 'ciu_nvleduc', 'ciu_ocpcion', 'ciu_estrato', 'ciu_discapacidad')
+        }),
+        ('Contacto', {
+            'fields': ('ciu_email', 'ciu_tlfno', 'ciu_estdo')
+        }),
+    )
 
-@admin.register(Operador)
-class OperadorAdmin(admin.ModelAdmin):
-    list_display = ('opr_numdoc', 'opr_nmbres', 'opr_aplldos')
 
-# Registros simples para el resto
-admin.site.register(PuntoViveDigital)
+admin.site.register(Operador)
+admin.site.register(Atencion)
 admin.site.register(Servicio)
-admin.site.register(Recurso)
-admin.site.register(UsuarioSistema)
-admin.site.register(Rol)
-admin.site.register(ListaValor)
-admin.site.register(ListaValorDetalle)
-admin.site.register(PrestamoRecurso)
 admin.site.register(Satisfaccion)

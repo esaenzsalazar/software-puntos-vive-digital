@@ -1,11 +1,11 @@
 from django.urls import path
 from . import views
 
+app_name = 'modulo_puntos'
+
 urlpatterns = [
-    path('', views.home, name='home'),
-    path('panel/', views.panel_control, name='panel_control'),
-    path('registrar-ciudadano/', views.registrar_ciudadano, name='registrar_ciudadano'),
-    path('registrar-operador/', views.registrar_operador, name='registrar_operador'),
-    path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
-    path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
+    path('', views.PanelControlView.as_view(), name='panel_control'),
+    path('registrar-ciudadano/', views.RegistrarCiudadanoView.as_view(), name='registrar_ciudadano'),
+    path('registrar-atencion/', views.RegistrarAtencionView.as_view(), name='registrar_atencion'),
+    path('registrar-satisfaccion/', views.RegistrarSatisfaccionView.as_view(), name='registrar_satisfaccion'),
 ]

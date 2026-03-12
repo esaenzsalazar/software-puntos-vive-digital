@@ -5,32 +5,32 @@
 {% block content %}
 <div class="card">
     <h2 class="page-title">Panel de Control</h2>
-    <p class="muted">Gestiona ciudadanos, operadores, atenciones y satisfacción desde un solo lugar.</p>
+    <p class="muted">Gestiona ciudadanos, atenciones y satisfacción desde un solo lugar.</p>
 </div>
 
 <div class="grid">
     <div class="menu-card">
         <h3>Registrar Ciudadano</h3>
         <p>Crea el registro de nuevos ciudadanos atendidos en el punto.</p>
-        <a class="btn" href="{% url 'registrar_ciudadano' %}">Abrir módulo</a>
-    </div>
-
-    <div class="menu-card">
-        <h3>Registrar Operador</h3>
-        <p>Administra el personal que atiende en el punto Vive Digital.</p>
-        <a class="btn" href="{% url 'registrar_operador' %}">Abrir módulo</a>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Abrir módulo</a>
     </div>
 
     <div class="menu-card">
         <h3>Registrar Atención</h3>
-        <p>Asocia ciudadano, servicio y operador en cada atención realizada.</p>
-        <a class="btn" href="{% url 'registrar_atencion' %}">Abrir módulo</a>
+        <p>Guarda la información de la atención prestada al ciudadano.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_atencion' %}">Abrir módulo</a>
     </div>
 
     <div class="menu-card">
         <h3>Registrar Satisfacción</h3>
-        <p>Guarda la calificación y comentarios de la atención brindada.</p>
-        <a class="btn" href="{% url 'registrar_satisfaccion' %}">Abrir módulo</a>
+        <p>Almacena la calificación y comentarios del servicio recibido.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
     </div>
+</div>
+
+<div class="card">
+    <h3>Resumen del sistema</h3>
+    <p><strong>Total ciudadanos:</strong> {{ total_ciudadanos }}</p>
+    <p><strong>Atenciones registradas:</strong> {{ atenciones_registradas }}</p>
 </div>
 {% endblock %}

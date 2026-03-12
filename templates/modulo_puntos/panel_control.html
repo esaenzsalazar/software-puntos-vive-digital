@@ -5,10 +5,13 @@
 {% block content %}
 <div class="card">
     <h2 class="page-title">Panel de Control</h2>
-    <p class="muted">Gestiona ciudadanos, atenciones y satisfacción desde un solo lugar.</p>
+    <p class="muted">Gestiona ciudadanos, atenciones, satisfacción, servicios y usuarios del sistema.</p>
+    <p><strong>Usuario actual:</strong> {{ request.user.username }}</p>
+    <p><strong>Rol:</strong> {{ rol_usuario }}</p>
 </div>
 
 <div class="grid">
+    {% if mostrar_modulos_pvd %}
     <div class="menu-card">
         <h3>Registrar Ciudadano</h3>
         <p>Crea el registro de nuevos ciudadanos atendidos en el punto.</p>
@@ -26,11 +29,34 @@
         <p>Almacena la calificación y comentarios del servicio recibido.</p>
         <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
     </div>
+
+    <div class="menu-card">
+        <h3>Registrar Servicio</h3>
+        <p>Registra los servicios prestados dentro del Punto Vive Digital.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_servicio' %}">Abrir módulo</a>
+    </div>
+    {% endif %}
+
+    {% if puede_gestionar_usuarios %}
+    <div class="menu-card">
+        <h3>Crear Administrador TIC</h3>
+        <p>Registra un nuevo usuario con rol de Administrador TIC.</p>
+        <a class="btn" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear usuario</a>
+    </div>
+
+    <div class="menu-card">
+        <h3>Crear Administrador PVD</h3>
+        <p>Registra un nuevo usuario con rol de Administrador PVD.</p>
+        <a class="btn" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear usuario</a>
+    </div>
+    {% endif %}
 </div>
 
 <div class="card">
     <h3>Resumen del sistema</h3>
     <p><strong>Total ciudadanos:</strong> {{ total_ciudadanos }}</p>
     <p><strong>Atenciones registradas:</strong> {{ atenciones_registradas }}</p>
+    <p><strong>Satisfacciones registradas:</strong> {{ total_satisfacciones }}</p>
+    <p><strong>Servicios registrados:</strong> {{ total_servicios }}</p>
 </div>
 {% endblock %}

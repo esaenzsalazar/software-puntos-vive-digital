@@ -1,18 +1,20 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Registrar Ciudadano{% endblock %}
+{% block title %}Mi Perfil{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Registrar Ciudadano</h2>
-    <p class="muted">Ingresa los datos del ciudadano atendido.</p>
+    <h2 class="page-title">Mi Perfil</h2>
+    <p class="muted">Aquí puedes actualizar tu información personal y tu contraseña.</p>
+
+    <p><strong>Rol actual:</strong> {{ rol_usuario }}</p>
 
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}
 
         <div class="actions">
-            <button type="submit" class="btn">Guardar</button>
+            <button type="submit" class="btn">Guardar cambios</button>
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
         </div>
     </form>

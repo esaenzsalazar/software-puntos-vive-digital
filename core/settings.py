@@ -78,6 +78,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # Configuración de Autenticación
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/pvd/'  # A dónde va el usuario tras loguearse
-LOGOUT_REDIRECT_URL = '/accounts/login/' # A dónde va al cerrar sesión
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'

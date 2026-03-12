@@ -1,18 +1,18 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Registrar Ciudadano{% endblock %}
+{% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Registrar Ciudadano</h2>
-    <p class="muted">Ingresa los datos del ciudadano atendido.</p>
+    <h2 class="page-title">{{ titulo }}</h2>
+    <p class="muted">Formulario para registrar un usuario con rol: {{ rol }}</p>
 
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}
 
         <div class="actions">
-            <button type="submit" class="btn">Guardar</button>
+            <button type="submit" class="btn">Guardar usuario</button>
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
         </div>
     </form>

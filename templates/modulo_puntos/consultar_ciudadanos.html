@@ -1,0 +1,53 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Consultar Ciudadanos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Consultar Ciudadanos</h2>
+    <p class="muted">Busca ciudadanos por nombre, apellido o número de documento.</p>
+
+    <form method="GET">
+        <label for="q">Buscar ciudadano</label>
+        <input
+            type="text"
+            name="q"
+            id="q"
+            value="{{ busqueda }}"
+            class="form-control"
+            placeholder="Ej. 123456, Juan, Pérez"
+        >
+
+        <div class="actions">
+            <button type="submit" class="btn">Buscar</button>
+            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Limpiar</a>
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Resultados encontrados: {{ total_resultados }}</h3>
+
+    {% if ciudadanos %}
+        <div class="grid">
+            {% for ciudadano in ciudadanos %}
+                <div class="menu-card">
+                    <h3>{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</h3>
+                    <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
+                    <p><strong>Correo:</strong> {{ ciudadano.ciu_email }}</p>
+                    <p><strong>Teléfono:</strong> {{ ciudadano.ciu_tlfno }}</p>
+                    <p><strong>Género:</strong> {{ ciudadano.ciu_genro }}</p>
+                    <p><strong>Etnia:</strong> {{ ciudadano.ciu_etnia }}</p>
+                    <p><strong>Nivel educativo:</strong> {{ ciudadano.ciu_nvleduc }}</p>
+                    <p><strong>Ocupación:</strong> {{ ciudadano.ciu_ocpcion }}</p>
+                    <p><strong>Estrato:</strong> {{ ciudadano.ciu_estrato }}</p>
+                    <p><strong>Estado:</strong> {{ ciudadano.ciu_estdo }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">No se encontraron ciudadanos con esa búsqueda.</p>
+    {% endif %}
+</div>
+{% endblock %}

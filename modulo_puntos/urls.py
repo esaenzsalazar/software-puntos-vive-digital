@@ -12,6 +12,8 @@ urlpatterns = [
     path('perfil/', views.perfil_usuario, name='perfil_usuario'),
 
     path('registrar-ciudadano/', views.registrar_ciudadano, name='registrar_ciudadano'),
+    path('consultar-ciudadanos/', views.consultar_ciudadanos, name='consultar_ciudadanos'),
+
     path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),

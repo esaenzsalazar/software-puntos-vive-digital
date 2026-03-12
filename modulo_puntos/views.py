@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
+from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
@@ -66,9 +67,14 @@ def login_usuario(request):
 
     form = LoginForm(request=request, data=request.POST or None)
 
-    if request.method == 'POST' and form.is_valid():
-        login(request, form.get_user())
-        return redirect(next_url)
+    if request.method == 'POST':
+        if form.is_valid():
+            login(request, form.get_user())
+            messages.success(request, 'Inicio de sesión correcto.')
+            return redirect(next_url)
+        else:
+            print(form.errors)
+            messages.error(request, 'Usuario o contraseña incorrectos.')
 
     return render(request, 'registration/login.html', {
         'form': form,
@@ -142,6 +148,31 @@ def registrar_ciudadano(request):
         form = CiudadanoForm()
 
     return render(request, 'modulo_puntos/registrar_ciudadano.html', {'form': form})
+
+
+@login_required(login_url='/login/')
+def consultar_ciudadanos(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    busqueda = request.GET.get('q', '').strip()
+
+    ciudadanos = Ciudadano.objects.all().order_by('-ciu_cdgo')
+
+    if busqueda:
+        ciudadanos = ciudadanos.filter(
+            Q(ciu_numdoc__icontains=busqueda) |
+            Q(ciu_nmbres__icontains=busqueda) |
+            Q(ciu_aplldos__icontains=busqueda)
+        )
+
+    context = {
+        'ciudadanos': ciudadanos,
+        'busqueda': busqueda,
+        'total_resultados': ciudadanos.count(),
+    }
+    return render(request, 'modulo_puntos/consultar_ciudadanos.html', context)
 
 
 @login_required(login_url='/login/')

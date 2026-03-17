@@ -7,21 +7,22 @@
     <h2 class="page-title">Panel de Control</h2>
     <p class="muted">Gestiona ciudadanos, atenciones, satisfacción, servicios y usuarios del sistema.</p>
     <p><strong>Usuario actual:</strong> {{ request.user.username }}</p>
-    <p><strong>Rol:</strong> {{ rol_usuario }}</p>
+    <p><strong>Nivel de Acceso:</strong> {{ rol_usuario }}</p>
 </div>
 
+{% if mostrar_modulos_pvd %}
+<h3 style="margin-top: 20px;">🛠️ Operaciones en Punto Vive Digital</h3>
 <div class="grid">
-    {% if mostrar_modulos_pvd %}
+    <div class="menu-card">
+        <h3>Consultar Ciudadano</h3>
+        <p>Busca un ciudadano por cédula o nombre en la base de datos.</p>
+        <a class="btn" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Buscar Ciudadano</a>
+    </div>
+
     <div class="menu-card">
         <h3>Registrar Ciudadano</h3>
         <p>Crea el registro de nuevos ciudadanos atendidos en el punto.</p>
         <a class="btn" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Abrir módulo</a>
-    </div>
-
-    <div class="menu-card">
-        <h3>Consultar Ciudadanos</h3>
-        <p>Consulta los ciudadanos registrados y busca por nombre o documento.</p>
-        <a class="btn" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Abrir módulo</a>
     </div>
 
     <div class="menu-card">
@@ -31,9 +32,9 @@
     </div>
 
     <div class="menu-card">
-        <h3>Registrar Satisfacción</h3>
-        <p>Almacena la calificación y comentarios del servicio recibido.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
+        <h3>Préstamo de Recursos</h3>
+        <p>Registra la entrega y devolución de equipos, diademas o material.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_prestamo' %}">Gestionar Préstamo</a>
     </div>
 
     <div class="menu-card">
@@ -41,24 +42,36 @@
         <p>Registra los servicios prestados dentro del Punto Vive Digital.</p>
         <a class="btn" href="{% url 'modulo_puntos:registrar_servicio' %}">Abrir módulo</a>
     </div>
-    {% endif %}
-
-    {% if puede_gestionar_usuarios %}
-    <div class="menu-card">
-        <h3>Crear Administrador TIC</h3>
-        <p>Registra un nuevo usuario con rol de Administrador TIC.</p>
-        <a class="btn" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear usuario</a>
-    </div>
 
     <div class="menu-card">
-        <h3>Crear Administrador PVD</h3>
-        <p>Registra un nuevo usuario con rol de Administrador PVD.</p>
-        <a class="btn" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear usuario</a>
+        <h3>Registrar Satisfacción</h3>
+        <p>Almacena la calificación y comentarios del servicio recibido.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
     </div>
-    {% endif %}
 </div>
+{% endif %}
 
-<div class="card">
+{% if mostrar_modulos_tic and not es_superusuario %}
+{% endif %}
+
+{% if es_superusuario %}
+<h3 style="margin-top: 20px;">👑 Administración del Sistema</h3>
+<div class="grid">
+    <div class="menu-card" style="border: 2px solid #004080;">
+        <h3>Crear Administrador TIC</h3>
+        <p>Registra un nuevo usuario con permisos de gestión TIC.</p>
+        <a class="btn" href="{% url 'modulo_puntos:crear_admin_tic' %}" style="background-color: #004080;">Crear TIC</a>
+    </div>
+
+    <div class="menu-card" style="border: 2px solid #004080;">
+        <h3>Crear Administrador PVD</h3>
+        <p>Registra un nuevo usuario para operar un punto físico.</p>
+        <a class="btn" href="{% url 'modulo_puntos:crear_admin_pvd' %}" style="background-color: #004080;">Crear PVD</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 30px;">
     <h3>Resumen del sistema</h3>
     <p><strong>Total ciudadanos:</strong> {{ total_ciudadanos }}</p>
     <p><strong>Atenciones registradas:</strong> {{ atenciones_registradas }}</p>

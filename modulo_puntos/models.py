@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class UsuarioSistema(models.Model):
     usu_cdgo = models.AutoField(primary_key=True, db_column='USU_CDGO')
     usu_nombre = models.CharField(max_length=64, db_column='USU_NOMBRE', null=True, blank=True)
@@ -14,7 +15,7 @@ class UsuarioSistema(models.Model):
 
 
 class Satisfaccion(models.Model):
-    sat_cdgo = models.IntegerField(primary_key=True, db_column='SAT_CDGO')
+    sat_cdgo = models.AutoField(primary_key=True, db_column='SAT_CDGO')
     sat_calif = models.IntegerField(db_column='SAT_CALIF')
     sat_cmntrio = models.CharField(max_length=512, db_column='SAT_CMNTRIO', null=True, blank=True)
     sat_fecha = models.DateTimeField(db_column='SAT_FECHA')
@@ -27,13 +28,16 @@ class Satisfaccion(models.Model):
 
 
 class PrestamoRecurso(models.Model):
-    prs_cdgo = models.IntegerField(primary_key=True, db_column='PRS_CDGO')
+    prs_cdgo = models.AutoField(primary_key=True, db_column='PRS_CDGO')
     prs_fchent = models.DateTimeField(db_column='PRS_FCHENT')
     prs_fchdev = models.DateTimeField(db_column='PRS_FCHDEV', null=True, blank=True)
     prs_obs = models.CharField(max_length=512, db_column='PRS_OBS', null=True, blank=True)
 
     class Meta:
         db_table = 'prs_prestamorecurso'
+
+    def __str__(self):
+        return f"Préstamo {self.prs_cdgo}"
 
 
 class ListaValor(models.Model):
@@ -50,14 +54,39 @@ class ListaValor(models.Model):
 
 
 class Atencion(models.Model):
-    atn_cdgo = models.IntegerField(primary_key=True, db_column='ATN_CDGO')
-    sat_cdgo = models.ForeignKey(Satisfaccion, models.DO_NOTHING, db_column='SAT_CDGO', null=True, blank=True)
-    prs_cdgo = models.ForeignKey(PrestamoRecurso, models.DO_NOTHING, db_column='PRS_CDGO', null=True, blank=True)
+    atn_cdgo = models.AutoField(primary_key=True, db_column='ATN_CDGO')
+    sat_cdgo = models.ForeignKey(
+        Satisfaccion,
+        models.DO_NOTHING,
+        db_column='SAT_CDGO',
+        null=True,
+        blank=True
+    )
+    prs_cdgo = models.ForeignKey(
+        PrestamoRecurso,
+        models.DO_NOTHING,
+        db_column='PRS_CDGO',
+        null=True,
+        blank=True
+    )
     atn_fecha = models.DateField(db_column='ATN_FECHA')
     atn_hrini = models.TimeField(db_column='ATN_HRINI')
-    atn_hrfin = models.TimeField(db_column='ATN_HRFIN')
-    atn_estdo = models.CharField(max_length=1, db_column='ATN_ESTDO')
-    atn_obs = models.CharField(max_length=512, db_column='ATN_OBS', null=True, blank=True)
+    atn_hrfin = models.TimeField(
+        db_column='ATN_HRFIN',
+        null=True,
+        blank=True
+    )
+    atn_estdo = models.CharField(
+        max_length=1,
+        db_column='ATN_ESTDO',
+        default='P'
+    )
+    atn_obs = models.CharField(
+        max_length=512,
+        db_column='ATN_OBS',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         db_table = 'atn_atencion'
@@ -98,7 +127,7 @@ class Ciudadano(models.Model):
     ciu_ocpcion = models.CharField(max_length=64, db_column='CIU_OCPCION')
     ciu_discapacidad = models.BooleanField(db_column='CIU_DISCAPACIDAD', default=False)
     ciu_estrato = models.IntegerField(db_column='CIU_ESTRATO', default=1)
-    ciu_estdo = models.CharField(max_length=1, db_column='CIU_ESTDO')
+    ciu_estdo = models.CharField(max_length=1, db_column='CIU_ESTDO', default='A')
     ciu_email = models.CharField(max_length=128, db_column='CIU_EMAIL')
     ciu_tlfno = models.CharField(max_length=32, db_column='CIU_TLFNO')
 
@@ -123,13 +152,32 @@ class Recurso(models.Model):
 
 
 class Servicio(models.Model):
-    srv_cdgo = models.IntegerField(primary_key=True, db_column='SRV_CDGO')
-    atn_cdgo = models.ForeignKey(Atencion, models.DO_NOTHING, db_column='ATN_CDGO', null=True, blank=True)
+    srv_cdgo = models.AutoField(primary_key=True, db_column='SRV_CDGO')
+    atn_cdgo = models.ForeignKey(
+        Atencion,
+        models.DO_NOTHING,
+        db_column='ATN_CDGO',
+        null=True,
+        blank=True
+    )
     srv_nombre = models.CharField(max_length=128, db_column='SRV_NOMBRE')
-    srv_descr = models.CharField(max_length=512, db_column='SRV_DESCR', null=True, blank=True)
+    srv_descr = models.CharField(
+        max_length=512,
+        db_column='SRV_DESCR',
+        null=True,
+        blank=True
+    )
     srv_tipo = models.CharField(max_length=64, db_column='SRV_TIPO')
-    srv_reqeqp = models.CharField(max_length=1, db_column='SRV_REQEQP')
-    srv_estdo = models.CharField(max_length=1, db_column='SRV_ESTDO')
+    srv_reqeqp = models.CharField(
+        max_length=1,
+        db_column='SRV_REQEQP',
+        default='N'
+    )
+    srv_estdo = models.CharField(
+        max_length=1,
+        db_column='SRV_ESTDO',
+        default='A'
+    )
 
     class Meta:
         db_table = 'srv_servicio'

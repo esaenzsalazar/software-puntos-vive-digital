@@ -7,6 +7,12 @@
     <h2 class="page-title">Registrar Satisfacción</h2>
     <p class="muted">Registra la calificación y comentarios del servicio.</p>
 
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            Revisa los errores del formulario.
+        </div>
+    {% endif %}
+
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}

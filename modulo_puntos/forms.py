@@ -3,10 +3,18 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
-from .models import Ciudadano, Atencion, Satisfaccion, Servicio
+
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso
 
 
 class CiudadanoForm(forms.ModelForm):
+    ciu_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'correo@ejemplo.com'
+        })
+    )
+
     class Meta:
         model = Ciudadano
         fields = [
@@ -25,26 +33,59 @@ class CiudadanoForm(forms.ModelForm):
                 ],
                 attrs={'class': 'form-control'}
             ),
-            'ciu_numdoc': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de documento'}),
-            'ciu_nmbres': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombres completos'}),
-            'ciu_aplldos': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellidos completos'}),
-            'ciu_fchancm': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'ciu_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
-            'ciu_tlfno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono o celular'}),
+            'ciu_numdoc': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Número de documento'
+            }),
+            'ciu_nmbres': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombres completos'
+            }),
+            'ciu_aplldos': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Apellidos completos'
+            }),
+            'ciu_fchancm': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'ciu_tlfno': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Teléfono o celular'
+            }),
             'ciu_genro': forms.Select(
                 choices=[('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')],
                 attrs={'class': 'form-control'}
             ),
-            'ciu_etnia': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Ninguna, Indígena, Afrocolombiano...'}),
-            'ciu_nvleduc': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Bachiller, Pregrado, Ninguno...'}),
-            'ciu_ocpcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Estudiante, Empleado, Independiente...'}),
+            'ciu_etnia': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Ninguna, Indígena, Afrocolombiano...'
+            }),
+            'ciu_nvleduc': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Bachiller, Pregrado, Ninguno...'
+            }),
+            'ciu_ocpcion': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Estudiante, Empleado, Independiente...'
+            }),
             'ciu_discapacidad': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'ciu_estrato': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '6', 'value': '1'}),
+            'ciu_estrato': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'max': '6'
+            }),
             'ciu_estdo': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ciu_estrato'].initial = 1
+        self.fields['ciu_estdo'].initial = 'A'
+        self.fields['ciu_discapacidad'].required = False
 
 
 class AtencionForm(forms.ModelForm):
@@ -52,25 +93,59 @@ class AtencionForm(forms.ModelForm):
         model = Atencion
         fields = ['atn_fecha', 'atn_hrini', 'atn_hrfin', 'atn_estdo', 'atn_obs']
         widgets = {
-            'atn_fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'atn_hrini': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'atn_hrfin': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'atn_fecha': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'atn_hrini': forms.TimeInput(
+                format='%H:%M',
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
+            'atn_hrfin': forms.TimeInput(
+                format='%H:%M',
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
             'atn_estdo': forms.Select(
                 choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')],
                 attrs={'class': 'form-control'}
             ),
-            'atn_obs': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones de la atención...'}),
+            'atn_obs': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Observaciones de la atención...'
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['atn_hrfin'].required = False
+        self.fields['atn_estdo'].initial = 'P'
 
 
 class SatisfaccionForm(forms.ModelForm):
+    sat_fecha = forms.DateTimeField(
+        input_formats=['%Y-%m-%dT%H:%M'],
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
+
     class Meta:
         model = Satisfaccion
         fields = ['sat_calif', 'sat_cmntrio', 'sat_fecha']
         widgets = {
-            'sat_calif': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '5', 'placeholder': 'Calificación (1 al 5)'}),
-            'sat_cmntrio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Comentarios o sugerencias...'}),
-            'sat_fecha': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'sat_calif': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '5',
+                'placeholder': 'Calificación (1 al 5)'
+            }),
+            'sat_cmntrio': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Comentarios o sugerencias...'
+            }),
         }
 
 
@@ -80,9 +155,19 @@ class ServicioForm(forms.ModelForm):
         fields = ['atn_cdgo', 'srv_nombre', 'srv_descr', 'srv_tipo', 'srv_reqeqp', 'srv_estdo']
         widgets = {
             'atn_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'srv_nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del servicio'}),
-            'srv_descr': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción del servicio'}),
-            'srv_tipo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tipo de servicio'}),
+            'srv_nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del servicio'
+            }),
+            'srv_descr': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del servicio'
+            }),
+            'srv_tipo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Tipo de servicio'
+            }),
             'srv_reqeqp': forms.Select(
                 choices=[('S', 'Sí'), ('N', 'No')],
                 attrs={'class': 'form-control'}
@@ -97,6 +182,37 @@ class ServicioForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['atn_cdgo'].required = False
         self.fields['atn_cdgo'].empty_label = 'Seleccione una atención (opcional)'
+        self.fields['srv_reqeqp'].initial = 'N'
+        self.fields['srv_estdo'].initial = 'A'
+
+
+class PrestamoRecursoForm(forms.ModelForm):
+    prs_fchent = forms.DateTimeField(
+        input_formats=['%Y-%m-%dT%H:%M'],
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
+    prs_fchdev = forms.DateTimeField(
+        required=False,
+        input_formats=['%Y-%m-%dT%H:%M'],
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
+
+    class Meta:
+        model = PrestamoRecurso
+        fields = ['prs_fchent', 'prs_fchdev', 'prs_obs']
+        widgets = {
+            'prs_obs': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Observaciones del equipo prestado...'
+            }),
+        }
 
 
 class LoginForm(AuthenticationForm):
@@ -108,7 +224,6 @@ class LoginForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.fields['username'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': 'Ingrese su usuario'

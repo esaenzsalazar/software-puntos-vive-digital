@@ -5,15 +5,15 @@
 {% block content %}
 <div class="card">
     <h2 class="page-title">{{ titulo }}</h2>
-    <p class="muted">Formulario para registrar un usuario con rol: {{ rol }}</p>
+    <p class="muted">Formulario reservado para Superusuario. Registrando un usuario con rol: <strong>{{ rol }}</strong></p>
 
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}
 
-        <div class="actions">
+        <div class="actions" style="margin-top: 20px;">
             <button type="submit" class="btn">Guardar usuario</button>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary" style="margin-left: 10px; background-color: #6c757d; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Volver al panel</a>
         </div>
     </form>
 </div>

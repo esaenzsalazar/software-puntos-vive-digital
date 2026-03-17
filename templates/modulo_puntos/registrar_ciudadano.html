@@ -7,6 +7,12 @@
     <h2 class="page-title">Registrar Ciudadano</h2>
     <p class="muted">Ingresa los datos del ciudadano atendido.</p>
 
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            Revisa los errores del formulario.
+        </div>
+    {% endif %}
+
     <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}

@@ -1,0 +1,88 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Historial del Ciudadano{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Historial del Ciudadano</h2>
+    <p class="muted">Consulta las atenciones, servicios, satisfacción y préstamos asociados al ciudadano.</p>
+
+    <p><strong>Ciudadano:</strong> {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</p>
+    <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
+    <p><strong>Correo:</strong> {{ ciudadano.ciu_email }}</p>
+    <p><strong>Teléfono:</strong> {{ ciudadano.ciu_tlfno }}</p>
+    <p><strong>Total de atenciones:</strong> {{ total_atenciones }}</p>
+
+    <div class="actions">
+        <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Volver a consulta</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Atenciones registradas</h3>
+
+    {% if atenciones %}
+        <div class="grid">
+            {% for atencion in atenciones %}
+                <div class="menu-card">
+                    <h3>Atención #{{ atencion.atn_cdgo }}</h3>
+                    <p><strong>Fecha:</strong> {{ atencion.atn_fecha }}</p>
+                    <p><strong>Hora inicio:</strong> {{ atencion.atn_hrini }}</p>
+                    <p><strong>Hora fin:</strong> {{ atencion.atn_hrfin|default:"Sin registrar" }}</p>
+                    <p><strong>Estado:</strong> {{ atencion.get_atn_estdo_display }}</p>
+                    <p><strong>Observaciones:</strong> {{ atencion.atn_obs|default:"Sin observaciones" }}</p>
+
+                    <hr style="margin: 12px 0;">
+
+                    <p><strong>Operador:</strong>
+                        {% if atencion.opr_cdgo %}
+                            {{ atencion.opr_cdgo.opr_nmbres }} {{ atencion.opr_cdgo.opr_aplldos }}
+                        {% else %}
+                            Sin operador asignado
+                        {% endif %}
+                    </p>
+
+                    <p><strong>Préstamo:</strong>
+                        {% if atencion.prs_cdgo %}
+                            #{{ atencion.prs_cdgo.prs_cdgo }}
+                            {% if atencion.prs_cdgo.rec_cdgo %}
+                                - {{ atencion.prs_cdgo.rec_cdgo.rec_tipo }}
+                            {% endif %}
+                        {% else %}
+                            Sin préstamo asociado
+                        {% endif %}
+                    </p>
+
+                    <p><strong>Servicios:</strong></p>
+                    {% if atencion.servicios_rel %}
+                        <ul>
+                            {% for servicio in atencion.servicios_rel %}
+                                <li>{{ servicio.srv_nombre }} ({{ servicio.srv_tipo }})</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="muted">No tiene servicios asociados.</p>
+                    {% endif %}
+
+                    <p><strong>Satisfacción:</strong></p>
+                    {% if atencion.satisfacciones_rel %}
+                        <ul>
+                            {% for sat in atencion.satisfacciones_rel %}
+                                <li>
+                                    Calificación: {{ sat.sat_calif }} |
+                                    Comentario: {{ sat.sat_cmntrio|default:"Sin comentario" }} |
+                                    Fecha: {{ sat.sat_fecha }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="muted">No tiene satisfacción registrada.</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">Este ciudadano no tiene atenciones registradas.</p>
+    {% endif %}
+</div>
+{% endblock %}

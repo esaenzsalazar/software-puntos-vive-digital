@@ -1,0 +1,52 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Consultar Operadores{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Consultar Operadores</h2>
+    <p class="muted">Busca operadores por nombre, apellido o número de documento.</p>
+
+    <form method="GET">
+        <label for="q">Buscar operador</label>
+        <input
+            type="text"
+            name="q"
+            id="q"
+            value="{{ busqueda }}"
+            class="form-control"
+            placeholder="Ej. 123456, Laura, Pérez"
+        >
+
+        <div class="actions">
+            <button type="submit" class="btn">Buscar</button>
+            <a href="{% url 'modulo_puntos:consultar_operadores' %}" class="btn btn-secondary">Limpiar</a>
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Resultados encontrados: {{ total_resultados }}</h3>
+
+    {% if operadores %}
+        <div class="grid">
+            {% for operador in operadores %}
+                <div class="menu-card">
+                    <h3>{{ operador.opr_nmbres }} {{ operador.opr_aplldos }}</h3>
+                    <p><strong>Documento:</strong> {{ operador.opr_tpodoc }} {{ operador.opr_numdoc }}</p>
+                    <p><strong>Correo:</strong> {{ operador.opr_email }}</p>
+                    <p><strong>Teléfono:</strong> {{ operador.opr_tlfno }}</p>
+                    <p><strong>Estado:</strong> {{ operador.get_opr_estdo_display }}</p>
+
+                    <div class="actions">
+                        <a class="btn" href="{% url 'modulo_puntos:editar_operador' operador.opr_cdgo %}">Editar</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">No se encontraron operadores con esa búsqueda.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -2,17 +2,19 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
-from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador
 from .forms import (
     CiudadanoForm,
     AtencionForm,
     SatisfaccionForm,
     ServicioForm,
     PrestamoRecursoForm,
+    RecursoForm,
+    OperadorForm,
     LoginForm,
     CrearUsuarioForm,
     PerfilUsuarioForm
@@ -32,7 +34,11 @@ def usuario_es_admin_tic(user):
 def usuario_puede_usar_modulos_pvd(user):
     if not user.is_authenticated:
         return False
-    return user.is_superuser or usuario_es_admin_tic(user) or user.groups.filter(name='Administrador PVD').exists()
+    return (
+        user.is_superuser
+        or usuario_es_admin_tic(user)
+        or user.groups.filter(name='Administrador PVD').exists()
+    )
 
 
 def obtener_rol_usuario(user):
@@ -64,7 +70,10 @@ def login_usuario(request):
             return redirect(next_url)
         messages.error(request, 'Usuario o contraseña incorrectos.')
 
-    return render(request, 'registration/login.html', {'form': form, 'next': next_url})
+    return render(request, 'registration/login.html', {
+        'form': form,
+        'next': next_url
+    })
 
 
 def logout_usuario(request):
@@ -79,13 +88,18 @@ def perfil_usuario(request):
         if form.is_valid():
             usuario = form.save(commit=False)
             nueva_password = form.cleaned_data.get('password1')
+
             if nueva_password:
                 usuario.set_password(nueva_password)
+
             usuario.save()
+
             if nueva_password:
                 update_session_auth_hash(request, usuario)
+
             messages.success(request, 'Tu perfil fue actualizado correctamente.')
             return redirect('modulo_puntos:perfil_usuario')
+
         messages.error(request, 'No se pudo actualizar el perfil. Revisa los datos ingresados.')
     else:
         form = PerfilUsuarioForm(instance=request.user)
@@ -103,6 +117,7 @@ def panel_control(request):
         'atenciones_registradas': Atencion.objects.count(),
         'total_satisfacciones': Satisfaccion.objects.count(),
         'total_servicios': Servicio.objects.count(),
+        'total_prestamos': PrestamoRecurso.objects.count(),
         'es_superusuario': usuario_es_superusuario(request.user),
         'mostrar_modulos_tic': usuario_es_admin_tic(request.user),
         'mostrar_modulos_pvd': usuario_puede_usar_modulos_pvd(request.user),
@@ -163,6 +178,132 @@ def registrar_ciudadano(request):
 
 
 @login_required(login_url='/login/')
+def editar_ciudadano(request, ciu_cdgo):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        ciudadano = Ciudadano.objects.get(pk=ciu_cdgo)
+    except Ciudadano.DoesNotExist:
+        messages.error(request, 'El ciudadano no existe.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
+
+    form = CiudadanoForm(request.POST or None, instance=ciudadano)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                ciudadano = form.save()
+                print('CIUDADANO ACTUALIZADO:', ciudadano.ciu_cdgo)
+                messages.success(request, 'Ciudadano actualizado correctamente en la base de datos.')
+                return redirect('modulo_puntos:consultar_ciudadanos')
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print('ERROR AL ACTUALIZAR CIUDADANO:', str(e))
+                messages.error(request, f'Error al actualizar en BD: {e}')
+        else:
+            print('ERRORES DEL FORMULARIO EDICION CIUDADANO:', form.errors)
+            messages.error(request, 'No se pudo actualizar el ciudadano. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/editar_ciudadano.html', {
+        'form': form,
+        'ciudadano': ciudadano,
+    })
+
+
+@login_required(login_url='/login/')
+def historial_ciudadano(request, ciu_cdgo):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        ciudadano = Ciudadano.objects.get(pk=ciu_cdgo)
+    except Ciudadano.DoesNotExist:
+        messages.error(request, 'El ciudadano no existe.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
+
+    atenciones = Atencion.objects.filter(
+        ciu_cdgo=ciudadano
+    ).select_related(
+        'opr_cdgo',
+        'prs_cdgo',
+        'prs_cdgo__rec_cdgo'
+    ).order_by('-atn_fecha', '-atn_hrini')
+
+    for atencion in atenciones:
+        atencion.servicios_rel = Servicio.objects.filter(atn_cdgo=atencion)
+        atencion.satisfacciones_rel = Satisfaccion.objects.filter(atn_cdgo=atencion)
+
+    return render(request, 'modulo_puntos/historial_ciudadano.html', {
+        'ciudadano': ciudadano,
+        'atenciones': atenciones,
+        'total_atenciones': atenciones.count(),
+    })
+
+
+@login_required(login_url='/login/')
+def reportes(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    total_ciudadanos = Ciudadano.objects.count()
+    ciudadanos_activos = Ciudadano.objects.filter(ciu_estdo='A').count()
+
+    total_operadores = Operador.objects.count()
+    operadores_activos = Operador.objects.filter(opr_estdo='A').count()
+
+    total_atenciones = Atencion.objects.count()
+    atenciones_pendientes = Atencion.objects.filter(atn_estdo='P').count()
+    atenciones_finalizadas = Atencion.objects.filter(atn_estdo='F').count()
+    atenciones_canceladas = Atencion.objects.filter(atn_estdo='C').count()
+
+    total_servicios = Servicio.objects.count()
+    total_prestamos = PrestamoRecurso.objects.count()
+    prestamos_activos = PrestamoRecurso.objects.filter(prs_fchdev__isnull=True).count()
+
+    satisfaccion_promedio = Satisfaccion.objects.aggregate(
+        promedio=Avg('sat_calif')
+    )['promedio']
+
+    servicios_por_tipo = Servicio.objects.values('srv_tipo').annotate(
+        total=Count('srv_cdgo')
+    ).order_by('-total', 'srv_tipo')
+
+    atenciones_por_operador = Atencion.objects.values(
+        'opr_cdgo__opr_nmbres',
+        'opr_cdgo__opr_aplldos'
+    ).annotate(
+        total=Count('atn_cdgo')
+    ).order_by('-total')
+
+    atenciones_recientes = Atencion.objects.select_related(
+        'ciu_cdgo',
+        'opr_cdgo'
+    ).order_by('-atn_fecha', '-atn_hrini')[:10]
+
+    return render(request, 'modulo_puntos/reportes.html', {
+        'total_ciudadanos': total_ciudadanos,
+        'ciudadanos_activos': ciudadanos_activos,
+        'total_operadores': total_operadores,
+        'operadores_activos': operadores_activos,
+        'total_atenciones': total_atenciones,
+        'atenciones_pendientes': atenciones_pendientes,
+        'atenciones_finalizadas': atenciones_finalizadas,
+        'atenciones_canceladas': atenciones_canceladas,
+        'total_servicios': total_servicios,
+        'total_prestamos': total_prestamos,
+        'prestamos_activos': prestamos_activos,
+        'satisfaccion_promedio': satisfaccion_promedio,
+        'servicios_por_tipo': servicios_por_tipo,
+        'atenciones_por_operador': atenciones_por_operador,
+        'atenciones_recientes': atenciones_recientes,
+    })
+
+@login_required(login_url='/login/')
 def registrar_atencion(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
@@ -215,6 +356,117 @@ def registrar_prestamo(request):
 
     return render(request, 'modulo_puntos/registrar_prestamo.html', {'form': form})
 
+@login_required(login_url='/login/')
+def registrar_recurso(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = RecursoForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                recurso = form.save()
+                print('RECURSO GUARDADO:', recurso.rec_cdgo)
+                messages.success(request, 'Recurso registrado correctamente en la base de datos.')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print('ERROR AL GUARDAR RECURSO:', str(e))
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            print('ERRORES DEL FORMULARIO RECURSO:', form.errors)
+            messages.error(request, 'No se pudo guardar el recurso. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_recurso.html', {'form': form})
+
+
+@login_required(login_url='/login/')
+def registrar_operador(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = OperadorForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                operador = form.save()
+                print('OPERADOR GUARDADO:', operador.opr_cdgo)
+                messages.success(request, 'Operador registrado correctamente en la base de datos.')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print('ERROR AL GUARDAR OPERADOR:', str(e))
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            print('ERRORES DEL FORMULARIO OPERADOR:', form.errors)
+            messages.error(request, 'No se pudo guardar el operador. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_operador.html', {'form': form})
+
+
+@login_required(login_url='/login/')
+def consultar_operadores(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    busqueda = request.GET.get('q', '').strip()
+    operadores = Operador.objects.all().order_by('-opr_cdgo')
+
+    if busqueda:
+        operadores = operadores.filter(
+            Q(opr_numdoc__icontains=busqueda) |
+            Q(opr_nmbres__icontains=busqueda) |
+            Q(opr_aplldos__icontains=busqueda)
+        )
+
+    return render(request, 'modulo_puntos/consultar_operadores.html', {
+        'operadores': operadores,
+        'busqueda': busqueda,
+        'total_resultados': operadores.count(),
+    })
+
+
+@login_required(login_url='/login/')
+def editar_operador(request, opr_cdgo):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        operador = Operador.objects.get(pk=opr_cdgo)
+    except Operador.DoesNotExist:
+        messages.error(request, 'El operador no existe.')
+        return redirect('modulo_puntos:consultar_operadores')
+
+    form = OperadorForm(request.POST or None, instance=operador)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                operador = form.save()
+                print('OPERADOR ACTUALIZADO:', operador.opr_cdgo)
+                messages.success(request, 'Operador actualizado correctamente en la base de datos.')
+                return redirect('modulo_puntos:consultar_operadores')
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print('ERROR AL ACTUALIZAR OPERADOR:', str(e))
+                messages.error(request, f'Error al actualizar en BD: {e}')
+        else:
+            print('ERRORES DEL FORMULARIO EDICION OPERADOR:', form.errors)
+            messages.error(request, 'No se pudo actualizar el operador. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/editar_operador.html', {
+        'form': form,
+        'operador': operador,
+    })
 
 @login_required(login_url='/login/')
 def registrar_satisfaccion(request):
@@ -285,6 +537,7 @@ def crear_admin_tic(request):
             user.groups.add(grupo)
             messages.success(request, 'Administrador TIC creado correctamente en la base de datos.')
             return redirect('modulo_puntos:panel_control')
+
         messages.error(request, 'No se pudo crear el usuario. Revisa los datos ingresados.')
 
     return render(request, 'modulo_puntos/crear_usuario.html', {
@@ -309,6 +562,7 @@ def crear_admin_pvd(request):
             user.groups.add(grupo)
             messages.success(request, 'Administrador PVD creado correctamente en la base de datos.')
             return redirect('modulo_puntos:panel_control')
+
         messages.error(request, 'No se pudo crear el usuario. Revisa los datos ingresados.')
 
     return render(request, 'modulo_puntos/crear_usuario.html', {

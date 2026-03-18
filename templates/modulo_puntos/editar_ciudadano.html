@@ -1,0 +1,29 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Editar Ciudadano{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Editar Ciudadano</h2>
+    <p class="muted">Actualiza la información del ciudadano seleccionado.</p>
+
+    <p><strong>Ciudadano:</strong> {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</p>
+    <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
+
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            Revisa los errores del formulario.
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="actions">
+            <button type="submit" class="btn">Guardar cambios</button>
+            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Volver</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

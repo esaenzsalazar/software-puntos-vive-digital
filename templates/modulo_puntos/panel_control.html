@@ -5,18 +5,45 @@
 {% block content %}
 <div class="card">
     <h2 class="page-title">Panel de Control</h2>
-    <p class="muted">Gestiona ciudadanos, atenciones, satisfacción, servicios y usuarios del sistema.</p>
+    <p class="muted">Gestiona ciudadanos, atenciones, satisfacción, préstamos, recursos, servicios, operadores, reportes y usuarios del sistema.</p>
     <p><strong>Usuario actual:</strong> {{ request.user.username }}</p>
     <p><strong>Nivel de Acceso:</strong> {{ rol_usuario }}</p>
 </div>
 
+<div class="grid" style="margin-bottom: 24px;">
+    <div class="menu-card">
+        <h3>Total Ciudadanos</h3>
+        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_ciudadanos }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Atenciones</h3>
+        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ atenciones_registradas }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Satisfacciones</h3>
+        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_satisfacciones }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Servicios</h3>
+        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_servicios }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Préstamos</h3>
+        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_prestamos }}</p>
+    </div>
+</div>
+
 {% if mostrar_modulos_pvd %}
-<h3 style="margin-top: 20px;">🛠️ Operaciones en Punto Vive Digital</h3>
+<h3 style="margin-top: 20px; color: white;">🛠️ Operaciones en Punto Vive Digital</h3>
 <div class="grid">
     <div class="menu-card">
-        <h3>Consultar Ciudadano</h3>
-        <p>Busca un ciudadano por cédula o nombre en la base de datos.</p>
-        <a class="btn" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Buscar Ciudadano</a>
+        <h3>Consultar Ciudadanos</h3>
+        <p>Busca ciudadanos registrados por documento, nombres o apellidos.</p>
+        <a class="btn" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Abrir módulo</a>
     </div>
 
     <div class="menu-card">
@@ -27,14 +54,14 @@
 
     <div class="menu-card">
         <h3>Registrar Atención</h3>
-        <p>Guarda la información de la atención prestada al ciudadano.</p>
+        <p>Guarda la atención prestada y la asocia con el ciudadano y el operador.</p>
         <a class="btn" href="{% url 'modulo_puntos:registrar_atencion' %}">Abrir módulo</a>
     </div>
 
     <div class="menu-card">
-        <h3>Préstamo de Recursos</h3>
-        <p>Registra la entrega y devolución de equipos, diademas o material.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_prestamo' %}">Gestionar Préstamo</a>
+        <h3>Registrar Satisfacción</h3>
+        <p>Almacena la calificación y comentario de una atención realizada.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
     </div>
 
     <div class="menu-card">
@@ -44,38 +71,51 @@
     </div>
 
     <div class="menu-card">
-        <h3>Registrar Satisfacción</h3>
-        <p>Almacena la calificación y comentarios del servicio recibido.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
+        <h3>Registrar Recurso</h3>
+        <p>Registra equipos y elementos disponibles para préstamo en el punto.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_recurso' %}">Abrir módulo</a>
+    </div>
+
+    <div class="menu-card">
+        <h3>Registrar Préstamo</h3>
+        <p>Registra la entrega y devolución de recursos disponibles.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_prestamo' %}">Abrir módulo</a>
+    </div>
+
+    <div class="menu-card">
+        <h3>Registrar Operador</h3>
+        <p>Registra la información de los operadores que atienden en el punto.</p>
+        <a class="btn" href="{% url 'modulo_puntos:registrar_operador' %}">Abrir módulo</a>
+    </div>
+
+    <div class="menu-card">
+        <h3>Consultar Operadores</h3>
+        <p>Busca y actualiza la información de los operadores registrados.</p>
+        <a class="btn" href="{% url 'modulo_puntos:consultar_operadores' %}">Abrir módulo</a>
+    </div>
+
+    <div class="menu-card">
+        <h3>Reportes</h3>
+        <p>Consulta indicadores generales del punto, atenciones, servicios y operadores.</p>
+        <a class="btn" href="{% url 'modulo_puntos:reportes' %}">Abrir módulo</a>
     </div>
 </div>
-{% endif %}
-
-{% if mostrar_modulos_tic and not es_superusuario %}
 {% endif %}
 
 {% if es_superusuario %}
-<h3 style="margin-top: 20px;">👑 Administración del Sistema</h3>
+<h3 style="margin-top: 30px; color: white;">👑 Administración del Sistema</h3>
 <div class="grid">
-    <div class="menu-card" style="border: 2px solid #004080;">
+    <div class="menu-card" style="border-left: 6px solid #0f172a;">
         <h3>Crear Administrador TIC</h3>
         <p>Registra un nuevo usuario con permisos de gestión TIC.</p>
-        <a class="btn" href="{% url 'modulo_puntos:crear_admin_tic' %}" style="background-color: #004080;">Crear TIC</a>
+        <a class="btn" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear usuario</a>
     </div>
 
-    <div class="menu-card" style="border: 2px solid #004080;">
+    <div class="menu-card" style="border-left: 6px solid #0f172a;">
         <h3>Crear Administrador PVD</h3>
-        <p>Registra un nuevo usuario para operar un punto físico.</p>
-        <a class="btn" href="{% url 'modulo_puntos:crear_admin_pvd' %}" style="background-color: #004080;">Crear PVD</a>
+        <p>Registra un nuevo usuario para operar el Punto Vive Digital.</p>
+        <a class="btn" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear usuario</a>
     </div>
 </div>
 {% endif %}
-
-<div class="card" style="margin-top: 30px;">
-    <h3>Resumen del sistema</h3>
-    <p><strong>Total ciudadanos:</strong> {{ total_ciudadanos }}</p>
-    <p><strong>Atenciones registradas:</strong> {{ atenciones_registradas }}</p>
-    <p><strong>Satisfacciones registradas:</strong> {{ total_satisfacciones }}</p>
-    <p><strong>Servicios registrados:</strong> {{ total_servicios }}</p>
-</div>
 {% endblock %}

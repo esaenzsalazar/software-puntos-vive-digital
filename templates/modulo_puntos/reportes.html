@@ -1,0 +1,128 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Reportes del Punto Vive Digital</h2>
+    <p class="muted">Consulta indicadores generales del sistema.</p>
+
+    <div class="actions">
+        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+    </div>
+</div>
+
+<div class="grid" style="margin-bottom: 24px;">
+    <div class="menu-card">
+        <h3>Total Ciudadanos</h3>
+        <p style="font-size: 28px; font-weight: bold;">{{ total_ciudadanos }}</p>
+        <p>Activos: {{ ciudadanos_activos }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Operadores</h3>
+        <p style="font-size: 28px; font-weight: bold;">{{ total_operadores }}</p>
+        <p>Activos: {{ operadores_activos }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Atenciones</h3>
+        <p style="font-size: 28px; font-weight: bold;">{{ total_atenciones }}</p>
+        <p>Pendientes: {{ atenciones_pendientes }}</p>
+        <p>Finalizadas: {{ atenciones_finalizadas }}</p>
+        <p>Canceladas: {{ atenciones_canceladas }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Servicios</h3>
+        <p style="font-size: 28px; font-weight: bold;">{{ total_servicios }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Total Préstamos</h3>
+        <p style="font-size: 28px; font-weight: bold;">{{ total_prestamos }}</p>
+        <p>Activos: {{ prestamos_activos }}</p>
+    </div>
+
+    <div class="menu-card">
+        <h3>Satisfacción Promedio</h3>
+        <p style="font-size: 28px; font-weight: bold;">
+            {% if satisfaccion_promedio %}
+                {{ satisfaccion_promedio|floatformat:2 }}
+            {% else %}
+                0.00
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Servicios por tipo</h3>
+    {% if servicios_por_tipo %}
+        <div class="grid">
+            {% for item in servicios_por_tipo %}
+                <div class="menu-card">
+                    <h3>{{ item.srv_tipo }}</h3>
+                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">No hay servicios registrados.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Atenciones por operador</h3>
+    {% if atenciones_por_operador %}
+        <div class="grid">
+            {% for item in atenciones_por_operador %}
+                <div class="menu-card">
+                    <h3>
+                        {% if item.opr_cdgo__opr_nmbres %}
+                            {{ item.opr_cdgo__opr_nmbres }} {{ item.opr_cdgo__opr_aplldos }}
+                        {% else %}
+                            Sin operador asignado
+                        {% endif %}
+                    </h3>
+                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">No hay atenciones registradas.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Últimas atenciones</h3>
+    {% if atenciones_recientes %}
+        <div class="grid">
+            {% for atencion in atenciones_recientes %}
+                <div class="menu-card">
+                    <h3>Atención #{{ atencion.atn_cdgo }}</h3>
+                    <p><strong>Fecha:</strong> {{ atencion.atn_fecha }}</p>
+                    <p><strong>Hora:</strong> {{ atencion.atn_hrini }}</p>
+                    <p><strong>Ciudadano:</strong>
+                        {% if atencion.ciu_cdgo %}
+                            {{ atencion.ciu_cdgo.ciu_nmbres }} {{ atencion.ciu_cdgo.ciu_aplldos }}
+                        {% else %}
+                            Sin ciudadano
+                        {% endif %}
+                    </p>
+                    <p><strong>Operador:</strong>
+                        {% if atencion.opr_cdgo %}
+                            {{ atencion.opr_cdgo.opr_nmbres }} {{ atencion.opr_cdgo.opr_aplldos }}
+                        {% else %}
+                            Sin operador
+                        {% endif %}
+                    </p>
+                    <p><strong>Estado:</strong> {{ atencion.get_atn_estdo_display }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">No hay atenciones registradas.</p>
+    {% endif %}
+</div>
+{% endblock %}

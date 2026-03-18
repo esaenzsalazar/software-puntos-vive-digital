@@ -3,7 +3,8 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
-
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador
 from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso
 
 
@@ -91,8 +92,11 @@ class CiudadanoForm(forms.ModelForm):
 class AtencionForm(forms.ModelForm):
     class Meta:
         model = Atencion
-        fields = ['atn_fecha', 'atn_hrini', 'atn_hrfin', 'atn_estdo', 'atn_obs']
+        fields = ['ciu_cdgo', 'opr_cdgo', 'prs_cdgo', 'atn_fecha', 'atn_hrini', 'atn_hrfin', 'atn_estdo', 'atn_obs']
         widgets = {
+            'ciu_cdgo': forms.Select(attrs={'class': 'form-control'}),
+            'opr_cdgo': forms.Select(attrs={'class': 'form-control'}),
+            'prs_cdgo': forms.Select(attrs={'class': 'form-control'}),
             'atn_fecha': forms.DateInput(
                 format='%Y-%m-%d',
                 attrs={'class': 'form-control', 'type': 'date'}
@@ -118,8 +122,24 @@ class AtencionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['ciu_cdgo'].required = False
+        self.fields['opr_cdgo'].required = False
+        self.fields['prs_cdgo'].required = False
+        self.fields['ciu_cdgo'].empty_label = 'Seleccione un ciudadano'
+        self.fields['opr_cdgo'].empty_label = 'Seleccione un operador'
+        self.fields['prs_cdgo'].empty_label = 'Seleccione un préstamo (opcional)'
         self.fields['atn_hrfin'].required = False
         self.fields['atn_estdo'].initial = 'P'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        hrini = cleaned_data.get('atn_hrini')
+        hrfin = cleaned_data.get('atn_hrfin')
+
+        if hrini and hrfin and hrfin < hrini:
+            self.add_error('atn_hrfin', 'La hora final no puede ser menor que la hora inicial.')
+
+        return cleaned_data
 
 
 class SatisfaccionForm(forms.ModelForm):
@@ -133,8 +153,9 @@ class SatisfaccionForm(forms.ModelForm):
 
     class Meta:
         model = Satisfaccion
-        fields = ['sat_calif', 'sat_cmntrio', 'sat_fecha']
+        fields = ['atn_cdgo', 'sat_calif', 'sat_cmntrio', 'sat_fecha']
         widgets = {
+            'atn_cdgo': forms.Select(attrs={'class': 'form-control'}),
             'sat_calif': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '1',
@@ -147,6 +168,17 @@ class SatisfaccionForm(forms.ModelForm):
                 'placeholder': 'Comentarios o sugerencias...'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['atn_cdgo'].required = False
+        self.fields['atn_cdgo'].empty_label = 'Seleccione una atención (opcional)'
+
+    def clean_sat_calif(self):
+        calif = self.cleaned_data.get('sat_calif')
+        if calif is not None and (calif < 1 or calif > 5):
+            raise forms.ValidationError('La calificación debe estar entre 1 y 5.')
+        return calif
 
 
 class ServicioForm(forms.ModelForm):
@@ -205,8 +237,9 @@ class PrestamoRecursoForm(forms.ModelForm):
 
     class Meta:
         model = PrestamoRecurso
-        fields = ['prs_fchent', 'prs_fchdev', 'prs_obs']
+        fields = ['rec_cdgo', 'prs_fchent', 'prs_fchdev', 'prs_obs']
         widgets = {
+            'rec_cdgo': forms.Select(attrs={'class': 'form-control'}),
             'prs_obs': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
@@ -214,6 +247,96 @@ class PrestamoRecursoForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['rec_cdgo'].required = False
+        self.fields['rec_cdgo'].empty_label = 'Seleccione un recurso (opcional)'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fchent = cleaned_data.get('prs_fchent')
+        fchdev = cleaned_data.get('prs_fchdev')
+
+        if fchent and fchdev and fchdev < fchent:
+            self.add_error('prs_fchdev', 'La fecha de devolución no puede ser menor que la fecha de entrega.')
+
+        return cleaned_data
+
+class RecursoForm(forms.ModelForm):
+    class Meta:
+        model = Recurso
+        fields = ['rec_cdgo', 'rec_tipo', 'rec_estdo']
+        widgets = {
+            'rec_cdgo': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Código del recurso'
+            }),
+            'rec_tipo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Portátil, Tablet, Diadema, Proyector'
+            }),
+            'rec_estdo': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')],
+                attrs={'class': 'form-control'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['rec_estdo'].initial = 'A'
+
+
+class OperadorForm(forms.ModelForm):
+    class Meta:
+        model = Operador
+        fields = [
+            'opr_tpodoc',
+            'opr_numdoc',
+            'opr_nmbres',
+            'opr_aplldos',
+            'opr_email',
+            'opr_tlfno',
+            'opr_estdo',
+        ]
+        widgets = {
+            'opr_tpodoc': forms.Select(
+                choices=[
+                    ('CC', 'Cédula de Ciudadanía'),
+                    ('TI', 'Tarjeta de Identidad'),
+                    ('CE', 'Cédula de Extranjería'),
+                    ('PP', 'Pasaporte')
+                ],
+                attrs={'class': 'form-control'}
+            ),
+            'opr_numdoc': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Número de documento'
+            }),
+            'opr_nmbres': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombres del operador'
+            }),
+            'opr_aplldos': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Apellidos del operador'
+            }),
+            'opr_email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'correo@ejemplo.com'
+            }),
+            'opr_tlfno': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Teléfono o celular'
+            }),
+            'opr_estdo': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')],
+                attrs={'class': 'form-control'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['opr_estdo'].initial = 'A'
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(label='Usuario')

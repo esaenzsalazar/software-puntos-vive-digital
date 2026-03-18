@@ -14,32 +14,6 @@ class UsuarioSistema(models.Model):
         return f"{self.usu_nombre} ({self.usu_estdo})"
 
 
-class Satisfaccion(models.Model):
-    sat_cdgo = models.AutoField(primary_key=True, db_column='SAT_CDGO')
-    sat_calif = models.IntegerField(db_column='SAT_CALIF')
-    sat_cmntrio = models.CharField(max_length=512, db_column='SAT_CMNTRIO', null=True, blank=True)
-    sat_fecha = models.DateTimeField(db_column='SAT_FECHA')
-
-    class Meta:
-        db_table = 'sat_satisfaccion'
-
-    def __str__(self):
-        return f"Calificación: {self.sat_calif} - {self.sat_fecha.strftime('%Y-%m-%d')}"
-
-
-class PrestamoRecurso(models.Model):
-    prs_cdgo = models.AutoField(primary_key=True, db_column='PRS_CDGO')
-    prs_fchent = models.DateTimeField(db_column='PRS_FCHENT')
-    prs_fchdev = models.DateTimeField(db_column='PRS_FCHDEV', null=True, blank=True)
-    prs_obs = models.CharField(max_length=512, db_column='PRS_OBS', null=True, blank=True)
-
-    class Meta:
-        db_table = 'prs_prestamorecurso'
-
-    def __str__(self):
-        return f"Préstamo {self.prs_cdgo}"
-
-
 class ListaValor(models.Model):
     lva_cdgo = models.IntegerField(primary_key=True, db_column='LVA_CDGO')
     lva_nombre = models.CharField(max_length=64, db_column='LVA_NOMBRE')
@@ -53,12 +27,65 @@ class ListaValor(models.Model):
         return self.lva_nombre
 
 
-class Atencion(models.Model):
-    atn_cdgo = models.AutoField(primary_key=True, db_column='ATN_CDGO')
-    sat_cdgo = models.ForeignKey(
-        Satisfaccion,
+class Satisfaccion(models.Model):
+    sat_cdgo = models.AutoField(primary_key=True, db_column='SAT_CDGO')
+    atn_cdgo = models.ForeignKey(
+        'Atencion',
         models.DO_NOTHING,
-        db_column='SAT_CDGO',
+        db_column='ATN_CDGO',
+        null=True,
+        blank=True
+    )
+    sat_calif = models.IntegerField(db_column='SAT_CALIF')
+    sat_cmntrio = models.CharField(max_length=512, db_column='SAT_CMNTRIO', null=True, blank=True)
+    sat_fecha = models.DateTimeField(db_column='SAT_FECHA')
+
+    class Meta:
+        db_table = 'sat_satisfaccion'
+
+    def __str__(self):
+        return f"Calificación: {self.sat_calif} - {self.sat_fecha.strftime('%Y-%m-%d')}"
+
+
+class PrestamoRecurso(models.Model):
+    prs_cdgo = models.AutoField(primary_key=True, db_column='PRS_CDGO')
+    rec_cdgo = models.ForeignKey(
+        'Recurso',
+        models.DO_NOTHING,
+        db_column='REC_CDGO',
+        null=True,
+        blank=True
+    )
+    prs_fchent = models.DateTimeField(db_column='PRS_FCHENT')
+    prs_fchdev = models.DateTimeField(db_column='PRS_FCHDEV', null=True, blank=True)
+    prs_obs = models.CharField(max_length=512, db_column='PRS_OBS', null=True, blank=True)
+
+    class Meta:
+        db_table = 'prs_prestamorecurso'
+
+    def __str__(self):
+        return f"Préstamo {self.prs_cdgo}"
+
+
+class Atencion(models.Model):
+    ESTADO_CHOICES = [
+        ('P', 'Pendiente'),
+        ('F', 'Finalizada'),
+        ('C', 'Cancelada'),
+    ]
+
+    atn_cdgo = models.AutoField(primary_key=True, db_column='ATN_CDGO')
+    ciu_cdgo = models.ForeignKey(
+        'Ciudadano',
+        models.DO_NOTHING,
+        db_column='CIU_CDGO',
+        null=True,
+        blank=True
+    )
+    opr_cdgo = models.ForeignKey(
+        'Operador',
+        models.DO_NOTHING,
+        db_column='OPR_CDGO',
         null=True,
         blank=True
     )
@@ -71,22 +98,9 @@ class Atencion(models.Model):
     )
     atn_fecha = models.DateField(db_column='ATN_FECHA')
     atn_hrini = models.TimeField(db_column='ATN_HRINI')
-    atn_hrfin = models.TimeField(
-        db_column='ATN_HRFIN',
-        null=True,
-        blank=True
-    )
-    atn_estdo = models.CharField(
-        max_length=1,
-        db_column='ATN_ESTDO',
-        default='P'
-    )
-    atn_obs = models.CharField(
-        max_length=512,
-        db_column='ATN_OBS',
-        null=True,
-        blank=True
-    )
+    atn_hrfin = models.TimeField(db_column='ATN_HRFIN', null=True, blank=True)
+    atn_estdo = models.CharField(max_length=1, db_column='ATN_ESTDO', default='P', choices=ESTADO_CHOICES)
+    atn_obs = models.CharField(max_length=512, db_column='ATN_OBS', null=True, blank=True)
 
     class Meta:
         db_table = 'atn_atencion'
@@ -96,6 +110,11 @@ class Atencion(models.Model):
 
 
 class Operador(models.Model):
+    ESTADO_CHOICES = [
+        ('A', 'Activo'),
+        ('I', 'Inactivo'),
+    ]
+
     opr_cdgo = models.AutoField(primary_key=True, db_column='OPR_CDGO')
     usu_cdgo = models.ForeignKey(UsuarioSistema, models.DO_NOTHING, db_column='USU_CDGO', null=True, blank=True)
     opr_tpodoc = models.CharField(max_length=32, db_column='OPR_TPODOC', null=True, blank=True)
@@ -104,7 +123,7 @@ class Operador(models.Model):
     opr_aplldos = models.CharField(max_length=128, db_column='OPR_APLLDOS', null=True, blank=True)
     opr_email = models.CharField(max_length=128, db_column='OPR_EMAIL', null=True, blank=True)
     opr_tlfno = models.CharField(max_length=32, db_column='OPR_TLFNO', null=True, blank=True)
-    opr_estdo = models.CharField(max_length=1, db_column='OPR_ESTDO', null=True, blank=True)
+    opr_estdo = models.CharField(max_length=1, db_column='OPR_ESTDO', null=True, blank=True, choices=ESTADO_CHOICES)
 
     class Meta:
         db_table = 'opr_operador'
@@ -114,20 +133,30 @@ class Operador(models.Model):
 
 
 class Ciudadano(models.Model):
+    ESTADO_CHOICES = [
+        ('A', 'Activo'),
+        ('I', 'Inactivo'),
+    ]
+
+    GENERO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+        ('O', 'Otro'),
+    ]
+
     ciu_cdgo = models.AutoField(primary_key=True, db_column='CIU_CDGO')
-    atn_cdgo = models.ForeignKey(Atencion, models.DO_NOTHING, db_column='ATN_CDGO', null=True, blank=True)
     ciu_tpodoc = models.CharField(max_length=32, db_column='CIU_TPODOC')
     ciu_numdoc = models.CharField(max_length=32, db_column='CIU_NUMDOC')
     ciu_nmbres = models.CharField(max_length=128, db_column='CIU_NMBRES')
     ciu_aplldos = models.CharField(max_length=128, db_column='CIU_APLLDOS')
     ciu_fchancm = models.DateField(db_column='CIU_FCHANCM')
-    ciu_genro = models.CharField(max_length=32, db_column='CIU_GENRO')
+    ciu_genro = models.CharField(max_length=32, db_column='CIU_GENRO', choices=GENERO_CHOICES)
     ciu_etnia = models.CharField(max_length=64, db_column='CIU_ETNIA')
     ciu_nvleduc = models.CharField(max_length=64, db_column='CIU_NVLEDUC')
     ciu_ocpcion = models.CharField(max_length=64, db_column='CIU_OCPCION')
     ciu_discapacidad = models.BooleanField(db_column='CIU_DISCAPACIDAD', default=False)
     ciu_estrato = models.IntegerField(db_column='CIU_ESTRATO', default=1)
-    ciu_estdo = models.CharField(max_length=1, db_column='CIU_ESTDO', default='A')
+    ciu_estdo = models.CharField(max_length=1, db_column='CIU_ESTDO', default='A', choices=ESTADO_CHOICES)
     ciu_email = models.CharField(max_length=128, db_column='CIU_EMAIL')
     ciu_tlfno = models.CharField(max_length=32, db_column='CIU_TLFNO')
 
@@ -139,10 +168,14 @@ class Ciudadano(models.Model):
 
 
 class Recurso(models.Model):
+    ESTADO_CHOICES = [
+        ('A', 'Activo'),
+        ('I', 'Inactivo'),
+    ]
+
     rec_cdgo = models.IntegerField(primary_key=True, db_column='REC_CDGO')
-    prs_cdgo = models.ForeignKey(PrestamoRecurso, models.DO_NOTHING, db_column='PRS_CDGO', null=True, blank=True)
     rec_tipo = models.CharField(max_length=64, db_column='REC_TIPO')
-    rec_estdo = models.CharField(max_length=1, db_column='REC_ESTDO')
+    rec_estdo = models.CharField(max_length=1, db_column='REC_ESTDO', choices=ESTADO_CHOICES)
 
     class Meta:
         db_table = 'rec_recurso'
@@ -152,6 +185,16 @@ class Recurso(models.Model):
 
 
 class Servicio(models.Model):
+    ESTADO_CHOICES = [
+        ('A', 'Activo'),
+        ('I', 'Inactivo'),
+    ]
+
+    REQUIERE_EQUIPO_CHOICES = [
+        ('S', 'Sí'),
+        ('N', 'No'),
+    ]
+
     srv_cdgo = models.AutoField(primary_key=True, db_column='SRV_CDGO')
     atn_cdgo = models.ForeignKey(
         Atencion,
@@ -161,23 +204,10 @@ class Servicio(models.Model):
         blank=True
     )
     srv_nombre = models.CharField(max_length=128, db_column='SRV_NOMBRE')
-    srv_descr = models.CharField(
-        max_length=512,
-        db_column='SRV_DESCR',
-        null=True,
-        blank=True
-    )
+    srv_descr = models.CharField(max_length=512, db_column='SRV_DESCR', null=True, blank=True)
     srv_tipo = models.CharField(max_length=64, db_column='SRV_TIPO')
-    srv_reqeqp = models.CharField(
-        max_length=1,
-        db_column='SRV_REQEQP',
-        default='N'
-    )
-    srv_estdo = models.CharField(
-        max_length=1,
-        db_column='SRV_ESTDO',
-        default='A'
-    )
+    srv_reqeqp = models.CharField(max_length=1, db_column='SRV_REQEQP', default='N', choices=REQUIERE_EQUIPO_CHOICES)
+    srv_estdo = models.CharField(max_length=1, db_column='SRV_ESTDO', default='A', choices=ESTADO_CHOICES)
 
     class Meta:
         db_table = 'srv_servicio'

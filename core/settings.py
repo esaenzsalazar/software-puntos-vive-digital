@@ -48,18 +48,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# --- BASE DE DATOS ---
-# Usa SQLite para pruebas locales (no requiere MySQL instalado)
-# Cuando tengas MySQL listo, comenta este bloque y descomenta el de abajo
-
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-         'NAME': 'modeladobd',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': '127.0.0.1',
+        'NAME': 'modeladobd',
+        'USER': 'app_django',
+        'PASSWORD': 'TuClaveFuerte123!',
+        'HOST': '192.168.1.5',
         'PORT': '3306',
     }
 }

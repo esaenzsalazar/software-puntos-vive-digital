@@ -1,3 +1,6 @@
+import csv
+from datetime import datetime
+from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -570,3 +573,40 @@ def crear_admin_pvd(request):
         'titulo': 'Crear Administrador PVD',
         'rol': 'Administrador PVD'
     })
+
+# --- NUEVA FUNCIONALIDAD: EXPORTAR A CSV ---
+@login_required(login_url='/login/')
+def exportar_atenciones_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    response = HttpResponse(content_type='text/csv')
+    # Nombre del archivo con la fecha actual
+    fecha_actual = datetime.now().strftime("%Y-%m-%d")
+    response['Content-Disposition'] = f'attachment; filename="Reporte_Atenciones_PVD_{fecha_actual}.csv"'
+
+    writer = csv.writer(response)
+    # Encabezados del Excel
+    writer.writerow(['ID Atención', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado', 'Ciudadano (Documento)', 'Operador', 'Observaciones'])
+
+    atenciones = Atencion.objects.select_related('ciu_cdgo', 'opr_cdgo').order_by('-atn_fecha', '-atn_hrini')
+
+    for atencion in atenciones:
+        ciudadano_info = f"{atencion.ciu_cdgo.ciu_nmbres} {atencion.ciu_cdgo.ciu_aplldos} ({atencion.ciu_cdgo.ciu_numdoc})" if atencion.ciu_cdgo else "N/A"
+        operador_info = f"{atencion.opr_cdgo.opr_nmbres} {atencion.opr_cdgo.opr_aplldos}" if atencion.opr_cdgo else "N/A"
+        estado_dict = dict(Atencion.ESTADO_CHOICES)
+        estado_display = estado_dict.get(atencion.atn_estdo, atencion.atn_estdo)
+
+        writer.writerow([
+            atencion.atn_cdgo,
+            atencion.atn_fecha,
+            atencion.atn_hrini,
+            atencion.atn_hrfin if atencion.atn_hrfin else "N/A",
+            estado_display,
+            ciudadano_info,
+            operador_info,
+            atencion.atn_obs if atencion.atn_obs else "Sin observaciones"
+        ])
+
+    return response

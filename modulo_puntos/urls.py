@@ -25,4 +25,5 @@ urlpatterns = [
     path('reportes/', views.reportes, name='reportes'),
     path('consultar-operadores/', views.consultar_operadores, name='consultar_operadores'),
     path('editar-operador/<int:opr_cdgo>/', views.editar_operador, name='editar_operador'),
+    path('exportar-atenciones/', views.exportar_atenciones_csv, name='exportar_atenciones_csv'),
 ]

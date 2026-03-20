@@ -3,24 +3,162 @@
 {% block title %}Registrar Ciudadano{% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="card" style="max-width: 900px; margin: 0 auto;">
     <h2 class="page-title">Registrar Ciudadano</h2>
-    <p class="muted">Ingresa los datos del ciudadano atendido.</p>
+    <p class="muted">Ingresa los datos del ciudadano atendido. Selecciona las opciones de las listas desplegables.</p>
 
     {% if form.errors %}
-        <div class="alert alert-danger">
-            Revisa los errores del formulario.
+        <div class="alert alert-error">
+            Revisa los errores del formulario en color rojo antes de continuar.
         </div>
     {% endif %}
 
     <form method="POST">
         {% csrf_token %}
-        {{ form.as_p }}
+        
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+            {% for field in form %}
+                
+                {% if field.name == 'ciu_dircion' %}
+                    <div style="grid-column: 1 / -1; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+                        <label style="font-size: 16px; color: var(--primary-color);">Constructor de Dirección de Residencia</label>
+                        <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas y el sistema armará la dirección oficial automáticamente.</p>
+                        
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                            <select id="dir_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
+                                <option value="Calle">Calle</option>
+                                <option value="Carrera">Carrera</option>
+                                <option value="Transversal">Transversal</option>
+                                <option value="Diagonal">Diagonal</option>
+                                <option value="Avenida">Avenida</option>
+                                <option value="Vía">Vía</option>
+                                <option value="Manzana">Manzana</option>
+                                <option value="Lote">Lote</option>
+                            </select>
+                            
+                            <input type="text" id="dir_num1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                            <input type="text" id="dir_letra1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
+                            
+                            <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
+                            
+                            <input type="text" id="dir_num2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                            <input type="text" id="dir_letra2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
+                            
+                            <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
+                            
+                            <input type="text" id="dir_num3" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                            
+                            <input type="text" id="dir_comp" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Complemento (Apto, Piso, Casa...)">
+                        </div>
+                        
+                        <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                            <p style="margin: 0; font-size: 14px; color: #64748b;">Dirección oficial a guardar: <strong id="dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                        </div>
+                        
+                        {{ field }}
+                    </div>
 
-        <div class="actions">
-            <button type="submit" class="btn">Guardar</button>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+                {% elif field.name == 'ciu_discapacidad' %}
+                    <div style="grid-column: 1 / -1; display: flex; align-items: center; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}" style="margin-bottom: 0; margin-left: 10px; cursor: pointer; font-size: 16px;">{{ field.label }}</label>
+                    </div>
+
+                {% elif field.name == 'ciu_desc_discapacidad' %}
+                    <div id="div_desc_discapacidad" style="grid-column: 1 / -1; display: none;">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+
+                {% elif field.name == 'ciu_email' or field.name == 'ciu_estdo' %}
+                    <div style="grid-column: 1 / -1;">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
+                    </div>
+
+                {% else %}
+                    <div>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
+                    </div>
+                {% endif %}
+
+            {% endfor %}
+        </div>
+
+        <div class="actions" style="justify-content: flex-end; margin-top: 20px;">
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn">Guardar Ciudadano</button>
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // ----------------------------------------------------
+        // LÓGICA DE DISCAPACIDAD
+        // ----------------------------------------------------
+        const checkboxDiscapacidad = document.getElementById('id_check_discapacidad');
+        const divDescDiscapacidad = document.getElementById('div_desc_discapacidad');
+        const inputDescDiscapacidad = document.getElementById('id_desc_discapacidad');
+
+        function toggleDiscapacidad() {
+            if (checkboxDiscapacidad.checked) {
+                divDescDiscapacidad.style.display = 'block';
+                inputDescDiscapacidad.setAttribute('required', 'required');
+            } else {
+                divDescDiscapacidad.style.display = 'none';
+                inputDescDiscapacidad.removeAttribute('required');
+                inputDescDiscapacidad.value = '';
+            }
+        }
+        if (checkboxDiscapacidad) {
+            toggleDiscapacidad();
+            checkboxDiscapacidad.addEventListener('change', toggleDiscapacidad);
+        }
+
+        // ----------------------------------------------------
+        // LÓGICA DEL CONSTRUCTOR DE DIRECCIONES
+        // ----------------------------------------------------
+        function updateDireccion() {
+            const tipo = document.getElementById('dir_tipo').value || '';
+            const num1 = document.getElementById('dir_num1').value || '';
+            const letra1 = document.getElementById('dir_letra1').value || '';
+            const num2 = document.getElementById('dir_num2').value || '';
+            const letra2 = document.getElementById('dir_letra2').value || '';
+            const num3 = document.getElementById('dir_num3').value || '';
+            const comp = document.getElementById('dir_comp').value || '';
+
+            let dir = "";
+            // Solo armamos la dirección si el primer número fue escrito
+            if (num1) {
+                dir = `${tipo} ${num1} ${letra1}`;
+                if (num2) dir += ` # ${num2} ${letra2}`;
+                if (num3) dir += ` - ${num3}`;
+                if (comp) dir += ` ${comp}`;
+            }
+            
+            // Limpiamos dobles espacios
+            dir = dir.replace(/\s+/g, ' ').trim();
+            
+            // Inyectamos el texto final en el campo oculto de Django y en la previsualización
+            document.getElementById('id_ciu_dircion').value = dir;
+            document.getElementById('dir_preview').textContent = dir;
+        }
+
+        // Asignamos el evento de escucha a cada cajita
+        const dirInputs = ['dir_tipo', 'dir_num1', 'dir_letra1', 'dir_num2', 'dir_letra2', 'dir_num3', 'dir_comp'];
+        dirInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('input', updateDireccion);
+                if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccion);
+            }
+        });
+        
+    });
+</script>
 {% endblock %}

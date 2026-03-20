@@ -7,52 +7,75 @@
     <h2 class="page-title">Consultar Ciudadanos</h2>
     <p class="muted">Busca ciudadanos por nombre, apellido o número de documento.</p>
 
-    <form method="GET">
-        <label for="q">Buscar ciudadano</label>
-        <input
-            type="text"
-            name="q"
-            id="q"
-            value="{{ busqueda }}"
-            class="form-control"
-            placeholder="Ej. 123456, Juan, Pérez"
-        >
-
-        <div class="actions">
+    <form method="GET" style="max-width: 600px;">
+        <label for="q">Término de búsqueda</label>
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. 123456, Juan, Pérez" style="margin-bottom: 0;">
             <button type="submit" class="btn">Buscar</button>
             <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Limpiar</a>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
         </div>
     </form>
 </div>
 
 <div class="card">
-    <h3>Resultados encontrados: {{ total_resultados }}</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+        <h3 style="margin: 0;">Resultados encontrados: <span style="color: var(--primary-color);">{{ total_resultados }}</span></h3>
+        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary" style="padding: 6px 15px; font-size: 14px;">Volver al panel</a>
+    </div>
 
     {% if ciudadanos %}
-        <div class="grid">
-            {% for ciudadano in ciudadanos %}
-                <div class="menu-card">
-                    <h3>{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</h3>
-                    <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
-                    <p><strong>Correo:</strong> {{ ciudadano.ciu_email }}</p>
-                    <p><strong>Teléfono:</strong> {{ ciudadano.ciu_tlfno }}</p>
-                    <p><strong>Género:</strong> {{ ciudadano.get_ciu_genro_display }}</p>
-                    <p><strong>Etnia:</strong> {{ ciudadano.ciu_etnia }}</p>
-                    <p><strong>Nivel educativo:</strong> {{ ciudadano.ciu_nvleduc }}</p>
-                    <p><strong>Ocupación:</strong> {{ ciudadano.ciu_ocpcion }}</p>
-                    <p><strong>Estrato:</strong> {{ ciudadano.ciu_estrato }}</p>
-                    <p><strong>Estado:</strong> {{ ciudadano.get_ciu_estdo_display }}</p>
-
-                    <div class="actions">
-                        <a class="btn" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.ciu_cdgo %}">Editar</a>
-                        <a class="btn btn-secondary" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.ciu_cdgo %}">Ver historial</a>
-                    </div>
-                </div>
-            {% endfor %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Documento</th>
+                        <th>Nombre del Ciudadano</th>
+                        <th>Contacto</th>
+                        <th>Ubicación</th>
+                        <th>Estado</th>
+                        <th style="text-align: right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ciudadano in ciudadanos %}
+                        <tr>
+                            <td>
+                                <strong>{{ ciudadano.ciu_numdoc }}</strong><br>
+                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.ciu_tpodoc }}</span>
+                            </td>
+                            <td>
+                                <strong style="color: var(--primary-color); font-size: 15px;">{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</strong><br>
+                                <span style="font-size: 13px; color: #64748b;">{{ ciudadano.ciu_ocpcion }}</span>
+                            </td>
+                            <td>
+                                <span style="font-size: 14px;">📞 {{ ciudadano.ciu_tlfno }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ ciudadano.ciu_barrio|default:"No registrado" }}</strong><br>
+                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.ciu_dircion|default:"Sin dirección" }}</span>
+                            </td>
+                            <td>
+                                {% if ciudadano.ciu_estdo == 'A' %}
+                                    <span class="badge badge-success">Activo</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; min-width: 170px;">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <a class="btn" style="padding: 6px 12px; font-size: 12px;" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.ciu_cdgo %}">Editar</a>
+                                    <a class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.ciu_cdgo %}">Historial</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     {% else %}
-        <p class="muted">No se encontraron ciudadanos con esa búsqueda.</p>
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 8px; margin-top: 20px;">
+            <p class="muted" style="font-size: 16px;">No se encontraron ciudadanos con esa búsqueda.</p>
+        </div>
     {% endif %}
 </div>
 {% endblock %}

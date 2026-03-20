@@ -574,7 +574,7 @@ def crear_admin_pvd(request):
         'rol': 'Administrador PVD'
     })
 
-# --- NUEVA FUNCIONALIDAD: EXPORTAR A CSV ---
+# --- NUEVA FUNCIONALIDAD: EXPORTAR A CSV (ACTUALIZADA) ---
 @login_required(login_url='/login/')
 def exportar_atenciones_csv(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
@@ -586,14 +586,35 @@ def exportar_atenciones_csv(request):
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
     response['Content-Disposition'] = f'attachment; filename="Reporte_Atenciones_PVD_{fecha_actual}.csv"'
 
+    # TRUCO: Inyectamos el BOM (Byte Order Mark) de UTF-8 para que Excel reconozca tildes y eñes
+    response.write('\ufeff'.encode('utf8'))
     writer = csv.writer(response)
-    # Encabezados del Excel
-    writer.writerow(['ID Atención', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado', 'Ciudadano (Documento)', 'Operador', 'Observaciones'])
+    
+    # Encabezados del Excel actualizados con los nuevos campos de ubicación y caracterización
+    writer.writerow([
+        'ID Atención', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado Atención', 
+        'Documento Ciudadano', 'Nombre Completo', 'Género', 'Etnia', 
+        'Discapacidad', 'Detalle Discapacidad', 'Barrio', 'Dirección', 'Vereda / Corregimiento',
+        'Operador a Cargo', 'Observaciones'
+    ])
 
     atenciones = Atencion.objects.select_related('ciu_cdgo', 'opr_cdgo').order_by('-atn_fecha', '-atn_hrini')
 
     for atencion in atenciones:
-        ciudadano_info = f"{atencion.ciu_cdgo.ciu_nmbres} {atencion.ciu_cdgo.ciu_aplldos} ({atencion.ciu_cdgo.ciu_numdoc})" if atencion.ciu_cdgo else "N/A"
+        # Extraemos los datos del ciudadano si existe, sino ponemos N/A
+        if atencion.ciu_cdgo:
+            doc_ciu = atencion.ciu_cdgo.ciu_numdoc
+            nom_ciu = f"{atencion.ciu_cdgo.ciu_nmbres} {atencion.ciu_cdgo.ciu_aplldos}"
+            gen_ciu = atencion.ciu_cdgo.get_ciu_genro_display()
+            etnia_ciu = atencion.ciu_cdgo.ciu_etnia
+            discap_ciu = "Sí" if atencion.ciu_cdgo.ciu_discapacidad else "No"
+            desc_discap_ciu = atencion.ciu_cdgo.ciu_desc_discapacidad if atencion.ciu_cdgo.ciu_desc_discapacidad else "N/A"
+            barrio_ciu = atencion.ciu_cdgo.ciu_barrio if atencion.ciu_cdgo.ciu_barrio else "N/A"
+            dir_ciu = atencion.ciu_cdgo.ciu_dircion if atencion.ciu_cdgo.ciu_dircion else "N/A"
+            rural_ciu = atencion.ciu_cdgo.ciu_zrural if atencion.ciu_cdgo.ciu_zrural else "N/A"
+        else:
+            doc_ciu = nom_ciu = gen_ciu = etnia_ciu = discap_ciu = desc_discap_ciu = barrio_ciu = dir_ciu = rural_ciu = "N/A"
+
         operador_info = f"{atencion.opr_cdgo.opr_nmbres} {atencion.opr_cdgo.opr_aplldos}" if atencion.opr_cdgo else "N/A"
         estado_dict = dict(Atencion.ESTADO_CHOICES)
         estado_display = estado_dict.get(atencion.atn_estdo, atencion.atn_estdo)
@@ -604,7 +625,15 @@ def exportar_atenciones_csv(request):
             atencion.atn_hrini,
             atencion.atn_hrfin if atencion.atn_hrfin else "N/A",
             estado_display,
-            ciudadano_info,
+            doc_ciu,
+            nom_ciu,
+            gen_ciu,
+            etnia_ciu,
+            discap_ciu,
+            desc_discap_ciu,
+            barrio_ciu,
+            dir_ciu,
+            rural_ciu,
             operador_info,
             atencion.atn_obs if atencion.atn_obs else "Sin observaciones"
         ])

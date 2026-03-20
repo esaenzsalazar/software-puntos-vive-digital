@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -52,11 +53,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql', 
-        'NAME': 'modeladobd', # O 'modeladobd' si creaste la base con ese nombre
+        'NAME': 'modeladobd', 
         'USER': 'avnadmin',
         'PASSWORD': 'AVNS_fl3LSi0cjPU3tyZUFgf',
         'HOST': 'mysql-3bb67bf0-alcaldiaesteban-d1bc.k.aivencloud.com', 
-        'PORT': '27827', # El número de 4 o 5 cifras que te dio Aiven
+        'PORT': '27827', 
     }
 }
 
@@ -72,7 +73,12 @@ TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+# --- CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS ---
+STATIC_URL = '/static/'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Configuración de Autenticación
 LOGIN_URL = '/login/'

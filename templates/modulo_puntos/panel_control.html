@@ -4,117 +4,114 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Panel de Control</h2>
-    <p class="muted">Gestiona ciudadanos, atenciones, satisfacción, préstamos, recursos, servicios, operadores, reportes y usuarios del sistema.</p>
-    <p><strong>Usuario actual:</strong> {{ request.user.username }}</p>
-    <p><strong>Nivel de Acceso:</strong> {{ rol_usuario }}</p>
+    <h2 class="page-title">Panel de Control General</h2>
+    <p class="muted">Bienvenido al sistema de gestión PVD. Administra todos los procesos operativos y ciudadanos desde aquí.</p>
+    
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; display: inline-block; margin-top: 10px;">
+        <p style="margin: 0; font-size: 14px;">👤 <strong>Usuario actual:</strong> <span style="color: var(--primary-color);">{{ request.user.username }}</span> &nbsp;|&nbsp; 🛡️ <strong>Nivel de Acceso:</strong> <span style="color: var(--primary-color);">{{ rol_usuario }}</span></p>
+    </div>
 </div>
 
-<div class="grid" style="margin-bottom: 24px;">
-    <div class="menu-card">
-        <h3>Total Ciudadanos</h3>
-        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_ciudadanos }}</p>
+<h3 style="margin-top: 0px; color: #334155; font-size: 18px; text-transform: uppercase; letter-spacing: 1px;">📊 Indicadores Globales</h3>
+<div class="grid" style="margin-bottom: 40px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+    <div class="menu-card" style="border-top-color: #3b82f6; min-height: 140px; padding: 20px;">
+        <h3 style="font-size: 14px; color: #64748b; text-transform: uppercase;">👥 Ciudadanos</h3>
+        <p style="font-size: 36px; font-weight: 800; color: #1e293b; margin: 0;">{{ total_ciudadanos }}</p>
     </div>
 
-    <div class="menu-card">
-        <h3>Total Atenciones</h3>
-        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ atenciones_registradas }}</p>
+    <div class="menu-card" style="border-top-color: #10b981; min-height: 140px; padding: 20px;">
+        <h3 style="font-size: 14px; color: #64748b; text-transform: uppercase;">📝 Atenciones</h3>
+        <p style="font-size: 36px; font-weight: 800; color: #1e293b; margin: 0;">{{ atenciones_registradas }}</p>
     </div>
 
-    <div class="menu-card">
-        <h3>Total Satisfacciones</h3>
-        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_satisfacciones }}</p>
+    <div class="menu-card" style="border-top-color: #f59e0b; min-height: 140px; padding: 20px;">
+        <h3 style="font-size: 14px; color: #64748b; text-transform: uppercase;">⭐ Satisfacción</h3>
+        <p style="font-size: 36px; font-weight: 800; color: #1e293b; margin: 0;">{{ total_satisfacciones }}</p>
     </div>
 
-    <div class="menu-card">
-        <h3>Total Servicios</h3>
-        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_servicios }}</p>
+    <div class="menu-card" style="border-top-color: #8b5cf6; min-height: 140px; padding: 20px;">
+        <h3 style="font-size: 14px; color: #64748b; text-transform: uppercase;">💻 Servicios</h3>
+        <p style="font-size: 36px; font-weight: 800; color: #1e293b; margin: 0;">{{ total_servicios }}</p>
     </div>
 
-    <div class="menu-card">
-        <h3>Total Préstamos</h3>
-        <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_prestamos }}</p>
+    <div class="menu-card" style="border-top-color: #ef4444; min-height: 140px; padding: 20px;">
+        <h3 style="font-size: 14px; color: #64748b; text-transform: uppercase;">🎧 Préstamos</h3>
+        <p style="font-size: 36px; font-weight: 800; color: #1e293b; margin: 0;">{{ total_prestamos }}</p>
     </div>
 </div>
 
 {% if mostrar_modulos_pvd %}
-<h3 style="margin-top: 20px; color: white;">🛠️ Operaciones en Punto Vive Digital</h3>
-<div class="grid">
+<h3 style="margin-top: 20px; color: #334155; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">🛠️ Operaciones en Punto Vive Digital</h3>
+<div class="grid" style="margin-top: 20px;">
     <div class="menu-card">
-        <h3>Consultar Ciudadanos</h3>
+        <h3>🔍 Consultar Ciudadanos</h3>
         <p>Busca ciudadanos registrados por documento, nombres o apellidos.</p>
-        <a class="btn" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Abrir módulo</a></div>
     </div>
-
     <div class="menu-card">
-        <h3>Registrar Ciudadano</h3>
+        <h3>👤 Registrar Ciudadano</h3>
         <p>Crea el registro de nuevos ciudadanos atendidos en el punto.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Abrir módulo</a></div>
     </div>
 
     <div class="menu-card">
-        <h3>Registrar Atención</h3>
-        <p>Guarda la atención prestada y la asocia con el ciudadano y el operador.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_atencion' %}">Abrir módulo</a>
+        <h3>📋 Registrar Atención</h3>
+        <p>Guarda la atención prestada y asóciala con el ciudadano.</p>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_atencion' %}">Abrir módulo</a></div>
     </div>
-
     <div class="menu-card">
-        <h3>Registrar Satisfacción</h3>
+        <h3>⭐ Registrar Satisfacción</h3>
         <p>Almacena la calificación y comentario de una atención realizada.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Abrir módulo</a></div>
     </div>
-
     <div class="menu-card">
-        <h3>Registrar Servicio</h3>
+        <h3>💻 Registrar Servicio</h3>
         <p>Registra los servicios prestados dentro del Punto Vive Digital.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_servicio' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_servicio' %}">Abrir módulo</a></div>
     </div>
 
     <div class="menu-card">
-        <h3>Registrar Recurso</h3>
+        <h3>📦 Registrar Recurso</h3>
         <p>Registra equipos y elementos disponibles para préstamo en el punto.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_recurso' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_recurso' %}">Abrir módulo</a></div>
     </div>
-
     <div class="menu-card">
-        <h3>Registrar Préstamo</h3>
+        <h3>🎧 Registrar Préstamo</h3>
         <p>Registra la entrega y devolución de recursos disponibles.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_prestamo' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_prestamo' %}">Abrir módulo</a></div>
     </div>
 
     <div class="menu-card">
-        <h3>Registrar Operador</h3>
+        <h3>🧑‍💼 Registrar Operador</h3>
         <p>Registra la información de los operadores que atienden en el punto.</p>
-        <a class="btn" href="{% url 'modulo_puntos:registrar_operador' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:registrar_operador' %}">Abrir módulo</a></div>
     </div>
-
     <div class="menu-card">
-        <h3>Consultar Operadores</h3>
+        <h3>🔎 Consultar Operadores</h3>
         <p>Busca y actualiza la información de los operadores registrados.</p>
-        <a class="btn" href="{% url 'modulo_puntos:consultar_operadores' %}">Abrir módulo</a>
+        <div style="margin-top: auto;"><a class="btn" href="{% url 'modulo_puntos:consultar_operadores' %}">Abrir módulo</a></div>
     </div>
-
-    <div class="menu-card">
-        <h3>Reportes</h3>
-        <p>Consulta indicadores generales del punto, atenciones, servicios y operadores.</p>
-        <a class="btn" href="{% url 'modulo_puntos:reportes' %}">Abrir módulo</a>
+    <div class="menu-card" style="background: #f0fdf4; border-color: #22c55e;">
+        <h3 style="color: #15803d;">📈 Módulo de Reportes</h3>
+        <p>Consulta indicadores generales, atenciones, servicios y exporta a Excel.</p>
+        <div style="margin-top: auto;"><a class="btn" style="background: #16a34a;" href="{% url 'modulo_puntos:reportes' %}">Abrir Reportes</a></div>
     </div>
 </div>
 {% endif %}
 
 {% if es_superusuario %}
-<h3 style="margin-top: 30px; color: white;">👑 Administración del Sistema</h3>
-<div class="grid">
-    <div class="menu-card" style="border-left: 6px solid #0f172a;">
+<h3 style="margin-top: 40px; color: #334155; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">👑 Administración del Sistema</h3>
+<div class="grid" style="margin-top: 20px;">
+    <div class="menu-card" style="border-left: 6px solid #0f172a; background: #f8fafc;">
         <h3>Crear Administrador TIC</h3>
         <p>Registra un nuevo usuario con permisos de gestión TIC.</p>
-        <a class="btn" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear usuario</a>
+        <div style="margin-top: auto;"><a class="btn" style="background: #0f172a;" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear usuario</a></div>
     </div>
 
-    <div class="menu-card" style="border-left: 6px solid #0f172a;">
+    <div class="menu-card" style="border-left: 6px solid #0f172a; background: #f8fafc;">
         <h3>Crear Administrador PVD</h3>
         <p>Registra un nuevo usuario para operar el Punto Vive Digital.</p>
-        <a class="btn" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear usuario</a>
+        <div style="margin-top: auto;"><a class="btn" style="background: #0f172a;" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear usuario</a></div>
     </div>
 </div>
 {% endif %}

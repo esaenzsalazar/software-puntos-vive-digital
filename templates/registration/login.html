@@ -1,20 +1,49 @@
 {% extends 'modulo_puntos/base.html' %}
+{% load static %}
 
-{% block title %}Iniciar Sesión{% endblock %}
+{% block title %}Iniciar Sesión - PVD Bugalagrande{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 500px; margin: 80px auto;">
-    <h2 class="page-title">Iniciar Sesión</h2>
-    <p class="muted">Ingrese su usuario y contraseña para acceder al sistema.</p>
-
-    <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next }}">
-        {{ form.as_p }}
-
-        <div class="actions">
-            <button type="submit" class="btn">Ingresar</button>
+<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center;">
+    
+    <div class="card" style="max-width: 450px; width: 100%; padding: 40px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); text-align: center; border-top: 5px solid var(--primary-color);">
+        
+        <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 25px;">
+            <img src="{% static 'img/logo-alcaldia.png' %}" alt="Alcaldía de Bugalagrande" style="max-height: 80px; width: auto; object-fit: contain;">
+            <div style="height: 60px; width: 2px; background-color: #e2e8f0;"></div> <img src="{% static 'img/logo-pvd.png' %}" alt="Punto Vive Digital" style="max-height: 80px; width: auto; object-fit: contain;">
         </div>
-    </form>
+
+        <h2 style="margin-top: 0; color: #1e293b; font-size: 24px;">Bienvenido al Sistema</h2>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 30px;">Ingresa tus credenciales para administrar el Punto Vive Digital.</p>
+
+        {% if form.errors %}
+            <div class="alert alert-error" style="padding: 10px; font-size: 14px; justify-content: center;">
+                Usuario o contraseña incorrectos.
+            </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label for="{{ form.username.id_for_label }}" style="color: #475569;">Usuario Operador / Admin</label>
+                {{ form.username }}
+            </div>
+
+            <div style="margin-bottom: 25px; text-align: left;">
+                <label for="{{ form.password.id_for_label }}" style="color: #475569;">Contraseña</label>
+                {{ form.password }}
+            </div>
+
+            <input type="hidden" name="next" value="{{ next }}">
+            
+            <button type="submit" class="btn" style="width: 100%; padding: 14px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; justify-content: center;">Ingresar al Sistema</button>
+        </form>
+
+        <p style="margin-top: 30px; font-size: 12px; color: #94a3b8;">
+            &copy; 2026 Puntos Vive Digital - Bugalagrande<br>
+            Software de Gestión de Apoyo TIC
+        </p>
+    </div>
 </div>
 {% endblock %}

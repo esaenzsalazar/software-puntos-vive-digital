@@ -3,23 +3,29 @@
 {% block title %}Registrar Atención{% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="card" style="max-width: 900px; margin: 0 auto;">
     <h2 class="page-title">Registrar Atención</h2>
-    <p class="muted">Ingresa los datos de la atención.</p>
+    <p class="muted">Configura los detalles de ingreso y salida del ciudadano en el Punto Vive Digital.</p>
 
     {% if form.errors %}
-        <div class="alert alert-danger">
-            Revisa los errores del formulario.
-        </div>
+        <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>
     {% endif %}
 
     <form method="POST">
         {% csrf_token %}
-        {{ form.as_p }}
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+            {% for field in form %}
+                <div {% if field.name == 'atn_obs' %}style="grid-column: 1 / -1;"{% endif %}>
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
+                </div>
+            {% endfor %}
+        </div>
 
-        <div class="actions">
-            <button type="submit" class="btn">Guardar</button>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+        <div class="actions" style="justify-content: flex-end; margin-top: 25px;">
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar y Volver</a>
+            <button type="submit" class="btn">Guardar Atención</button>
         </div>
     </form>
 </div>

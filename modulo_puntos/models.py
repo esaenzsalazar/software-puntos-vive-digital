@@ -155,6 +155,13 @@ class Ciudadano(models.Model):
     ciu_nvleduc = models.CharField(max_length=64, db_column='CIU_NVLEDUC')
     ciu_ocpcion = models.CharField(max_length=64, db_column='CIU_OCPCION')
     ciu_discapacidad = models.BooleanField(db_column='CIU_DISCAPACIDAD', default=False)
+    ciu_desc_discapacidad = models.CharField(max_length=128, db_column='CIU_DESC_DISCAPACIDAD', null=True, blank=True)
+    
+    # NUEVOS CAMPOS DE UBICACIÓN
+    ciu_dircion = models.CharField(max_length=128, db_column='CIU_DIRCION', null=True, blank=True)
+    ciu_barrio = models.CharField(max_length=64, db_column='CIU_BARRIO', null=True, blank=True)
+    ciu_zrural = models.CharField(max_length=64, db_column='CIU_ZRURAL', null=True, blank=True)
+    
     ciu_estrato = models.IntegerField(db_column='CIU_ESTRATO', default=1)
     ciu_estdo = models.CharField(max_length=1, db_column='CIU_ESTDO', default='A', choices=ESTADO_CHOICES)
     ciu_email = models.CharField(max_length=128, db_column='CIU_EMAIL')

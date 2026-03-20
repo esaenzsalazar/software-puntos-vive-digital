@@ -7,46 +7,70 @@
     <h2 class="page-title">Consultar Operadores</h2>
     <p class="muted">Busca operadores por nombre, apellido o número de documento.</p>
 
-    <form method="GET">
-        <label for="q">Buscar operador</label>
-        <input
-            type="text"
-            name="q"
-            id="q"
-            value="{{ busqueda }}"
-            class="form-control"
-            placeholder="Ej. 123456, Laura, Pérez"
-        >
-
-        <div class="actions">
+    <form method="GET" style="max-width: 600px;">
+        <label for="q">Término de búsqueda</label>
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. 123456, Laura, Pérez" style="margin-bottom: 0;">
             <button type="submit" class="btn">Buscar</button>
             <a href="{% url 'modulo_puntos:consultar_operadores' %}" class="btn btn-secondary">Limpiar</a>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
         </div>
     </form>
 </div>
 
 <div class="card">
-    <h3>Resultados encontrados: {{ total_resultados }}</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+        <h3 style="margin: 0;">Resultados encontrados: <span style="color: var(--primary-color);">{{ total_resultados }}</span></h3>
+        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary" style="padding: 6px 15px; font-size: 14px;">Volver al panel</a>
+    </div>
 
     {% if operadores %}
-        <div class="grid">
-            {% for operador in operadores %}
-                <div class="menu-card">
-                    <h3>{{ operador.opr_nmbres }} {{ operador.opr_aplldos }}</h3>
-                    <p><strong>Documento:</strong> {{ operador.opr_tpodoc }} {{ operador.opr_numdoc }}</p>
-                    <p><strong>Correo:</strong> {{ operador.opr_email }}</p>
-                    <p><strong>Teléfono:</strong> {{ operador.opr_tlfno }}</p>
-                    <p><strong>Estado:</strong> {{ operador.get_opr_estdo_display }}</p>
-
-                    <div class="actions">
-                        <a class="btn" href="{% url 'modulo_puntos:editar_operador' operador.opr_cdgo %}">Editar</a>
-                    </div>
-                </div>
-            {% endfor %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Documento</th>
+                        <th>Nombre del Operador</th>
+                        <th>Correo Electrónico</th>
+                        <th>Teléfono</th>
+                        <th>Estado</th>
+                        <th style="text-align: right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for operador in operadores %}
+                        <tr>
+                            <td>
+                                <strong>{{ operador.opr_numdoc }}</strong><br>
+                                <span style="font-size: 12px; color: #64748b;">{{ operador.opr_tpodoc }}</span>
+                            </td>
+                            <td>
+                                <strong style="color: var(--primary-color); font-size: 15px;">{{ operador.opr_nmbres }} {{ operador.opr_aplldos }}</strong>
+                            </td>
+                            <td>
+                                <span style="font-size: 14px; color: #475569;">{{ operador.opr_email|default:"Sin correo" }}</span>
+                            </td>
+                            <td>
+                                <span style="font-size: 14px;">📞 {{ operador.opr_tlfno }}</span>
+                            </td>
+                            <td>
+                                {% if operador.opr_estdo == 'A' %}
+                                    <span class="badge badge-success">Activo</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <a class="btn" style="padding: 6px 12px; font-size: 12px;" href="{% url 'modulo_puntos:editar_operador' operador.opr_cdgo %}">Editar Operador</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     {% else %}
-        <p class="muted">No se encontraron operadores con esa búsqueda.</p>
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 8px; margin-top: 20px;">
+            <p class="muted" style="font-size: 16px;">No se encontraron operadores con esa búsqueda.</p>
+        </div>
     {% endif %}
 </div>
 {% endblock %}

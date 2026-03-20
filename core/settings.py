@@ -51,12 +51,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'modeladobd',
-        'USER': 'app_django',
-        'PASSWORD': 'TuClaveFuerte123!',
-        'HOST': '192.168.1.5',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.mysql', 
+        'NAME': 'modeladobd', # O 'modeladobd' si creaste la base con ese nombre
+        'USER': 'avnadmin',
+        'PASSWORD': 'AVNS_fl3LSi0cjPU3tyZUFgf',
+        'HOST': 'mysql-3bb67bf0-alcaldiaesteban-d1bc.k.aivencloud.com', 
+        'PORT': '27827', # El número de 4 o 5 cifras que te dio Aiven
     }
 }
 

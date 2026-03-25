@@ -3,17 +3,29 @@
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="card" style="max-width: 600px; margin: 0 auto;">
     <h2 class="page-title">{{ titulo }}</h2>
-    <p class="muted">Formulario reservado para Superusuario. Registrando un usuario con rol: <strong>{{ rol }}</strong></p>
+    <p class="muted">Ingresa los datos para registrar un nuevo {{ rol }} en el sistema. Asegúrate de escribir bien el Nombre, ya que el sistema lo usará para auto-asignarle las atenciones.</p>
 
-    <form method="POST">
+    <form method="POST" style="margin-top: 20px;">
         {% csrf_token %}
-        {{ form.as_p }}
+        
+        {% for field in form %}
+            <div style="margin-bottom: 15px;">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <small style="color: #64748b; font-size: 12px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.help_text }}</small>
+                {% endif %}
+                {% if field.errors %}
+                    <span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>
+                {% endif %}
+            </div>
+        {% endfor %}
 
-        <div class="actions" style="margin-top: 20px;">
-            <button type="submit" class="btn">Guardar usuario</button>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary" style="margin-left: 10px; background-color: #6c757d; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Volver al panel</a>
+        <div class="actions" style="justify-content: flex-end; margin-top: 30px;">
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn">Crear Usuario</button>
         </div>
     </form>
 </div>

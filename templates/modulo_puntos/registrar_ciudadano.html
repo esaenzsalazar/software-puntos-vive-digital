@@ -19,43 +19,90 @@
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
             {% for field in form %}
                 
-                {% if field.name == 'ciu_dircion' %}
-                    <div style="grid-column: 1 / -1; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
-                        <label style="font-size: 16px; color: var(--primary-color);">Constructor de Dirección de Residencia</label>
-                        <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas y el sistema armará la dirección oficial automáticamente.</p>
-                        
-                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
-                            <select id="dir_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
-                                <option value="Calle">Calle</option>
-                                <option value="Carrera">Carrera</option>
-                                <option value="Transversal">Transversal</option>
-                                <option value="Diagonal">Diagonal</option>
-                                <option value="Avenida">Avenida</option>
-                                <option value="Vía">Vía</option>
-                                <option value="Manzana">Manzana</option>
-                                <option value="Lote">Lote</option>
-                            </select>
-                            
-                            <input type="text" id="dir_num1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
-                            <input type="text" id="dir_letra1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
-                            
-                            <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
-                            
-                            <input type="text" id="dir_num2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
-                            <input type="text" id="dir_letra2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
-                            
-                            <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
-                            
-                            <input type="text" id="dir_num3" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
-                            
-                            <input type="text" id="dir_comp" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Complemento (Apto, Piso, Casa...)">
-                        </div>
-                        
-                        <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                            <p style="margin: 0; font-size: 14px; color: #64748b;">Dirección oficial a guardar: <strong id="dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
-                        </div>
-                        
+                {% if field.name == 'ciu_fchancm' %}
+                    <div>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                        <span id="edad_calculada" style="color: var(--primary-color); font-weight: bold; font-size: 14px; margin-top: 5px; display: block;"></span>
+                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
+                    </div>
+
+                {% elif field.name == 'ciu_dircion' %}
+                    <div style="grid-column: 1 / -1; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+                        <label style="font-size: 16px; color: var(--primary-color); display: block; margin-bottom: 10px;">Ubicación de Residencia</label>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="margin-right: 15px; cursor: pointer;">
+                                <input type="radio" name="tipo_zona" value="Urbana" checked onchange="toggleZona()"> Cabecera Municipal (Urbana)
+                            </label>
+                            <label style="cursor: pointer;">
+                                <input type="radio" name="tipo_zona" value="Rural" onchange="toggleZona()"> Vereda / Corregimiento (Rural)
+                            </label>
+                        </div>
+
+                        <div id="constructor_urbano">
+                            <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas y el sistema armará la dirección urbana automáticamente.</p>
+                            
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                                <select id="dir_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
+                                    <option value="Calle">Calle</option>
+                                    <option value="Carrera">Carrera</option>
+                                    <option value="Transversal">Transversal</option>
+                                    <option value="Diagonal">Diagonal</option>
+                                    <option value="Avenida">Avenida</option>
+                                    <option value="Vía">Vía</option>
+                                    <option value="Manzana">Manzana</option>
+                                    <option value="Lote">Lote</option>
+                                </select>
+                                
+                                <input type="text" id="dir_num1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                                <input type="text" id="dir_letra1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
+                                
+                                <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
+                                
+                                <input type="text" id="dir_num2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                                <input type="text" id="dir_letra2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
+                                
+                                <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
+                                
+                                <input type="text" id="dir_num3" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                                
+                                <input type="text" id="dir_comp" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Complemento (Apto, Piso, Casa...)">
+                            </div>
+                            
+                            <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                                <p style="margin: 0; font-size: 14px; color: #64748b;">Dirección urbana a guardar: <strong id="dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                            </div>
+                            
+                            {{ field }} </div>
+
+                        <div id="constructor_rural" style="display: none;">
+                            <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Selecciona el tipo y escribe el nombre para armar la ubicación.</p>
+                            
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                                <select id="rur_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
+                                    <option value="Vereda">Vereda</option>
+                                    <option value="Corregimiento">Corregimiento</option>
+                                </select>
+                                
+                                <input type="text" id="rur_nombre" class="form-control" style="flex-grow: 1; min-width: 150px; margin:0; padding: 8px;" placeholder="Nombre (Ej: San Antonio)">
+                                <input type="text" id="rur_finca" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Finca / Lote (Opcional)">
+                            </div>
+                            
+                            <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                                <p style="margin: 0; font-size: 14px; color: #64748b;">Ubicación rural a guardar: <strong id="rur_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                {% elif field.name == 'ciu_zrural' %}
+                    {{ field }}
+
+                {% elif field.name == 'ciu_barrio' %}
+                    <div id="contenedor_barrio">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
 
                 {% elif field.name == 'ciu_discapacidad' %}
@@ -121,7 +168,62 @@
         }
 
         // ----------------------------------------------------
-        // LÓGICA DEL CONSTRUCTOR DE DIRECCIONES
+        // LÓGICA DE EDAD AUTOMÁTICA
+        // ----------------------------------------------------
+        const fechaNacimientoInput = document.getElementById('id_ciu_fchancm');
+        const edadSpan = document.getElementById('edad_calculada');
+
+        function calcularEdad() {
+            if (fechaNacimientoInput.value) {
+                const fechaNac = new Date(fechaNacimientoInput.value);
+                const hoy = new Date();
+                let edad = hoy.getFullYear() - fechaNac.getFullYear();
+                const m = hoy.getMonth() - fechaNac.getMonth();
+                if (m < 0 || (m === 0 && hoy.getDate() < fechaNac.getDate())) {
+                    edad--;
+                }
+                edadSpan.textContent = `Edad calculada: ${edad} años`;
+            } else {
+                edadSpan.textContent = '';
+            }
+        }
+
+        if (fechaNacimientoInput) {
+            fechaNacimientoInput.addEventListener('change', calcularEdad);
+            fechaNacimientoInput.addEventListener('input', calcularEdad);
+            calcularEdad(); 
+        }
+
+        // ----------------------------------------------------
+        // LÓGICA DEL TIPO DE ZONA (URBANA / RURAL)
+        // ----------------------------------------------------
+        window.toggleZona = function() {
+            const zonaSeleccionada = document.querySelector('input[name="tipo_zona"]:checked').value;
+            const constructorUrbano = document.getElementById('constructor_urbano');
+            const constructorRural = document.getElementById('constructor_rural');
+            const contenedorBarrio = document.getElementById('contenedor_barrio');
+            const barrioSelect = document.getElementById('id_ciu_barrio');
+
+            if (zonaSeleccionada === 'Urbana') {
+                constructorUrbano.style.display = 'block';
+                constructorRural.style.display = 'none';
+                contenedorBarrio.style.display = 'block'; 
+                
+                document.getElementById('id_ciu_zrural').value = '';
+                
+            } else {
+                constructorUrbano.style.display = 'none';
+                constructorRural.style.display = 'block';
+                contenedorBarrio.style.display = 'none'; 
+                
+                document.getElementById('id_ciu_dircion').value = '';
+                barrioSelect.value = 'Ninguno / Área Rural'; 
+                updateDireccionRural();
+            }
+        };
+
+        // ----------------------------------------------------
+        // LÓGICA DEL CONSTRUCTOR DE DIRECCIONES (URBANO)
         // ----------------------------------------------------
         function updateDireccion() {
             const tipo = document.getElementById('dir_tipo').value || '';
@@ -133,7 +235,6 @@
             const comp = document.getElementById('dir_comp').value || '';
 
             let dir = "";
-            // Solo armamos la dirección si el primer número fue escrito
             if (num1) {
                 dir = `${tipo} ${num1} ${letra1}`;
                 if (num2) dir += ` # ${num2} ${letra2}`;
@@ -141,21 +242,45 @@
                 if (comp) dir += ` ${comp}`;
             }
             
-            // Limpiamos dobles espacios
             dir = dir.replace(/\s+/g, ' ').trim();
-            
-            // Inyectamos el texto final en el campo oculto de Django y en la previsualización
             document.getElementById('id_ciu_dircion').value = dir;
             document.getElementById('dir_preview').textContent = dir;
         }
 
-        // Asignamos el evento de escucha a cada cajita
         const dirInputs = ['dir_tipo', 'dir_num1', 'dir_letra1', 'dir_num2', 'dir_letra2', 'dir_num3', 'dir_comp'];
         dirInputs.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
                 el.addEventListener('input', updateDireccion);
                 if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccion);
+            }
+        });
+
+        // ----------------------------------------------------
+        // LÓGICA DEL CONSTRUCTOR RURAL
+        // ----------------------------------------------------
+        function updateDireccionRural() {
+            const tipo = document.getElementById('rur_tipo').value || '';
+            const nombre = document.getElementById('rur_nombre').value || '';
+            const finca = document.getElementById('rur_finca').value || '';
+
+            let dir = "";
+            if (nombre) {
+                dir = `${tipo} ${nombre}`;
+                if (finca) dir += ` - Finca/Lote: ${finca}`;
+            }
+            
+            dir = dir.replace(/\s+/g, ' ').trim();
+            document.getElementById('id_ciu_zrural').value = dir;
+            document.getElementById('rur_preview').textContent = dir;
+        }
+
+        const rurInputs = ['rur_tipo', 'rur_nombre', 'rur_finca'];
+        rurInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('input', updateDireccionRural);
+                if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccionRural);
             }
         });
         

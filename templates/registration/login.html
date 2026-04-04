@@ -1,6 +1,7 @@
 {% extends 'modulo_puntos/base.html' %}
 {% load static %}
 
+{% block body_class %}page-auth{% endblock %}
 {% block title %}Iniciar Sesión - PVD Bugalagrande{% endblock %}
 
 {% block content %}
@@ -12,11 +13,11 @@
             <img src="{% static 'img/logo-pvd.png' %}" alt="Punto Vive Digital">
         </div>
 
-        <h2>Bienvenido al Sistema</h2>
-        <p class="lead">Ingresa tus credenciales para administrar el Punto Vive Digital.</p>
+        <h2>Bienvenido</h2>
+        <p class="lead">Ingresa tus credenciales para acceder al sistema de gestión del Punto Vive Digital.</p>
 
         {% if form.errors %}
-            <div class="alert alert-error" style="justify-content: center; font-size: 14px;">
+            <div class="alert alert-error" style="justify-content: center;">
                 Usuario o contraseña incorrectos.
             </div>
         {% endif %}
@@ -24,24 +25,24 @@
         <form method="POST">
             {% csrf_token %}
 
-            <div style="margin-bottom: 20px; text-align: left;">
-                <label for="{{ form.username.id_for_label }}">Usuario Operador / Admin</label>
+            <div class="form-field">
+                <label for="{{ form.username.id_for_label }}">Usuario</label>
                 {{ form.username }}
             </div>
 
-            <div style="margin-bottom: 24px; text-align: left;">
+            <div class="form-field">
                 <label for="{{ form.password.id_for_label }}">Contraseña</label>
                 {{ form.password }}
             </div>
 
             <input type="hidden" name="next" value="{{ next }}">
 
-            <button type="submit" class="btn btn--block">Ingresar al Sistema</button>
+            <button type="submit" class="btn btn--block">Ingresar al sistema</button>
         </form>
 
-        <p style="margin-top: 28px; font-size: 12px; color: #94a3b8;">
-            &copy; 2026 Puntos Vive Digital - Bugalagrande<br>
-            Software de Gestión de Apoyo TIC
+        <p class="auth-footer">
+            &copy; 2026 Puntos Vive Digital — Bugalagrande<br>
+            <span style="opacity: 0.85;">Software de apoyo a la gestión TIC · CD-224-2026</span>
         </p>
     </div>
 </div>

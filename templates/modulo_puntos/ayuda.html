@@ -4,9 +4,12 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Ayuda del sistema</h2>
-    <p class="muted">Software de apoyo a la gestión TIC — Punto Vive Digital Bugalagrande. Contrato CD-224-2026.</p>
-    <p class="muted">Tu rol actual: <strong>{{ rol_usuario }}</strong></p>
+    <div class="page-hero">
+        <span class="eyebrow">Soporte</span>
+        <h2 class="page-title">Ayuda del sistema</h2>
+        <p class="muted">Software de apoyo a la gestión TIC — Punto Vive Digital Bugalagrande (CD-224-2026).</p>
+        <p class="muted"><strong>Rol actual:</strong> <span class="text-accent">{{ rol_usuario }}</span></p>
+    </div>
     <div class="actions">
         <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
     </div>
@@ -14,43 +17,39 @@
 
 <div class="card">
     <h3 class="section-title section-title--rule">Flujo operativo recomendado</h3>
-    <ol class="muted" style="line-height: 1.8; padding-left: 1.25rem;">
-        <li><strong>Registrar ciudadano</strong> (caracterización socio-demográfica) o <strong>consultar</strong> si ya existe.</li>
+    <ol class="prose-list">
+        <li><strong>Registrar ciudadano</strong> (caracterización) o <strong>consultar</strong> si ya existe.</li>
         <li><strong>Registrar atención</strong> vinculando ciudadano y operador.</li>
-        <li><strong>Registrar servicio</strong> asociado a esa atención (tipo y detalle del servicio PVD).</li>
-        <li>Opcional: <strong>préstamo de recurso</strong> si aplica; <strong>satisfacción</strong> del usuario respecto a la atención.</li>
-        <li>En <strong>Reportes</strong> revisa indicadores y descarga los CSV para consolidados (Excel).</li>
+        <li><strong>Registrar servicio</strong> asociado a esa atención.</li>
+        <li>Opcional: <strong>préstamo</strong> y <strong>satisfacción</strong> del usuario.</li>
+        <li>En <strong>Reportes</strong> revisa indicadores y descarga CSV para Excel.</li>
     </ol>
 </div>
 
 <div class="card">
     <h3 class="section-title section-title--rule">Roles</h3>
-    <ul class="muted" style="line-height: 1.8;">
-        <li><strong>Administrador PVD:</strong> opera módulos de ciudadanos, atenciones, servicios, recursos, préstamos, satisfacción y reportes.</li>
-        <li><strong>Administrador TIC:</strong> lo anterior y además puede crear usuarios PVD.</li>
-        <li><strong>Superusuario:</strong> acceso total, incluida creación de administradores TIC.</li>
+    <ul class="prose-list">
+        <li><strong>Administrador PVD:</strong> módulos operativos y reportes.</li>
+        <li><strong>Administrador TIC:</strong> lo anterior y creación de usuarios PVD.</li>
+        <li><strong>Superusuario:</strong> acceso total, incluidos administradores TIC.</li>
     </ul>
 </div>
 
 <div class="card">
-    <h3 class="section-title section-title--rule">Exportación de datos (reportes)</h3>
-    <p class="muted">En la pantalla <strong>Reportes</strong> puedes descargar archivos CSV (abren en Microsoft Excel o LibreOffice) con BOM UTF-8 para caracteres en español:</p>
-    <ul class="muted" style="line-height: 1.8;">
-        <li><strong>Atenciones:</strong> trazabilidad con datos del ciudadano y operador.</li>
-        <li><strong>Ciudadanos:</strong> caracterización completa según variables definidas en el sistema.</li>
-        <li><strong>Servicios:</strong> por atención y ciudadano, tipo de servicio y estado.</li>
-        <li><strong>Satisfacción:</strong> calificaciones y comentarios vinculados a la atención.</li>
-        <li><strong>Préstamos:</strong> entregas y devoluciones de recursos del inventario.</li>
+    <h3 class="section-title section-title--rule">Exportación de datos</h3>
+    <p class="muted">En <strong>Reportes</strong> puedes descargar CSV (UTF-8 con BOM) para Excel o LibreOffice:</p>
+    <ul class="prose-list">
+        <li><strong>Atenciones, ciudadanos, servicios, satisfacción, préstamos.</strong></li>
     </ul>
 </div>
 
 <div class="card">
-    <h3 class="section-title section-title--rule">Documentación técnica (entrega contractual)</h3>
-    <p class="muted">En la carpeta <code>docs/</code> del proyecto encontrarás, para supervisión y mantenimiento:</p>
-    <ul class="muted" style="line-height: 1.8;">
-        <li><code>MANUAL_USUARIO.md</code> — guía ampliada.</li>
-        <li><code>DESCRIPCION_FUNCIONAL.md</code> — alcance frente al objeto del contrato.</li>
-        <li><code>ESTRUCTURA_BASE_DE_DATOS.md</code> — tablas y relaciones principales.</li>
+    <h3 class="section-title section-title--rule">Documentación técnica</h3>
+    <p class="muted">En la carpeta <code>docs/</code> del proyecto:</p>
+    <ul class="prose-list">
+        <li><code>MANUAL_USUARIO.md</code></li>
+        <li><code>DESCRIPCION_FUNCIONAL.md</code></li>
+        <li><code>ESTRUCTURA_BASE_DE_DATOS.md</code></li>
     </ul>
 </div>
 {% endblock %}

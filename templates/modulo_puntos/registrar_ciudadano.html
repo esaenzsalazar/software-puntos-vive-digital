@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card card--narrow">
-    <h2 class="page-title">Registrar Ciudadano</h2>
-    <p class="muted">Ingresa los datos del ciudadano atendido. Selecciona las opciones de las listas desplegables.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Caracterización</span>
+        <h2 class="page-title">Registrar ciudadano</h2>
+        <p class="muted">Datos socio-demográficos y ubicación. Usa las listas desplegables para estandarizar la información.</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">

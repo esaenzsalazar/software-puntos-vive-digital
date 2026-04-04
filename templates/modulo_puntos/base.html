@@ -1,658 +1,118 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Puntos Vive Digital{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/pvd-theme.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style>
-        :root {
-            --primary-color: #0f4a9b;
-            --primary-hover: #0a336e;
-            --bg-body: #f4f7f9;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --card-bg: #ffffff;
-            --border-radius: 12px;
-            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-            --transition: all 0.3s ease;
-            --header-h: 56px;
-        }
-
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body {
-            margin: 0;
-            font-family: 'Inter', Arial, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            line-height: 1.6;
-            min-height: 100dvh;
-        }
-
-        .site-header {
-            background: linear-gradient(90deg, #0f172a, #1e3a8a);
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .site-header__inner {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        .site-header__brand {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex: 1;
-            min-width: 0;
-        }
-        .site-header__title {
-            margin: 0;
-            font-size: clamp(1.05rem, 3.5vw, 1.5rem);
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            line-height: 1.2;
-        }
-        .site-header__title a {
-            color: inherit;
-            text-decoration: none;
-        }
-        .site-header__title a:hover {
-            opacity: 0.92;
-        }
-
-        .nav-toggle {
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            gap: 5px;
-            width: 44px;
-            height: 44px;
-            padding: 0;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.12);
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        .nav-toggle:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .nav-toggle__bar {
-            display: block;
-            width: 22px;
-            height: 2px;
-            margin: 0 auto;
-            background: #fff;
-            border-radius: 1px;
-        }
-
-        .site-nav {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .site-nav a {
-            color: #e2e8f0;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: var(--transition);
-            padding: 10px 14px;
-            border-radius: 8px;
-            min-height: 44px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .site-nav a:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: clamp(16px, 4vw, 40px) auto;
-            padding: 0 clamp(14px, 3vw, 20px) clamp(24px, 5vw, 40px);
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md);
-            padding: clamp(18px, 3vw, 30px);
-            margin-bottom: clamp(18px, 3vw, 30px);
-            width: 100%;
-            border: 1px solid rgba(0,0,0,0.03);
-        }
-        .card--narrow {
-            max-width: 900px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .card--sm {
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-            gap: 24px;
-            width: 100%;
-        }
-        .form-grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 20px;
-        }
-        .span-full {
-            grid-column: 1 / -1;
-        }
-
-        .menu-card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 24px;
-            box-shadow: var(--shadow-sm);
-            border-top: 4px solid var(--primary-color);
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            transition: var(--transition);
-        }
-        .menu-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-        }
-        .menu-card h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            color: var(--text-main);
-            font-size: 18px;
-            font-weight: 700;
-        }
-        .menu-card p {
-            color: var(--text-muted);
-            font-size: 15px;
-            margin-bottom: 8px;
-            margin-top: 0;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-            gap: clamp(14px, 2vw, 24px);
-        }
-        .stat-card {
-            border-radius: var(--border-radius);
-            padding: clamp(16px, 2.5vw, 20px);
-            box-shadow: var(--shadow-sm);
-            border-top: 4px solid var(--primary-color);
-            background: var(--card-bg);
-            min-height: 120px;
-        }
-        .stat-card h3 {
-            font-size: 13px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin: 0 0 8px 0;
-            font-weight: 700;
-        }
-        .stat-card .stat-card__value {
-            font-size: clamp(1.75rem, 5vw, 2.25rem);
-            font-weight: 800;
-            color: var(--text-main);
-            margin: 0;
-            line-height: 1.1;
-        }
-
-        .section-title {
-            margin-top: 0;
-            margin-bottom: 0;
-            color: #334155;
-            font-size: clamp(1rem, 2.5vw, 1.125rem);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            font-weight: 700;
-        }
-        .section-title--rule {
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
-            margin-bottom: 4px;
-        }
-
-        .user-banner {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            padding: 14px 16px;
-            border-radius: 8px;
-            margin-top: 12px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .user-banner p {
-            margin: 0;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-color);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 15px;
-            text-align: center;
-            width: fit-content;
-            max-width: 100%;
-            transition: var(--transition);
-            box-shadow: 0 2px 4px rgba(15, 74, 155, 0.2);
-            min-height: 44px;
-        }
-        .btn:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(15, 74, 155, 0.3);
-        }
-        .btn-secondary {
-            background: #cbd5e1;
-            color: #334155;
-            box-shadow: none;
-        }
-        .btn-secondary:hover {
-            background: #94a3b8;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .btn-success {
-            background: #15803d;
-            color: white;
-            box-shadow: 0 2px 4px rgba(21, 128, 61, 0.25);
-        }
-        .btn-success:hover {
-            background: #166534;
-            color: white;
-        }
-        .btn--sm {
-            padding: 8px 14px;
-            font-size: 13px;
-            min-height: 40px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: var(--text-main);
-        }
-        .form-control, input[type="text"], input[type="email"], input[type="password"], input[type="date"],
-        input[type="time"], input[type="datetime-local"], input[type="number"], input[type="url"], select, textarea {
-            width: 100%;
-            max-width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 15px;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 20px;
-            transition: var(--transition);
-            background-color: #f8fafc;
-            color: var(--text-main);
-        }
-        .form-control:focus, input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(15, 74, 155, 0.15);
-        }
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-        .form-check-input {
-            transform: scale(1.2);
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        form > p {
-            margin: 0 0 16px 0;
-        }
-        form > p label {
-            display: block;
-        }
-
-        .page-title {
-            margin-top: 0;
-            color: var(--text-main);
-            font-size: clamp(1.35rem, 4vw, 1.75rem);
-            font-weight: 800;
-            margin-bottom: 8px;
-            line-height: 1.2;
-        }
-        .muted {
-            color: var(--text-muted);
-            font-size: clamp(14px, 2.5vw, 16px);
-            margin-top: 0;
-        }
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 24px;
-        }
-
-        .alert {
-            padding: 14px 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .alert-success {
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-        .alert-error, .alert-danger {
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin: 8px -4px 0;
-            padding: 0 4px;
-        }
-        .table {
-            width: 100%;
-            min-width: 640px;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        .table th, .table td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e2e8f0;
-            text-align: left;
-            vertical-align: top;
-        }
-        .table thead th {
-            background: #f8fafc;
-            font-weight: 700;
-            color: #334155;
-            white-space: nowrap;
-        }
-        .table tbody tr:hover {
-            background: #fafbfc;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .search-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: flex-end;
-            max-width: 720px;
-        }
-        .search-row .form-control,
-        .search-row input {
-            flex: 1 1 200px;
-            min-width: 0;
-            margin-bottom: 0;
-        }
-        .search-row__actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .toolbar h3 {
-            margin: 0;
-            font-size: clamp(1rem, 2.5vw, 1.125rem);
-        }
-
-        .cell-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-        }
-
-        .empty-state {
-            background: #f8fafc;
-            border: 1px dashed #cbd5e1;
-            padding: clamp(24px, 5vw, 40px);
-            text-align: center;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        .auth-layout {
-            min-height: 75dvh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px 0;
-        }
-        .auth-card {
-            max-width: 450px;
-            width: 100%;
-            text-align: center;
-            border-top: 5px solid var(--primary-color);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-        .auth-logos {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: clamp(12px, 3vw, 20px);
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-        .auth-logos img {
-            max-height: 72px;
-            width: auto;
-            object-fit: contain;
-        }
-        .auth-logos__sep {
-            height: 56px;
-            width: 2px;
-            background-color: #e2e8f0;
-            flex-shrink: 0;
-        }
-        .auth-card h2 {
-            margin-top: 0;
-            color: #1e293b;
-            font-size: clamp(1.15rem, 3vw, 1.5rem);
-        }
-        .auth-card .lead {
-            color: #64748b;
-            font-size: 14px;
-            margin-bottom: 28px;
-        }
-        .auth-card .btn--block {
-            width: 100%;
-            padding: 14px 20px;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-
-        .info-grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px 20px;
-        }
-
-        .select2-container {
-            max-width: 100% !important;
-            margin-bottom: 20px;
-        }
-        .select2-container .select2-selection--single {
-            height: 45px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background-color: #f8fafc;
-            display: flex;
-            align-items: center;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 43px;
-            right: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .nav-toggle {
-                display: inline-flex;
-            }
-            .site-nav {
-                display: none;
-                flex-direction: column;
-                width: 100%;
-                padding-top: 8px;
-                border-top: 1px solid rgba(255, 255, 255, 0.12);
-            }
-            .site-nav.is-open {
-                display: flex;
-            }
-            .site-nav a {
-                width: 100%;
-                justify-content: center;
-            }
-            .form-grid-2 {
-                grid-template-columns: 1fr;
-            }
-            .info-grid-2 {
-                grid-template-columns: 1fr;
-            }
-            .actions {
-                flex-direction: column;
-                width: 100%;
-            }
-            .actions .btn {
-                width: 100%;
-            }
-            .search-row__actions {
-                width: 100%;
-            }
-            .search-row__actions .btn {
-                flex: 1 1 auto;
-                min-width: calc(50% - 5px);
-            }
-            .cell-actions {
-                justify-content: flex-start;
-            }
-            .cell-actions .btn {
-                flex: 1 1 auto;
-            }
-        }
-
-        @media (min-width: 769px) {
-            .site-header__inner {
-                flex-wrap: nowrap;
-            }
-            .site-header__brand {
-                flex: 0 1 auto;
-            }
-        }
-
-        @media (max-width: 480px) {
-            input, select, textarea, .form-control {
-                font-size: 16px;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-            .menu-card:hover {
-                transform: none;
-            }
-            .btn:hover {
-                transform: none;
-            }
-        }
-    </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% if user.is_authenticated %}app-auth{% endif %} {% block body_class %}{% endblock %}">
     {% if user.is_authenticated %}
-    <header class="site-header">
-        <div class="site-header__inner">
-            <div class="site-header__brand">
-                <h1 class="site-header__title"><a href="{% url 'modulo_puntos:panel_control' %}">Puntos Vive Digital</a></h1>
-                <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Abrir o cerrar menú" aria-expanded="false" aria-controls="site-nav">
-                    <span class="nav-toggle__bar"></span>
-                    <span class="nav-toggle__bar"></span>
-                    <span class="nav-toggle__bar"></span>
-                </button>
-            </div>
-            <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
-                <a href="{% url 'modulo_puntos:panel_control' %}">Panel</a>
-                <a href="{% url 'modulo_puntos:ayuda' %}">Ayuda</a>
-                <a href="{% url 'modulo_puntos:perfil_usuario' %}">Mi perfil</a>
-                <a href="{% url 'modulo_puntos:logout' %}">Cerrar sesión</a>
-            </nav>
-        </div>
-    </header>
-    {% endif %}
+    <div class="app-shell">
+        <header class="app-topbar">
+            <button type="button" class="app-topbar__menu" id="sidebar-toggle" aria-label="Abrir o cerrar menú" aria-expanded="false" aria-controls="app-sidebar">
+                <span class="app-topbar__menu-bar"></span>
+                <span class="app-topbar__menu-bar"></span>
+                <span class="app-topbar__menu-bar"></span>
+            </button>
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="app-topbar__brand">
+                <span class="app-topbar__brand-title">Puntos Vive Digital</span>
+                <span class="app-topbar__brand-sub">Bugalagrande</span>
+            </a>
+            <span class="app-topbar__user" title="Usuario en sesión">{{ user.username }}</span>
+        </header>
 
+        <div class="app-sidebar-backdrop" id="sidebar-backdrop" hidden aria-hidden="true"></div>
+
+        <div class="app-frame">
+            <aside class="app-sidebar" id="app-sidebar" aria-label="Menú de módulos">
+                <nav class="side-nav">
+                    <p class="side-nav__heading">General</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:panel_control' %}" class="side-nav__link {% if current_url_name == 'panel_control' %}is-active{% endif %}">Inicio / Panel</a>
+                        </li>
+                    </ul>
+
+                    {% if nav_pvd %}
+                    <p class="side-nav__heading">Ciudadanos</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="side-nav__link {% if current_url_name == 'consultar_ciudadanos' or current_url_name == 'historial_ciudadano' or current_url_name == 'editar_ciudadano' %}is-active{% endif %}">Consultar</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_ciudadano' %}" class="side-nav__link {% if current_url_name == 'registrar_ciudadano' %}is-active{% endif %}">Registrar</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">Atención y calidad</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="side-nav__link {% if current_url_name == 'registrar_atencion' %}is-active{% endif %}">Registrar atención</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="side-nav__link {% if current_url_name == 'registrar_servicio' %}is-active{% endif %}">Registrar servicio</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_satisfaccion' %}" class="side-nav__link {% if current_url_name == 'registrar_satisfaccion' %}is-active{% endif %}">Satisfacción</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">Inventario</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="side-nav__link {% if current_url_name == 'registrar_recurso' %}is-active{% endif %}">Registrar recurso</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="side-nav__link {% if current_url_name == 'registrar_prestamo' %}is-active{% endif %}">Registrar préstamo</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">Informes</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y exportación</a>
+                        </li>
+                    </ul>
+                    {% endif %}
+
+                    {% if nav_tic %}
+                    <p class="side-nav__heading">Administración</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear usuario PVD</a>
+                        </li>
+                        {% if nav_super %}
+                        <li>
+                            <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear usuario TIC</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+                </nav>
+
+                <div class="app-sidebar__footer">
+                    <a href="{% url 'modulo_puntos:ayuda' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'ayuda' %}is-active{% endif %}">Ayuda</a>
+                    <a href="{% url 'modulo_puntos:perfil_usuario' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'perfil_usuario' %}is-active{% endif %}">Mi perfil</a>
+                    <a href="{% url 'modulo_puntos:logout' %}" class="side-nav__link side-nav__link--footer side-nav__link--logout">Cerrar sesión</a>
+                </div>
+            </aside>
+
+            <div class="app-content">
+                <div class="container container--app">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <main class="main-stack">
+    {% else %}
     <div class="container">
         {% if messages %}
             {% for message in messages %}
@@ -661,21 +121,58 @@
                 </div>
             {% endfor %}
         {% endif %}
+        <main class="main-stack">
+    {% endif %}
 
-        {% block content %}{% endblock %}
+                        {% block content %}{% endblock %}
+
+    {% if user.is_authenticated %}
+                    </main>
+                </div>
+            </div>
+        </div>
     </div>
+    {% else %}
+        </main>
+    </div>
+    {% endif %}
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         (function () {
-            var toggle = document.getElementById('nav-toggle');
-            var nav = document.getElementById('site-nav');
-            if (!toggle || !nav) return;
-            toggle.addEventListener('click', function () {
-                var open = nav.classList.toggle('is-open');
-                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-                toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+            var toggle = document.getElementById('sidebar-toggle');
+            var sidebar = document.getElementById('app-sidebar');
+            var backdrop = document.getElementById('sidebar-backdrop');
+            if (!toggle || !sidebar || !backdrop) return;
+
+            function openMenu() {
+                sidebar.classList.add('is-open');
+                backdrop.hidden = false;
+                backdrop.classList.add('is-visible');
+                toggle.setAttribute('aria-expanded', 'true');
+                document.body.classList.add('sidebar-open');
+            }
+            function closeMenu() {
+                sidebar.classList.remove('is-open');
+                backdrop.classList.remove('is-visible');
+                toggle.setAttribute('aria-expanded', 'false');
+                document.body.classList.remove('sidebar-open');
+                window.setTimeout(function () { backdrop.hidden = true; }, 200);
+            }
+            function onToggle() {
+                if (sidebar.classList.contains('is-open')) closeMenu();
+                else openMenu();
+            }
+            toggle.addEventListener('click', onToggle);
+            backdrop.addEventListener('click', closeMenu);
+            window.addEventListener('resize', function () {
+                if (window.innerWidth >= 960) closeMenu();
+            });
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', function () {
+                    if (window.innerWidth < 960) closeMenu();
+                });
             });
         })();
         $(document).ready(function() {

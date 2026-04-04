@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card card--narrow">
-    <h2 class="page-title">Calificación del Servicio</h2>
-    <p class="muted">Registra el nivel de satisfacción y comentarios de retorno por parte del ciudadano.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Calidad</span>
+        <h2 class="page-title">Registrar satisfacción</h2>
+        <p class="muted">Calificación y comentarios del usuario sobre la atención.</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>

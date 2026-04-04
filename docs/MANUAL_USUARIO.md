@@ -6,7 +6,7 @@ Aplicación web para caracterización de usuarios (ciudadanos), registro de aten
 
 1. Abra la URL que le indique la Oficina TIC (por ejemplo `http://127.0.0.1:8000/` en pruebas locales).
 2. Inicie sesión con el usuario y contraseña asignados.
-3. Use **Panel** para ir al menú principal; **Ayuda** resume flujos y exportaciones.
+3. El **menú lateral** (en móvil, icono ☰ arriba) agrupa todos los módulos por tema: ciudadanos, atención, inventario e informes. **Ayuda** y **Mi perfil** están al pie del menú.
 
 ## Módulos principales
 

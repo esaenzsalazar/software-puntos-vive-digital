@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card card--narrow">
-    <h2 class="page-title">Registrar Atención</h2>
-    <p class="muted">Configura los detalles de ingreso y salida del ciudadano en el Punto Vive Digital.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Atenciones</span>
+        <h2 class="page-title">Registrar atención</h2>
+        <p class="muted">Horarios, ciudadano, operador y observaciones.</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>

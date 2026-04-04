@@ -3,11 +3,15 @@
 {% block title %}Mi Perfil{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2 class="page-title">Mi Perfil</h2>
-    <p class="muted">Aquí puedes actualizar tu información personal y tu contraseña.</p>
-
-    <p><strong>Rol actual:</strong> {{ rol_usuario }}</p>
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Cuenta</span>
+        <h2 class="page-title">Mi perfil</h2>
+        <p class="muted">Actualiza tus datos y contraseña.</p>
+    </div>
+    <div class="user-banner">
+        <p><strong>Rol:</strong> <span class="text-accent">{{ rol_usuario }}</span></p>
+    </div>
 
     <form method="POST">
         {% csrf_token %}

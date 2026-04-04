@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Consultar Ciudadanos</h2>
-    <p class="muted">Busca ciudadanos por nombre, apellido o número de documento.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Ciudadanos</span>
+        <h2 class="page-title">Consultar ciudadanos</h2>
+        <p class="muted">Búsqueda por nombre, apellido o número de documento.</p>
+    </div>
 
     <form method="GET">
         <label for="q">Término de búsqueda</label>
@@ -21,7 +24,7 @@
 
 <div class="card">
     <div class="toolbar">
-        <h3>Resultados: <span style="color: var(--primary-color);">{{ total_resultados }}</span></h3>
+        <h3>Resultados: <span class="text-accent">{{ total_resultados }}</span></h3>
         <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary btn--sm">Volver al panel</a>
     </div>
 
@@ -46,7 +49,7 @@
                                 <span style="font-size: 12px; color: #64748b;">{{ ciudadano.ciu_tpodoc }}</span>
                             </td>
                             <td>
-                                <strong style="color: var(--primary-color); font-size: 15px;">{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</strong><br>
+                                <strong class="text-accent" style="font-size: 15px;">{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</strong><br>
                                 <span style="font-size: 13px; color: #64748b;">{{ ciudadano.ciu_ocpcion }}</span>
                             </td>
                             <td>

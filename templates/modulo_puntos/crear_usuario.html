@@ -4,28 +4,31 @@
 
 {% block content %}
 <div class="card card--sm">
-    <h2 class="page-title">{{ titulo }}</h2>
-    <p class="muted">Ingresa los datos para registrar un nuevo {{ rol }} en el sistema. Asegúrate de escribir bien el Nombre, ya que el sistema lo usará para auto-asignarle las atenciones.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Usuarios</span>
+        <h2 class="page-title">{{ titulo }}</h2>
+        <p class="muted">Completa los datos del nuevo {{ rol }}. El nombre se usará para asociar atenciones al operador cuando corresponda.</p>
+    </div>
 
-    <form method="POST" style="margin-top: 20px;">
+    <form method="POST">
         {% csrf_token %}
-        
+
         {% for field in form %}
-            <div style="margin-bottom: 15px;">
+            <div class="form-field">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {% if field.help_text %}
-                    <small style="color: #64748b; font-size: 12px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.help_text }}</small>
+                    <span class="help-text">{{ field.help_text }}</span>
                 {% endif %}
                 {% if field.errors %}
-                    <span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>
+                    <span class="field-error">{{ field.errors.0 }}</span>
                 {% endif %}
             </div>
         {% endfor %}
 
-        <div class="actions" style="justify-content: flex-end; margin-top: 30px;">
+        <div class="actions" style="justify-content: flex-end; margin-top: 8px;">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn">Crear Usuario</button>
+            <button type="submit" class="btn">Crear usuario</button>
         </div>
     </form>
 </div>

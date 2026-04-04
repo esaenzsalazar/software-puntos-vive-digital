@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card card--narrow">
-    <h2 class="page-title">Asignar Préstamo de Equipo</h2>
-    <p class="muted">Registra la entrega física de recursos (diademas, tablets, portátiles) a los ciudadanos.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Inventario</span>
+        <h2 class="page-title">Registrar préstamo</h2>
+        <p class="muted">Entrega y devolución de recursos del punto.</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>

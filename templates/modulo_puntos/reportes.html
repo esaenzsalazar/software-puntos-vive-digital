@@ -4,60 +4,57 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Reportes del Punto Vive Digital</h2>
-    <p class="muted">Indicadores consolidados por tipo de servicio, perfiles de usuarios y variables para informes a la Alcaldía y reportes externos. Los archivos CSV se abren en Excel.</p>
-
-    <div class="actions" style="margin-top: 16px;">
-        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
-        <a href="{% url 'modulo_puntos:exportar_atenciones_csv' %}" class="btn btn-success">Descargar atenciones</a>
-        <a href="{% url 'modulo_puntos:exportar_ciudadanos_csv' %}" class="btn btn-success">Descargar ciudadanos</a>
-        <a href="{% url 'modulo_puntos:exportar_servicios_csv' %}" class="btn btn-success">Descargar servicios</a>
-        <a href="{% url 'modulo_puntos:exportar_satisfaccion_csv' %}" class="btn btn-success">Descargar satisfacción</a>
-        <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn-success">Descargar préstamos</a>
+    <div class="page-hero">
+        <span class="eyebrow">Analítica</span>
+        <h2 class="page-title">Reportes e indicadores</h2>
+        <p class="muted">Consolidados por tipo de servicio, perfiles de usuarios y variables para informes institucionales. Las exportaciones son archivos CSV compatibles con Excel.</p>
     </div>
+    <div class="actions" style="margin-top: 8px;">
+        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al inicio</a>
+    </div>
+    <details class="export-panel">
+        <summary class="export-panel__summary">Descargar datos (CSV para Excel)</summary>
+        <div class="export-panel__body">
+            <p class="muted" style="margin: 0 0 12px 0; font-size: 13px;">Selecciona el conjunto de datos a exportar.</p>
+            <div class="export-panel__grid">
+                <a href="{% url 'modulo_puntos:exportar_atenciones_csv' %}" class="btn btn-success btn--sm">Atenciones</a>
+                <a href="{% url 'modulo_puntos:exportar_ciudadanos_csv' %}" class="btn btn-success btn--sm">Ciudadanos</a>
+                <a href="{% url 'modulo_puntos:exportar_servicios_csv' %}" class="btn btn-success btn--sm">Servicios</a>
+                <a href="{% url 'modulo_puntos:exportar_satisfaccion_csv' %}" class="btn btn-success btn--sm">Satisfacción</a>
+                <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn-success btn--sm">Préstamos</a>
+            </div>
+        </div>
+    </details>
 </div>
 
-<div class="grid" style="margin-bottom: 24px;">
-    <div class="menu-card">
-        <h3>Total Ciudadanos</h3>
-        <p style="font-size: 28px; font-weight: bold;">{{ total_ciudadanos }}</p>
-        <p>Activos: {{ ciudadanos_activos }}</p>
+<div class="stats-grid content-section">
+    <div class="stat-card stat-card--accent-blue">
+        <h3>Ciudadanos</h3>
+        <p class="stat-card__value">{{ total_ciudadanos }}</p>
+        <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ ciudadanos_activos }}</p>
     </div>
-
-    <div class="menu-card">
-        <h3>Total Operadores</h3>
-        <p style="font-size: 28px; font-weight: bold;">{{ total_operadores }}</p>
-        <p>Activos: {{ operadores_activos }}</p>
+    <div class="stat-card stat-card--accent-violet">
+        <h3>Operadores</h3>
+        <p class="stat-card__value">{{ total_operadores }}</p>
+        <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ operadores_activos }}</p>
     </div>
-
-    <div class="menu-card">
-        <h3>Total Atenciones</h3>
-        <p style="font-size: 28px; font-weight: bold;">{{ total_atenciones }}</p>
-        <p>Pendientes: {{ atenciones_pendientes }}</p>
-        <p>Finalizadas: {{ atenciones_finalizadas }}</p>
-        <p>Canceladas: {{ atenciones_canceladas }}</p>
+    <div class="stat-card stat-card--accent-emerald">
+        <h3>Atenciones</h3>
+        <p class="stat-card__value">{{ total_atenciones }}</p>
+        <p class="muted" style="font-size: 13px; margin-top: 8px;">Pend. {{ atenciones_pendientes }} · Fin. {{ atenciones_finalizadas }} · Canc. {{ atenciones_canceladas }}</p>
     </div>
-
-    <div class="menu-card">
-        <h3>Total Servicios</h3>
-        <p style="font-size: 28px; font-weight: bold;">{{ total_servicios }}</p>
+    <div class="stat-card stat-card--accent-amber">
+        <h3>Servicios</h3>
+        <p class="stat-card__value">{{ total_servicios }}</p>
     </div>
-
-    <div class="menu-card">
-        <h3>Total Préstamos</h3>
-        <p style="font-size: 28px; font-weight: bold;">{{ total_prestamos }}</p>
-        <p>Activos: {{ prestamos_activos }}</p>
+    <div class="stat-card stat-card--accent-rose">
+        <h3>Préstamos</h3>
+        <p class="stat-card__value">{{ total_prestamos }}</p>
+        <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ prestamos_activos }}</p>
     </div>
-
-    <div class="menu-card">
-        <h3>Satisfacción Promedio</h3>
-        <p style="font-size: 28px; font-weight: bold;">
-            {% if satisfaccion_promedio %}
-                {{ satisfaccion_promedio|floatformat:2 }}
-            {% else %}
-                0.00
-            {% endif %}
-        </p>
+    <div class="stat-card">
+        <h3>Satisfacción promedio</h3>
+        <p class="stat-card__value">{% if satisfaccion_promedio %}{{ satisfaccion_promedio|floatformat:2 }}{% else %}0.00{% endif %}</p>
     </div>
 </div>
 
@@ -68,7 +65,7 @@
             {% for item in ciudadanos_por_genero %}
                 <div class="menu-card">
                     <h3>{{ item.etiqueta }}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -82,11 +79,11 @@
     <div class="grid">
         <div class="menu-card">
             <h3>Con discapacidad declarada</h3>
-            <p style="font-size: 24px; font-weight: bold;">{{ ciudadanos_con_discapacidad }}</p>
+            <p class="tile-value">{{ ciudadanos_con_discapacidad }}</p>
         </div>
         <div class="menu-card">
             <h3>Sin discapacidad declarada</h3>
-            <p style="font-size: 24px; font-weight: bold;">{{ ciudadanos_sin_discapacidad }}</p>
+            <p class="tile-value">{{ ciudadanos_sin_discapacidad }}</p>
         </div>
     </div>
 </div>
@@ -98,7 +95,7 @@
             {% for item in ciudadanos_por_estrato %}
                 <div class="menu-card">
                     <h3>Estrato {{ item.ciu_estrato }}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -114,7 +111,7 @@
             {% for item in ciudadanos_por_etnia %}
                 <div class="menu-card">
                     <h3>{{ item.ciu_etnia }}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -130,7 +127,7 @@
             {% for item in ciudadanos_por_nvleduc %}
                 <div class="menu-card">
                     <h3>{{ item.ciu_nvleduc }}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -146,7 +143,7 @@
             {% for item in ciudadanos_por_ocupacion %}
                 <div class="menu-card">
                     <h3>{{ item.ciu_ocpcion }}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -162,7 +159,7 @@
             {% for item in atenciones_por_mes %}
                 <div class="menu-card">
                     <h3>{% if item.mes %}{{ item.mes|date:"Y-m" }}{% else %}Sin fecha{% endif %}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -178,7 +175,7 @@
             {% for item in servicios_por_tipo %}
                 <div class="menu-card">
                     <h3>{{ item.srv_tipo }}</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>
@@ -200,7 +197,7 @@
                             Sin operador asignado
                         {% endif %}
                     </h3>
-                    <p style="font-size: 24px; font-weight: bold;">{{ item.total }}</p>
+                    <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
         </div>

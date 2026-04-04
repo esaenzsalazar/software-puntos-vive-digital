@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card card--narrow">
-    <h2 class="page-title">Ingresar Nuevo Recurso</h2>
-    <p class="muted">Añade equipos tecnológicos y mobiliario al inventario del PVD.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Inventario</span>
+        <h2 class="page-title">Registrar recurso</h2>
+        <p class="muted">Equipos y elementos disponibles para préstamo.</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>

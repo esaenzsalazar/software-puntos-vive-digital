@@ -3,12 +3,17 @@
 {% block title %}Editar Ciudadano{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2 class="page-title">Editar Ciudadano</h2>
-    <p class="muted">Actualiza la información del ciudadano seleccionado.</p>
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Ciudadanos</span>
+        <h2 class="page-title">Editar ciudadano</h2>
+        <p class="muted">Actualiza la información registrada.</p>
+    </div>
 
-    <p><strong>Ciudadano:</strong> {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</p>
-    <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
+    <div class="callout">
+        <p style="margin: 0 0 6px 0;"><strong>Nombre:</strong> {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</p>
+        <p style="margin: 0;"><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">

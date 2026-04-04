@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="card card--narrow">
-    <h2 class="page-title">Asignar Servicio a la Atención</h2>
-    <p class="muted">Tipifica qué clase de asesoría o ayuda se le brindó al ciudadano.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Servicios</span>
+        <h2 class="page-title">Registrar servicio</h2>
+        <p class="muted">Vincula el tipo de servicio prestado a una atención.</p>
+    </div>
 
     {% if form.errors %}
         <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>

@@ -4,11 +4,14 @@
 
 {% block content %}
 <div class="card">
-    <h2 class="page-title">Historial del Ciudadano</h2>
-    <p class="muted">Consulta las atenciones, servicios, satisfacción y préstamos asociados al ciudadano.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Historial</span>
+        <h2 class="page-title">Historial del ciudadano</h2>
+        <p class="muted">Atenciones, servicios y satisfacción registrados.</p>
+    </div>
 
-    <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-        <h3 style="margin-top: 0; color: var(--primary-color);">{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</h3>
+    <div class="callout">
+        <h3>{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</h3>
         <div class="info-grid-2">
             <div>
                 <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
@@ -23,7 +26,7 @@
         </div>
     </div>
 
-    <p style="font-size: 18px;"><strong>Total de atenciones recibidas:</strong> <span style="color: var(--primary-color); font-weight: bold;">{{ total_atenciones }}</span></p>
+    <p class="muted" style="font-size: 16px;"><strong>Total de atenciones:</strong> <span class="text-accent">{{ total_atenciones }}</span></p>
 
     <div class="actions">
         <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Volver a consulta</a>
@@ -37,14 +40,14 @@
         <div class="grid">
             {% for atencion in atenciones %}
                 <div class="menu-card">
-                    <h3 style="color: var(--primary-color);">Atención #{{ atencion.atn_cdgo }}</h3>
+                    <h3 class="text-accent">Atención #{{ atencion.atn_cdgo }}</h3>
                     <p><strong>Fecha:</strong> {{ atencion.atn_fecha }}</p>
                     <p><strong>Hora inicio:</strong> {{ atencion.atn_hrini }}</p>
                     <p><strong>Hora fin:</strong> {{ atencion.atn_hrfin|default:"Sin registrar" }}</p>
                     <p><strong>Estado:</strong> {{ atencion.get_atn_estdo_display }}</p>
                     <p><strong>Observaciones:</strong> {{ atencion.atn_obs|default:"Sin observaciones" }}</p>
 
-                    <hr style="margin: 12px 0; border-color: #e2e8f0;">
+                    <hr class="divider">
 
                     <p><strong>Operador a cargo:</strong>
                         {% if atencion.opr_cdgo %}

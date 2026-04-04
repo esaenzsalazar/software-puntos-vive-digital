@@ -1,67 +1,32 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PVD Bugalagrande - Inicio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .card-link { transition: transform 0.2s; text-decoration: none; color: inherit; }
-        .card-link:hover { transform: scale(1.02); }
-    </style>
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand mb-0 h1">Sistema PVD - Bugalagrande</span>
-            <div class="d-flex align-items-center">
-                <span class="text-light me-3">Sesión: <strong>{{ user.username }}</strong></span>
-                <form action="{% url 'logout' %}" method="post" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar Sesión</button>
-                </form>
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}PVD Bugalagrande - Inicio{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="page-title">Panel de inicio</h2>
+    <p class="muted">Gestión de apoyo a la gestión — Contrato No. 224-2026</p>
+    <p class="muted" style="margin-top: -4px;">Sesión: <strong>{{ user.username }}</strong></p>
+
+    <div class="grid" style="margin-top: 24px;">
+        <div class="menu-card">
+            <h3>Administrar datos</h3>
+            <p>Panel de control: ciudadanos, operadores, atenciones y satisfacción.</p>
+            <div style="margin-top: auto;">
+                <a class="btn" href="{% url 'modulo_puntos:panel_control' %}">Abrir panel de control</a>
             </div>
         </div>
-    </nav>
-
-    <div class="container">
-        <div class="card shadow-sm p-4 mb-4 bg-white border-0">
-            {% block content %}
-            <h2>Panel de Inicio</h2>
-            <p class="text-muted">Gestión de apoyo a la gestión - Contrato No. 224-2026</p>
-            <hr>
-            
-            <div class="row g-4 mt-2">
-                <div class="col-md-6">
-                    <a href="{% url 'panel_control' %}" class="card-link">
-                        <div class="card h-100 border-0 shadow-sm bg-dark text-white p-4">
-                            <div class="card-body text-center">
-                                <h4 class="card-title">Administrar Datos</h4>
-                                <p class="card-text opacity-75">Ir al Panel de Control para gestionar Ciudadanos, Operadores, Atenciones y Satisfacción.</p>
-                                <span class="btn btn-primary">Abrir Panel de Control</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-md-6">
-                    <a href="{% url 'registrar_ciudadano' %}" class="card-link">
-                        <div class="card h-100 border-0 shadow-sm border-start border-success border-4 p-4">
-                            <div class="card-body text-center">
-                                <h4 class="card-title text-success">Registro Rápido</h4>
-                                <p class="card-text text-muted">Ingresar un nuevo ciudadano directamente a la base de datos.</p>
-                                <span class="btn btn-success">Nueva Caracterización</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
+        <div class="menu-card" style="border-top-color: #16a34a;">
+            <h3>Registro rápido</h3>
+            <p>Ingresar un nuevo ciudadano a la base de datos.</p>
+            <div style="margin-top: auto;">
+                <a class="btn btn-success" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Nueva caracterización</a>
             </div>
-            {% endblock %}
         </div>
     </div>
+</div>
 
-    <footer class="text-center mt-5 text-muted pb-4">
-        <small>Puntos Vive Digital Bugalagrande &copy; 2026</small>
-    </footer>
-</body>
-</html>
+<footer class="muted" style="text-align: center; padding-bottom: 24px; font-size: 13px;">
+    Puntos Vive Digital Bugalagrande &copy; 2026
+</footer>
+{% endblock %}

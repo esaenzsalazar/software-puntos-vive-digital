@@ -3,7 +3,7 @@
 {% block title %}Registrar Ciudadano{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 900px; margin: 0 auto;">
+<div class="card card--narrow">
     <h2 class="page-title">Registrar Ciudadano</h2>
     <p class="muted">Ingresa los datos del ciudadano atendido. Selecciona las opciones de las listas desplegables.</p>
 
@@ -16,7 +16,7 @@
     <form method="POST">
         {% csrf_token %}
         
-        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="grid form-grid-2">
             {% for field in form %}
                 
                 {% if field.name == 'ciu_fchancm' %}
@@ -28,7 +28,7 @@
                     </div>
 
                 {% elif field.name == 'ciu_dircion' %}
-                    <div style="grid-column: 1 / -1; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+                    <div class="span-full" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
                         <label style="font-size: 16px; color: var(--primary-color); display: block; margin-bottom: 10px;">Ubicación de Residencia</label>
                         
                         <div style="margin-bottom: 15px;">
@@ -106,19 +106,19 @@
                     </div>
 
                 {% elif field.name == 'ciu_discapacidad' %}
-                    <div style="grid-column: 1 / -1; display: flex; align-items: center; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
+                    <div class="span-full" style="display: flex; align-items: center; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
                         {{ field }}
                         <label for="{{ field.id_for_label }}" style="margin-bottom: 0; margin-left: 10px; cursor: pointer; font-size: 16px;">{{ field.label }}</label>
                     </div>
 
                 {% elif field.name == 'ciu_desc_discapacidad' %}
-                    <div id="div_desc_discapacidad" style="grid-column: 1 / -1; display: none;">
+                    <div id="div_desc_discapacidad" class="span-full" style="display: none;">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                     </div>
 
                 {% elif field.name == 'ciu_email' or field.name == 'ciu_estdo' %}
-                    <div style="grid-column: 1 / -1;">
+                    <div class="span-full">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}

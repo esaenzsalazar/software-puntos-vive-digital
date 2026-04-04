@@ -3,7 +3,7 @@
 {% block title %}Registrar Atención{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 900px; margin: 0 auto;">
+<div class="card card--narrow">
     <h2 class="page-title">Registrar Atención</h2>
     <p class="muted">Configura los detalles de ingreso y salida del ciudadano en el Punto Vive Digital.</p>
 
@@ -13,9 +13,9 @@
 
     <form method="POST">
         {% csrf_token %}
-        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="grid form-grid-2">
             {% for field in form %}
-                <div {% if field.name == 'atn_obs' %}style="grid-column: 1 / -1;"{% endif %}>
+                <div {% if field.name == 'atn_obs' %}class="span-full"{% endif %}>
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
                     {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}

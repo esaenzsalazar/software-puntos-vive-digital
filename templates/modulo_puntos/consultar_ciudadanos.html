@@ -7,20 +7,22 @@
     <h2 class="page-title">Consultar Ciudadanos</h2>
     <p class="muted">Busca ciudadanos por nombre, apellido o número de documento.</p>
 
-    <form method="GET" style="max-width: 600px;">
+    <form method="GET">
         <label for="q">Término de búsqueda</label>
-        <div style="display: flex; gap: 10px; align-items: flex-start;">
-            <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. 123456, Juan, Pérez" style="margin-bottom: 0;">
-            <button type="submit" class="btn">Buscar</button>
-            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Limpiar</a>
+        <div class="search-row">
+            <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. 123456, Juan, Pérez" aria-label="Término de búsqueda">
+            <div class="search-row__actions">
+                <button type="submit" class="btn">Buscar</button>
+                <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Limpiar</a>
+            </div>
         </div>
     </form>
 </div>
 
 <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
-        <h3 style="margin: 0;">Resultados encontrados: <span style="color: var(--primary-color);">{{ total_resultados }}</span></h3>
-        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary" style="padding: 6px 15px; font-size: 14px;">Volver al panel</a>
+    <div class="toolbar">
+        <h3>Resultados: <span style="color: var(--primary-color);">{{ total_resultados }}</span></h3>
+        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary btn--sm">Volver al panel</a>
     </div>
 
     {% if ciudadanos %}
@@ -61,10 +63,10 @@
                                     <span class="badge badge-danger">Inactivo</span>
                                 {% endif %}
                             </td>
-                            <td style="text-align: right; min-width: 170px;">
-                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                    <a class="btn" style="padding: 6px 12px; font-size: 12px;" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.ciu_cdgo %}">Editar</a>
-                                    <a class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.ciu_cdgo %}">Historial</a>
+                            <td style="text-align: right;">
+                                <div class="cell-actions">
+                                    <a class="btn btn--sm" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.ciu_cdgo %}">Editar</a>
+                                    <a class="btn btn-secondary btn--sm" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.ciu_cdgo %}">Historial</a>
                                 </div>
                             </td>
                         </tr>
@@ -73,8 +75,8 @@
             </table>
         </div>
     {% else %}
-        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 8px; margin-top: 20px;">
-            <p class="muted" style="font-size: 16px;">No se encontraron ciudadanos con esa búsqueda.</p>
+        <div class="empty-state">
+            <p class="muted" style="font-size: 16px; margin: 0;">No se encontraron ciudadanos con esa búsqueda.</p>
         </div>
     {% endif %}
 </div>

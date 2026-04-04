@@ -7,6 +7,7 @@ from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.db.models import Q, Count, Avg
+from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
@@ -254,6 +255,47 @@ def reportes(request):
         'opr_cdgo'
     ).order_by('-atn_fecha', '-atn_hrini')[:10]
 
+    gen_map = dict(Ciudadano.GENERO_CHOICES)
+    ciudadanos_por_genero = []
+    for row in Ciudadano.objects.values('ciu_genro').annotate(total=Count('ciu_cdgo')).order_by('-total'):
+        clave = row['ciu_genro'] or ''
+        ciudadanos_por_genero.append({
+            'etiqueta': gen_map.get(clave, clave or 'Sin dato'),
+            'total': row['total'],
+        })
+
+    ciudadanos_por_etnia = list(
+        Ciudadano.objects.exclude(ciu_etnia__isnull=True).exclude(ciu_etnia='').values('ciu_etnia').annotate(
+            total=Count('ciu_cdgo')
+        ).order_by('-total')[:20]
+    )
+
+    ciudadanos_por_nvleduc = list(
+        Ciudadano.objects.exclude(ciu_nvleduc__isnull=True).exclude(ciu_nvleduc='').values('ciu_nvleduc').annotate(
+            total=Count('ciu_cdgo')
+        ).order_by('-total')[:20]
+    )
+
+    ciudadanos_por_estrato = list(
+        Ciudadano.objects.values('ciu_estrato').annotate(total=Count('ciu_cdgo')).order_by('ciu_estrato')
+    )
+
+    ciudadanos_por_ocupacion = list(
+        Ciudadano.objects.exclude(ciu_ocpcion__isnull=True).exclude(ciu_ocpcion='').values('ciu_ocpcion').annotate(
+            total=Count('ciu_cdgo')
+        ).order_by('-total')[:15]
+    )
+
+    ciudadanos_con_discapacidad = Ciudadano.objects.filter(ciu_discapacidad=True).count()
+    ciudadanos_sin_discapacidad = Ciudadano.objects.filter(ciu_discapacidad=False).count()
+
+    atenciones_por_mes = list(
+        Atencion.objects.annotate(mes=TruncMonth('atn_fecha'))
+        .values('mes')
+        .annotate(total=Count('atn_cdgo'))
+        .order_by('-mes')[:12]
+    )
+
     return render(request, 'modulo_puntos/reportes.html', {
         'total_ciudadanos': total_ciudadanos,
         'ciudadanos_activos': ciudadanos_activos,
@@ -270,6 +312,14 @@ def reportes(request):
         'servicios_por_tipo': servicios_por_tipo,
         'atenciones_por_operador': atenciones_por_operador,
         'atenciones_recientes': atenciones_recientes,
+        'ciudadanos_por_genero': ciudadanos_por_genero,
+        'ciudadanos_por_etnia': ciudadanos_por_etnia,
+        'ciudadanos_por_nvleduc': ciudadanos_por_nvleduc,
+        'ciudadanos_por_estrato': ciudadanos_por_estrato,
+        'ciudadanos_por_ocupacion': ciudadanos_por_ocupacion,
+        'ciudadanos_con_discapacidad': ciudadanos_con_discapacidad,
+        'ciudadanos_sin_discapacidad': ciudadanos_sin_discapacidad,
+        'atenciones_por_mes': atenciones_por_mes,
     })
 
 @login_required(login_url='/login/')
@@ -431,6 +481,123 @@ def exportar_atenciones_csv(request):
         ])
 
     return response
+
+
+def _csv_response(filename_base):
+    response = HttpResponse(content_type='text/csv')
+    fecha_actual = datetime.now().strftime("%Y-%m-%d")
+    response['Content-Disposition'] = f'attachment; filename="{filename_base}_{fecha_actual}.csv"'
+    response.write('\ufeff'.encode('utf8'))
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_ciudadanos_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    response = _csv_response('Reporte_Ciudadanos_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Tipo doc.', 'Número doc.', 'Nombres', 'Apellidos', 'Fecha nacimiento', 'Género', 'Etnia',
+        'Nivel educativo', 'Ocupación', 'Discapacidad', 'Descripción discapacidad', 'Dirección', 'Barrio',
+        'Zona rural', 'Estrato', 'Estado', 'Email', 'Teléfono'
+    ])
+    for c in Ciudadano.objects.all().order_by('-ciu_cdgo'):
+        writer.writerow([
+            c.ciu_cdgo, c.ciu_tpodoc, c.ciu_numdoc, c.ciu_nmbres, c.ciu_aplldos, c.ciu_fchancm,
+            c.get_ciu_genro_display(), c.ciu_etnia, c.ciu_nvleduc, c.ciu_ocpcion,
+            'Sí' if c.ciu_discapacidad else 'No',
+            c.ciu_desc_discapacidad or '',
+            c.ciu_dircion or '', c.ciu_barrio or '', c.ciu_zrural or '',
+            c.ciu_estrato, c.get_ciu_estdo_display(), c.ciu_email, c.ciu_tlfno
+        ])
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_servicios_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    response = _csv_response('Reporte_Servicios_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID servicio', 'ID atención', 'Fecha atención', 'Documento ciudadano', 'Nombre ciudadano',
+        'Nombre servicio', 'Descripción', 'Tipo servicio', 'Requiere equipo', 'Estado servicio'
+    ])
+    qs = Servicio.objects.select_related('atn_cdgo', 'atn_cdgo__ciu_cdgo').order_by('-srv_cdgo')
+    for s in qs:
+        atn = s.atn_cdgo
+        fecha_atn = atn.atn_fecha if atn else ''
+        doc = nom = ''
+        if atn and atn.ciu_cdgo:
+            doc = atn.ciu_cdgo.ciu_numdoc
+            nom = f"{atn.ciu_cdgo.ciu_nmbres} {atn.ciu_cdgo.ciu_aplldos}"
+        writer.writerow([
+            s.srv_cdgo, atn.atn_cdgo if atn else '', fecha_atn, doc, nom,
+            s.srv_nombre, s.srv_descr or '', s.srv_tipo, s.get_srv_reqeqp_display(),
+            s.get_srv_estdo_display()
+        ])
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_satisfaccion_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    response = _csv_response('Reporte_Satisfaccion_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID satisfacción', 'ID atención', 'Fecha atención', 'Estado atención', 'Documento ciudadano',
+        'Nombre ciudadano', 'Calificación', 'Comentario', 'Fecha registro satisfacción'
+    ])
+    qs = Satisfaccion.objects.select_related('atn_cdgo', 'atn_cdgo__ciu_cdgo').order_by('-sat_cdgo')
+    estado_atn = dict(Atencion.ESTADO_CHOICES)
+    for sat in qs:
+        atn = sat.atn_cdgo
+        doc = nom = fecha_atn = est_atn = ''
+        if atn:
+            fecha_atn = str(atn.atn_fecha)
+            est_atn = estado_atn.get(atn.atn_estdo, atn.atn_estdo)
+            if atn.ciu_cdgo:
+                doc = atn.ciu_cdgo.ciu_numdoc
+                nom = f"{atn.ciu_cdgo.ciu_nmbres} {atn.ciu_cdgo.ciu_aplldos}"
+        writer.writerow([
+            sat.sat_cdgo, atn.atn_cdgo if atn else '', fecha_atn, est_atn, doc, nom,
+            sat.sat_calif, sat.sat_cmntrio or '', sat.sat_fecha
+        ])
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_prestamos_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    response = _csv_response('Reporte_Prestamos_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID préstamo', 'Tipo recurso', 'Fecha entrega', 'Fecha devolución', 'Observaciones', 'Estado'
+    ])
+    for p in PrestamoRecurso.objects.select_related('rec_cdgo').order_by('-prs_cdgo'):
+        tipo = p.rec_cdgo.rec_tipo if p.rec_cdgo else ''
+        dev = p.prs_fchdev if p.prs_fchdev else ''
+        estado = 'Activo (sin devolución)' if not p.prs_fchdev else 'Devuelto'
+        writer.writerow([p.prs_cdgo, tipo, p.prs_fchent, dev, p.prs_obs or '', estado])
+    return response
+
+
+@login_required(login_url='/login/')
+def ayuda_sistema(request):
+    return render(request, 'modulo_puntos/ayuda.html', {
+        'rol_usuario': obtener_rol_usuario(request.user),
+    })
 
 @login_required(login_url='/login/')
 def crear_admin_tic(request):

@@ -64,6 +64,17 @@
                     {% else %}
                         <p class="muted" style="margin-top: 5px;">No tiene servicios asociados.</p>
                     {% endif %}
+
+                    <p><strong>Satisfacción:</strong></p>
+                    {% if atencion.satisfacciones_rel %}
+                        <ul style="margin-top: 5px; color: var(--text-muted);">
+                            {% for sat in atencion.satisfacciones_rel %}
+                                <li>Calificación {{ sat.sat_calif }}/5 — {{ sat.sat_cmntrio|default:"Sin comentario" }} ({{ sat.sat_fecha|date:"d/m/Y H:i" }})</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="muted" style="margin-top: 5px;">Sin registro de satisfacción para esta atención.</p>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>

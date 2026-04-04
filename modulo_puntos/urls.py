@@ -20,6 +20,11 @@ urlpatterns = [
     path('editar-ciudadano/<int:ciu_cdgo>/', views.editar_ciudadano, name='editar_ciudadano'),
     path('reportes/', views.reportes, name='reportes'),
     path('exportar-atenciones/', views.exportar_atenciones_csv, name='exportar_atenciones_csv'),
+    path('exportar-ciudadanos/', views.exportar_ciudadanos_csv, name='exportar_ciudadanos_csv'),
+    path('exportar-servicios/', views.exportar_servicios_csv, name='exportar_servicios_csv'),
+    path('exportar-satisfaccion/', views.exportar_satisfaccion_csv, name='exportar_satisfaccion_csv'),
+    path('exportar-prestamos/', views.exportar_prestamos_csv, name='exportar_prestamos_csv'),
+    path('ayuda/', views.ayuda_sistema, name='ayuda'),
     path('crear-admin-tic/', views.crear_admin_tic, name='crear_admin_tic'),
     path('crear-admin-pvd/', views.crear_admin_pvd, name='crear_admin_pvd'),
 ]

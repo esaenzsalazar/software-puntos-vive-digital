@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Puntos Vive Digital{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* Variables de color para mantener consistencia profesional */
         :root {
-            --primary-color: #0f4a9b; /* Azul institucional */
+            --primary-color: #0f4a9b;
             --primary-hover: #0a336e;
-            --bg-body: #f4f7f9; /* Gris muy claro para no cansar la vista */
+            --bg-body: #f4f7f9;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --card-bg: #ffffff;
@@ -20,332 +20,54 @@
             --transition: all 0.3s ease;
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: 'Inter', Arial, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            line-height: 1.6;
-        }
-
-        /* NAVBAR: Elegante, oscura y fija */
-        .navbar {
-            background: linear-gradient(90deg, #0f172a, #1e3a8a);
-            color: white;
-            padding: 16px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .navbar h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .navbar .menu {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            flex-wrap: wrap;
-        }
-
-        .navbar a {
-            color: #e2e8f0;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: var(--transition);
-            padding: 8px 12px;
-            border-radius: 6px;
-        }
-
-        .navbar a:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px 40px 20px;
-        }
-
-        /* TARJETAS: Blancas, limpias y con sombra suave */
-        .card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md);
-            padding: 30px;
-            margin-bottom: 30px;
-            width: 100%;
-            border: 1px solid rgba(0,0,0,0.03);
-        }
-
-        /* GRID Y TARJETAS DE MENU (Métricas) */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            width: 100%;
-        }
-
-        .menu-card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 24px;
-            box-shadow: var(--shadow-sm);
-            border-top: 4px solid var(--primary-color);
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            transition: var(--transition);
-        }
-
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .menu-card h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            color: var(--text-main);
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .menu-card p {
-            color: var(--text-muted);
-            font-size: 15px;
-            margin-bottom: 8px;
-            margin-top: 0;
-        }
-
-        /* BOTONES: Modernos y con efectos */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-color);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 15px;
-            text-align: center;
-            width: fit-content;
-            max-width: 100%;
-            transition: var(--transition);
-            box-shadow: 0 2px 4px rgba(15, 74, 155, 0.2);
-        }
-
-        .btn:hover {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(15, 74, 155, 0.3);
-        }
-
-        .btn-secondary {
-            background: #cbd5e1;
-            color: #334155;
-            box-shadow: none;
-        }
-
-        .btn-secondary:hover {
-            background: #94a3b8;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        /* FORMULARIOS */
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: var(--text-main);
-        }
-
-        .form-control,
-        input[type="text"],
-        input[type="email"],
-        input[type="password"],
-        input[type="date"],
-        input[type="time"],
-        input[type="datetime-local"],
-        input[type="number"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 15px;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 20px;
-            transition: var(--transition);
-            background-color: #f8fafc;
-            color: var(--text-main);
-        }
-
-        .form-control:focus,
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(15, 74, 155, 0.15);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        .form-check-input {
-            transform: scale(1.2);
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        /* TEXTOS DE APOYO Y ALERTAS */
-        .page-title {
-            margin-top: 0;
-            color: var(--text-main);
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-
-        .muted {
-            color: var(--text-muted);
-            font-size: 16px;
-            margin-top: 0;
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 24px;
-        }
-
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-        }
-
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', Arial, sans-serif; background-color: var(--bg-body); color: var(--text-main); line-height: 1.6; }
+        
+        .navbar { background: linear-gradient(90deg, #0f172a, #1e3a8a); color: white; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .navbar h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+        .navbar .menu { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+        .navbar a { color: #e2e8f0; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); padding: 8px 12px; border-radius: 6px; }
+        .navbar a:hover { color: white; background-color: rgba(255, 255, 255, 0.1); }
+        
+        .container { width: 100%; max-width: 1200px; margin: 40px auto; padding: 0 20px 40px 20px; }
+        .card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 30px; margin-bottom: 30px; width: 100%; border: 1px solid rgba(0,0,0,0.03); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; width: 100%; }
+        .menu-card { background: var(--card-bg); border-radius: var(--border-radius); padding: 24px; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary-color); min-height: 200px; display: flex; flex-direction: column; justify-content: flex-start; transition: var(--transition); }
+        .menu-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .menu-card h3 { margin-top: 0; margin-bottom: 12px; color: var(--text-main); font-size: 18px; font-weight: 700; }
+        .menu-card p { color: var(--text-muted); font-size: 15px; margin-bottom: 8px; margin-top: 0; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; background: var(--primary-color); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; font-weight: 600; font-size: 15px; text-align: center; width: fit-content; max-width: 100%; transition: var(--transition); box-shadow: 0 2px 4px rgba(15, 74, 155, 0.2); }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 8px rgba(15, 74, 155, 0.3); }
+        .btn-secondary { background: #cbd5e1; color: #334155; box-shadow: none; }
+        .btn-secondary:hover { background: #94a3b8; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: var(--text-main); }
+        .form-control, input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], select, textarea { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-family: 'Inter', sans-serif; margin-bottom: 20px; transition: var(--transition); background-color: #f8fafc; color: var(--text-main); }
+        .form-control:focus, input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); background-color: #ffffff; box-shadow: 0 0 0 3px rgba(15, 74, 155, 0.15); }
+        textarea { resize: vertical; min-height: 120px; }
+        .form-check-input { transform: scale(1.2); margin-right: 10px; cursor: pointer; }
+        
+        .page-title { margin-top: 0; color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .muted { color: var(--text-muted); font-size: 16px; margin-top: 0; }
+        .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+        
+        .alert { padding: 16px; border-radius: 8px; margin-bottom: 24px; font-size: 15px; font-weight: 600; display: flex; align-items: center; }
         .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
         .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
-        /* ========================================= */
-        /* NUEVOS ESTILOS PARA TABLAS PROFESIONALES  */
-        /* ========================================= */
-        .table-responsive {
-            overflow-x: auto;
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            min-width: 800px;
-        }
-
-        .table th, .table td {
-            padding: 16px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: middle;
-        }
-
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 700;
-            color: #475569;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #cbd5e1;
-        }
-
-        .table tbody tr {
-            transition: background-color 0.2s;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f1f5f9;
-        }
-
-        .table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* ETIQUETAS (BADGES) PARA ESTADOS */
-        .badge {
-            padding: 6px 12px;
-            border-radius: 9999px;
-            font-size: 12px;
-            font-weight: 700;
-            display: inline-block;
-            text-align: center;
-        }
-        .badge-success { background-color: #dcfce7; color: #166534; }
-        .badge-warning { background-color: #fef9c3; color: #854d0e; }
-        .badge-danger { background-color: #fee2e2; color: #991b1b; }
-        .badge-info { background-color: #e0f2fe; color: #075985; }
-
-        /* RESPONSIVE DESIGN */
-        @media (max-width: 992px) {
-            .navbar { padding: 14px 20px; }
-            .container { margin: 24px auto; }
-            .grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-        }
+        /* Estilos para que Select2 cuadre con tu formulario original */
+        .select2-container .select2-selection--single { height: 45px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc; display: flex; align-items: center; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 43px; right: 10px; }
 
         @media (max-width: 768px) {
             .navbar { flex-direction: column; align-items: center; padding: 16px; }
             .navbar .menu { width: 100%; justify-content: center; margin-top: 12px; gap: 10px; }
-            .navbar a { font-size: 14px; padding: 6px 10px; }
             .container { margin: 16px auto; padding: 0 16px 24px 16px; }
-            .card { padding: 20px; border-radius: 12px; }
-            .page-title { font-size: 24px; }
             .grid { grid-template-columns: 1fr; gap: 16px; }
-            .menu-card { min-height: auto; padding: 20px; }
             .actions { flex-direction: column; width: 100%; }
             .btn { width: 100%; text-align: center; }
-        }
-
-        @media (max-width: 480px) {
-            .navbar h1 { font-size: 20px; }
-            .navbar .menu { flex-direction: column; width: 100%; gap: 6px; }
-            .navbar a { width: 100%; text-align: center; background: rgba(255,255,255,0.05); }
-            .form-control, input, select, textarea { font-size: 16px; padding: 10px; }
         }
     </style>
 </head>
@@ -372,5 +94,19 @@
 
         {% block content %}{% endblock %}
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Aplica el buscador inteligente a todos los campos 'select' excepto al de operador bloqueado
+            $('select:not([readonly])').select2({
+                width: '100%',
+                language: {
+                    noResults: function() { return "No se encontraron resultados"; }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

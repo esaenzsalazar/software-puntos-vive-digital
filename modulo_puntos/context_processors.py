@@ -1,21 +1,38 @@
-"""Contexto global para navegación según permisos (contrato PVD / roles)."""
+"""
+Contexto global para navegación según permisos (contrato PVD / roles).
+Proporciona variables de contexto disponibles en todos los templates.
+"""
 from .models import PuntoViveDigital
 
 
 def pvd_navigation(request):
+    """
+    Context processor para proporcionar variables de navegación según el rol del usuario.
+    
+    Este processor agrega variables que determinan qué menú mostrar a cada usuario
+    según sus permisos (Superuser, Admin TIC, Admin PVD).
+    
+    Args:
+        request: HttpRequest object
+        
+    Returns:
+        dict: Variables de contexto para los templates
+    """
     rm = getattr(request, 'resolver_match', None)
     ctx = {
-        'nav_pvd': False,
-        'nav_tic': False,
-        'nav_super': False,
+        'nav_pvd': False,  # Puede usar módulos del PVD
+        'nav_tic': False,  # Es Admin TIC o Superuser
+        'nav_super': False,  # Es Superuser
         'current_url_name': getattr(rm, 'url_name', '') or '',
         'pvd_activo': None,
         'pvds_disponibles': [],
     }
+    
     u = request.user
     if not u.is_authenticated:
         return ctx
 
+    # Determinar permisos de navegación
     ctx['nav_super'] = u.is_superuser
     ctx['nav_tic'] = u.is_superuser or u.groups.filter(name='Administrador TIC').exists()
     ctx['nav_pvd'] = (

@@ -99,6 +99,13 @@
                             <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y Exportación</a>
                         </li>
                     </ul>
+
+                    <p class="side-nav__heading">🏛️ Infraestructura</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">Salas</a>
+                        </li>
+                    </ul>
                     {% endif %}
 
                     {% if nav_tic %}
@@ -106,6 +113,9 @@
                     <ul class="side-nav__list">
                         <li>
                             <a href="{% url 'modulo_puntos:lista_pvd' %}" class="side-nav__link {% if 'pvd' in current_url_name %}is-active{% endif %}">Gestionar PVDs</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">🏛️ Salas</a>
                         </li>
                         <li>
                             <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear Usuario PVD</a>

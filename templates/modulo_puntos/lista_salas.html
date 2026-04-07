@@ -1,0 +1,109 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Gestión de Salas{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Administración</span>
+        <h1 class="page-title">Gestión de Salas</h1>
+        <p class="muted">Administra las salas de cada Punto Vive Digital</p>
+        <div class="page-hero__actions" style="margin-top: 16px;">
+            <a href="{% url 'modulo_puntos:crear_sala' %}" class="btn btn-primary">
+                <span style="margin-right: 6px;">➕</span> Nueva Sala
+            </a>
+        </div>
+    </div>
+
+    {% if es_admin_tic and pvds %}
+    <div class="card" style="margin-bottom: 24px; padding: 16px; background: var(--bg-alt);">
+        <label style="font-weight: 600; margin-bottom: 8px; display: block;">Filtrar por PVD:</label>
+        <select id="pvd-filter" class="form-control" style="max-width: 400px;">
+            <option value="">-- Todos los PVDs --</option>
+            {% for pvd in pvds %}
+                <option value="{{ pvd.pvd_cdgo }}" {% if pvd_seleccionado and pvd.pvd_cdgo == pvd_seleccionado.pvd_cdgo %}selected{% endif %}>
+                    {{ pvd.pvd_nombre }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <script>
+        document.getElementById('pvd-filter').addEventListener('change', function() {
+            const pvdId = this.value;
+            const url = new URL(window.location.href);
+            if (pvdId) {
+                url.searchParams.set('pvd_id', pvdId);
+            } else {
+                url.searchParams.delete('pvd_id');
+            }
+            window.location.href = url.toString();
+        });
+    </script>
+    {% endif %}
+
+    {% if salas %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Nombre de la Sala</th>
+                    {% if es_admin_tic %}
+                    <th>Punto Vive Digital</th>
+                    {% endif %}
+                    <th>Descripción</th>
+                    <th class="text-center">Capacidad</th>
+                    <th>Estado</th>
+                    <th>Fecha de Creación</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sala in salas %}
+                <tr>
+                    <td><strong>{{ sala.sala_nombre }}</strong></td>
+                    {% if es_admin_tic %}
+                    <td>{{ sala.pvd_cdgo.pvd_nombre }}</td>
+                    {% endif %}
+                    <td>{{ sala.sala_descr|truncatechars:50|default:"—" }}</td>
+                    <td class="text-center">{{ sala.sala_capacidad|default:"—" }}</td>
+                    <td>
+                        {% if sala.sala_estdo == 'A' %}
+                            <span class="badge badge--success">Activo</span>
+                        {% elif sala.sala_estdo == 'M' %}
+                            <span class="badge badge--warning">Mantenimiento</span>
+                        {% else %}
+                            <span class="badge badge--danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ sala.sala_fch_crea|date:"d/m/Y" }}</td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'modulo_puntos:editar_sala' sala.sala_cdgo %}" class="btn btn--sm" title="Editar">✏️</a>
+                            <a href="{% url 'modulo_puntos:activar_sala' sala.sala_cdgo %}" class="btn btn--sm"
+                               title="{% if sala.sala_estdo == 'A' %}Desactivar{% else %}Activar{% endif %}">
+                                {% if sala.sala_estdo == 'A' %}⏸️{% else %}▶️{% endif %}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card card--hint" style="text-align: center; padding: 40px;">
+        <p style="font-size: 48px; margin: 0 0 16px 0;">🏛️</p>
+        <h3 style="margin: 0 0 8px 0;">No hay salas registradas</h3>
+        <p class="muted">
+            {% if pvd_seleccionado %}
+                Comienza creando una sala para {{ pvd_seleccionado.pvd_nombre }}.
+            {% else %}
+                Comienza creando tu primera sala para un Punto Vive Digital.
+            {% endif %}
+        </p>
+        <a href="{% url 'modulo_puntos:crear_sala' %}" class="btn" style="margin-top: 16px;">Crear primera sala</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

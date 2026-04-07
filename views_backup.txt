@@ -1,0 +1,928 @@
+﻿import csv
+import random
+from datetime import datetime
+from django.http import HttpResponse
+from django.contrib import messages
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
+from django.db.models import Q, Count, Avg
+from django.db.models.functions import TruncMonth
+from django.shortcuts import render, redirect
+from django.urls import reverse
+
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital, UserProfile
+from .forms import (
+    CiudadanoForm,
+    AtencionForm,
+    SatisfaccionForm,
+    ServicioForm,
+    PrestamoRecursoForm,
+    RecursoForm,
+    LoginForm,
+    PerfilUsuarioForm,
+    CrearUsuarioForm,
+    PuntoViveDigitalForm
+)
+from .utils import registrar_auditoria, mensaje_exito, mensaje_error, mensaje_advertencia, mensaje_info
+
+def usuario_es_superusuario(user):
+    return user.is_authenticated and user.is_superuser
+
+def usuario_es_admin_tic(user):
+    if not user.is_authenticated:
+        return False
+    return user.is_superuser or user.groups.filter(name='Administrador TIC').exists()
+
+def usuario_puede_usar_modulos_pvd(user):
+    if not user.is_authenticated:
+        return False
+    return (
+        user.is_superuser
+        or usuario_es_admin_tic(user)
+        or user.groups.filter(name='Administrador PVD').exists()
+    )
+
+def obtener_rol_usuario(user):
+    if not user.is_authenticated:
+        return 'Sin sesiÃ³n'
+    if user.is_superuser:
+        return 'Superusuario'
+    grupos = list(user.groups.values_list('name', flat=True))
+    return ', '.join(grupos) if grupos else 'Sin rol asignado'
+
+
+
+def logout_usuario(request):
+    usuario = request.user.username if request.user.is_authenticated else 'AnÃ³nimo'
+    try:
+        registrar_auditoria(request, 'LOGOUT', descripcion=f'Cierre de sesiÃ³n: {usuario}')
+    except:
+        pass
+    logout(request)
+    return redirect('/login/')
+
+
+def login_usuario(request):
+    """Vista de login con selecciÃ³n de rol."""
+    if request.user.is_authenticated:
+        return redirect('/panel/')
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
+        selected_role = request.POST.get('role', '')
+        from django.contrib.auth import authenticate
+        
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            # Validate that the user's actual role matches the selected role
+            role_valid = False
+            
+            if selected_role == 'superuser' and user.is_superuser:
+                role_valid = True
+            elif selected_role == 'admin_tic' and (user.is_superuser or user.groups.filter(name='Administrador TIC').exists()):
+                role_valid = True
+            elif selected_role == 'admin_pvd' and user.groups.filter(name='Administrador PVD').exists():
+                role_valid = True
+            
+            if not role_valid:
+                messages.error(request, 'El rol seleccionado no corresponde a tu tipo de usuario.')
+                return render(request, 'registration/login.html', {'rol': ''})
+            
+            login(request, user)
+            messages.success(request, 'Inicio de sesiÃ³n correcto.')
+            
+            # Redirect based on role
+            if selected_role in ['superuser', 'admin_tic']:
+                return redirect('/panel/')
+            else:  # admin_pvd
+                return redirect('/seleccionar-pvd/')
+        else:
+            messages.error(request, 'Usuario o contraseÃ±a incorrectos.')
+
+    return render(request, 'registration/login.html', {'rol': ''})
+
+@login_required(login_url='/login/')
+def perfil_usuario(request):
+    if request.method == 'POST':
+        # Verificar si es cambio de contraseÃ±a
+        if request.POST.get('cambiar_password'):
+            from django.contrib.auth.forms import PasswordChangeForm
+            from django.contrib.auth import update_session_auth_hash
+            
+            password_form = PasswordChangeForm(request.user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Tu contraseÃ±a fue actualizada correctamente.')
+                registrar_auditoria(request, 'UPDATE', 'Usuario', request.user.pk, 'Cambio de contraseÃ±a')
+            else:
+                messages.error(request, 'Error al cambiar la contraseÃ±a. Verifica los datos.')
+        else:
+            form = PerfilUsuarioForm(request.POST, instance=request.user)
+            if form.is_valid():
+                usuario = form.save(commit=False)
+                nueva_password = form.cleaned_data.get('password1')
+                if nueva_password:
+                    usuario.set_password(nueva_password)
+                usuario.save()
+                if nueva_password:
+                    update_session_auth_hash(request, usuario)
+                messages.success(request, 'Tu perfil fue actualizado correctamente.')
+                registrar_auditoria(request, 'UPDATE', 'Usuario', request.user.pk, 'ActualizaciÃ³n de perfil')
+                return redirect('modulo_puntos:perfil_usuario')
+            messages.error(request, 'No se pudo actualizar el perfil. Revisa los datos ingresados.')
+    
+    # GET - mostrar formularios
+    form = PerfilUsuarioForm(instance=request.user)
+    password_form = None  # No se necesita en el GET inicial
+
+    return render(request, 'modulo_puntos/perfil_usuario.html', {
+        'form': form,
+        'rol_usuario': obtener_rol_usuario(request.user),
+    })
+
+@login_required(login_url='/login/')
+def panel_control(request):
+    """Panel principal.
+    - Superuser y Admin TIC: ven el dashboard completo sin necesidad de seleccionar PVD
+    - Admin PVD: debe seleccionar un PVD activo antes de acceder
+    """
+    pvd_activo_id = request.session.get('pvd_activo_id')
+    pvd_activo = None
+
+    if pvd_activo_id:
+        try:
+            pvd_activo = PuntoViveDigital.objects.get(pk=pvd_activo_id, pvd_estdo='A')
+        except PuntoViveDigital.DoesNotExist:
+            request.session.pop('pvd_activo_id', None)
+
+    # Admin PVD DEBE tener un PVD seleccionado
+    es_admin_pvd = not usuario_es_admin_tic(request.user) and request.user.groups.filter(name='Administrador PVD').exists()
+
+    if es_admin_pvd and not pvd_activo:
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    # Calcular contadores filtrados por PVD activo (si hay uno seleccionado)
+    if pvd_activo:
+        atenciones_pvd = Atencion.objects.filter(pvd_cdgo=pvd_activo)
+        atencion_ids = list(atenciones_pvd.values_list('atn_cdgo', flat=True))
+        recursos_pvd = Recurso.objects.filter(pvd_cdgo=pvd_activo)
+        recurso_ids = list(recursos_pvd.values_list('rec_cdgo', flat=True))
+
+        total_ciudadanos = Ciudadano.objects.filter(pvd_cdgo=pvd_activo).count()
+        atenciones_registradas = atenciones_pvd.count()
+        total_satisfacciones = Satisfaccion.objects.filter(atn_cdgo__in=atencion_ids).count() if atencion_ids else 0
+        total_servicios = Servicio.objects.filter(atn_cdgo__in=atencion_ids).count() if atencion_ids else 0
+        total_prestamos = PrestamoRecurso.objects.filter(rec_cdgo__in=recurso_ids).count() if recurso_ids else 0
+    else:
+        # Superuser/Admin TIC sin PVD seleccionado ven totales globales
+        total_ciudadanos = Ciudadano.objects.count()
+        atenciones_registradas = Atencion.objects.count()
+        total_satisfacciones = Satisfaccion.objects.count()
+        total_servicios = Servicio.objects.count()
+        total_prestamos = PrestamoRecurso.objects.count()
+
+    context = {
+        'total_ciudadanos': total_ciudadanos,
+        'atenciones_registradas': atenciones_registradas,
+        'total_satisfacciones': total_satisfacciones,
+        'total_servicios': total_servicios,
+        'total_prestamos': total_prestamos,
+        'pvd_activo': pvd_activo,
+        'es_superusuario': usuario_es_superusuario(request.user),
+        'mostrar_modulos_tic': usuario_es_admin_tic(request.user),
+        'mostrar_modulos_pvd': usuario_puede_usar_modulos_pvd(request.user),
+        'rol_usuario': obtener_rol_usuario(request.user),
+    }
+
+    return render(request, 'modulo_puntos/panel_control.html', context)
+
+
+@login_required(login_url='/login/')
+def inicio_pvd(request):
+    """Pantalla inicial con 2 botones: Seleccionar PVD y Crear PVD."""
+    return render(request, 'modulo_puntos/inicio_pvd.html', {
+        'rol_usuario': obtener_rol_usuario(request.user),
+    })
+
+
+@login_required(login_url='/login/')
+def seleccionar_pvd_view(request):
+    """Vista para seleccionar un PVD existente.
+    - Superuser y Admin TIC: van directo al dashboard (no pasan por aquÃ­)
+    - Admin PVD: ve TODOS los PVDs activos para seleccionar dÃ³nde trabajar
+    """
+    # Admin PVD ve todos los PVDs activos para elegir
+    pvds = PuntoViveDigital.objects.filter(pvd_estdo='A').order_by('pvd_nombre')
+
+    # Contar registros por PVD
+    for pvd in pvds:
+        pvd.total_atenciones = Atencion.objects.filter(pvd_cdgo=pvd).count()
+        pvd.total_ciudadanos = Ciudadano.objects.filter(pvd_cdgo=pvd).count()
+        pvd.total_recursos = Recurso.objects.filter(pvd_cdgo=pvd).count()
+
+    return render(request, 'modulo_puntos/seleccionar_pvd.html', {
+        'pvds': pvds,
+    })
+
+@login_required(login_url='/login/')
+def consultar_ciudadanos(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    busqueda = request.GET.get('q', '').strip()
+    ciudadanos = Ciudadano.objects.all().order_by('-ciu_cdgo')
+
+    if busqueda:
+        ciudadanos = ciudadanos.filter(
+            Q(ciu_numdoc__icontains=busqueda) |
+            Q(ciu_nmbres__icontains=busqueda) |
+            Q(ciu_aplldos__icontains=busqueda)
+        )
+
+    context = {
+        'ciudadanos': ciudadanos,
+        'busqueda': busqueda,
+        'total_resultados': ciudadanos.count(),
+    }
+    return render(request, 'modulo_puntos/consultar_ciudadanos.html', context)
+
+@login_required(login_url='/login/')
+def registrar_ciudadano(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = CiudadanoForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                ciudadano = form.save()
+                messages.success(request, 'Ciudadano registrado exitosamente en la base de datos.')
+                registrar_auditoria(request, 'CREATE', 'Ciudadano', ciudadano.ciu_cdgo, 
+                                   f'Registrado: {ciudadano.ciu_nmbres} {ciudadano.ciu_aplldos}')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'Formulario invÃ¡lido. Revisa los campos.')
+
+    return render(request, 'modulo_puntos/registrar_ciudadano.html', {'form': form})
+
+@login_required(login_url='/login/')
+def editar_ciudadano(request, ciu_cdgo):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        ciudadano = Ciudadano.objects.get(pk=ciu_cdgo)
+    except Ciudadano.DoesNotExist:
+        messages.error(request, 'El ciudadano no existe.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
+
+    form = CiudadanoForm(request.POST or None, instance=ciudadano)
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, 'Ciudadano actualizado correctamente en la base de datos.')
+                registrar_auditoria(request, 'UPDATE', 'Ciudadano', ciudadano.ciu_cdgo,
+                                   f'Actualizado: {ciudadano.ciu_nmbres} {ciudadano.ciu_aplldos}')
+                return redirect('modulo_puntos:consultar_ciudadanos')
+            except Exception as e:
+                messages.error(request, f'Error al actualizar en BD: {e}')
+        else:
+            messages.error(request, 'No se pudo actualizar el ciudadano. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/editar_ciudadano.html', {
+        'form': form,
+        'ciudadano': ciudadano,
+    })
+
+@login_required(login_url='/login/')
+def historial_ciudadano(request, ciu_cdgo):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        ciudadano = Ciudadano.objects.get(pk=ciu_cdgo)
+    except Ciudadano.DoesNotExist:
+        messages.error(request, 'El ciudadano no existe.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
+
+    atenciones = Atencion.objects.filter(
+        ciu_cdgo=ciudadano
+    ).select_related(
+        'opr_cdgo',
+        'prs_cdgo',
+        'prs_cdgo__rec_cdgo'
+    ).order_by('-atn_fecha', '-atn_hrini')
+
+    for atencion in atenciones:
+        atencion.servicios_rel = Servicio.objects.filter(atn_cdgo=atencion)
+        atencion.satisfacciones_rel = Satisfaccion.objects.filter(atn_cdgo=atencion)
+
+    return render(request, 'modulo_puntos/historial_ciudadano.html', {
+        'ciudadano': ciudadano,
+        'atenciones': atenciones,
+        'total_atenciones': atenciones.count(),
+    })
+
+@login_required(login_url='/login/')
+def reportes(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    total_ciudadanos = Ciudadano.objects.count()
+    ciudadanos_activos = Ciudadano.objects.filter(ciu_estdo='A').count()
+    total_operadores = Operador.objects.count()
+    operadores_activos = Operador.objects.filter(opr_estdo='A').count()
+    total_atenciones = Atencion.objects.count()
+    atenciones_pendientes = Atencion.objects.filter(atn_estdo='P').count()
+    atenciones_finalizadas = Atencion.objects.filter(atn_estdo='F').count()
+    atenciones_canceladas = Atencion.objects.filter(atn_estdo='C').count()
+    total_servicios = Servicio.objects.count()
+    total_prestamos = PrestamoRecurso.objects.count()
+    prestamos_activos = PrestamoRecurso.objects.filter(prs_fchdev__isnull=True).count()
+
+    satisfaccion_promedio = Satisfaccion.objects.aggregate(
+        promedio=Avg('sat_calif')
+    )['promedio']
+
+    servicios_por_tipo = Servicio.objects.values('srv_tipo').annotate(
+        total=Count('srv_cdgo')
+    ).order_by('-total', 'srv_tipo')
+
+    atenciones_por_operador = Atencion.objects.values(
+        'opr_cdgo__opr_nmbres',
+        'opr_cdgo__opr_aplldos'
+    ).annotate(
+        total=Count('atn_cdgo')
+    ).order_by('-total')
+
+    atenciones_recientes = Atencion.objects.select_related(
+        'ciu_cdgo',
+        'opr_cdgo'
+    ).order_by('-atn_fecha', '-atn_hrini')[:10]
+
+    gen_map = dict(Ciudadano.GENERO_CHOICES)
+    ciudadanos_por_genero = []
+    for row in Ciudadano.objects.values('ciu_genro').annotate(total=Count('ciu_cdgo')).order_by('-total'):
+        clave = row['ciu_genro'] or ''
+        ciudadanos_por_genero.append({
+            'etiqueta': gen_map.get(clave, clave or 'Sin dato'),
+            'total': row['total'],
+        })
+
+    ciudadanos_por_etnia = list(
+        Ciudadano.objects.exclude(ciu_etnia__isnull=True).exclude(ciu_etnia='').values('ciu_etnia').annotate(
+            total=Count('ciu_cdgo')
+        ).order_by('-total')[:20]
+    )
+
+    ciudadanos_por_nvleduc = list(
+        Ciudadano.objects.exclude(ciu_nvleduc__isnull=True).exclude(ciu_nvleduc='').values('ciu_nvleduc').annotate(
+            total=Count('ciu_cdgo')
+        ).order_by('-total')[:20]
+    )
+
+    ciudadanos_por_estrato = list(
+        Ciudadano.objects.values('ciu_estrato').annotate(total=Count('ciu_cdgo')).order_by('ciu_estrato')
+    )
+
+    ciudadanos_por_ocupacion = list(
+        Ciudadano.objects.exclude(ciu_ocpcion__isnull=True).exclude(ciu_ocpcion='').values('ciu_ocpcion').annotate(
+            total=Count('ciu_cdgo')
+        ).order_by('-total')[:15]
+    )
+
+    ciudadanos_con_discapacidad = Ciudadano.objects.filter(ciu_discapacidad=True).count()
+    ciudadanos_sin_discapacidad = Ciudadano.objects.filter(ciu_discapacidad=False).count()
+
+    atenciones_por_mes = list(
+        Atencion.objects.annotate(mes=TruncMonth('atn_fecha'))
+        .values('mes')
+        .annotate(total=Count('atn_cdgo'))
+        .order_by('-mes')[:12]
+    )
+
+    return render(request, 'modulo_puntos/reportes.html', {
+        'total_ciudadanos': total_ciudadanos,
+        'ciudadanos_activos': ciudadanos_activos,
+        'total_operadores': total_operadores,
+        'operadores_activos': operadores_activos,
+        'total_atenciones': total_atenciones,
+        'atenciones_pendientes': atenciones_pendientes,
+        'atenciones_finalizadas': atenciones_finalizadas,
+        'atenciones_canceladas': atenciones_canceladas,
+        'total_servicios': total_servicios,
+        'total_prestamos': total_prestamos,
+        'prestamos_activos': prestamos_activos,
+        'satisfaccion_promedio': satisfaccion_promedio,
+        'servicios_por_tipo': servicios_por_tipo,
+        'atenciones_por_operador': atenciones_por_operador,
+        'atenciones_recientes': atenciones_recientes,
+        'ciudadanos_por_genero': ciudadanos_por_genero,
+        'ciudadanos_por_etnia': ciudadanos_por_etnia,
+        'ciudadanos_por_nvleduc': ciudadanos_por_nvleduc,
+        'ciudadanos_por_estrato': ciudadanos_por_estrato,
+        'ciudadanos_por_ocupacion': ciudadanos_por_ocupacion,
+        'ciudadanos_con_discapacidad': ciudadanos_con_discapacidad,
+        'ciudadanos_sin_discapacidad': ciudadanos_sin_discapacidad,
+        'atenciones_por_mes': atenciones_por_mes,
+    })
+
+@login_required(login_url='/login/')
+def registrar_atencion(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    # LÃ“GICA DE AUTO-ASIGNACIÃ“N:
+    operador_actual = None
+    if request.user.first_name:
+        operador_actual = Operador.objects.filter(opr_nmbres__icontains=request.user.first_name).first()
+
+    datos_iniciales = {}
+    if operador_actual:
+        datos_iniciales['opr_cdgo'] = operador_actual.opr_cdgo
+
+    form = AtencionForm(request.POST or None, initial=datos_iniciales)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                atencion = form.save()
+                messages.success(request, 'AtenciÃ³n registrada correctamente en la base de datos.')
+                registrar_auditoria(request, 'CREATE', 'Atencion', atencion.atn_cdgo,
+                                   f'AtenciÃ³n #{atencion.atn_cdgo} registrada')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'No se pudo guardar la atenciÃ³n. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_atencion.html', {'form': form})
+
+@login_required(login_url='/login/')
+def registrar_prestamo(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = PrestamoRecursoForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                prestamo = form.save()
+                messages.success(request, 'PrÃ©stamo registrado correctamente en la base de datos.')
+                registrar_auditoria(request, 'CREATE', 'PrestamoRecurso', prestamo.prs_cdgo,
+                                   f'PrÃ©stamo #{prestamo.prs_cdgo} registrado')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'No se pudo guardar el prÃ©stamo. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_prestamo.html', {'form': form})
+
+@login_required(login_url='/login/')
+def registrar_recurso(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = RecursoForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                recurso = form.save()
+                messages.success(request, 'Recurso registrado correctamente en la base de datos.')
+                registrar_auditoria(request, 'CREATE', 'Recurso', recurso.rec_cdgo,
+                                   f'Recurso #{recurso.rec_cdgo} registrado')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'No se pudo guardar el recurso. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_recurso.html', {'form': form})
+
+@login_required(login_url='/login/')
+def registrar_satisfaccion(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = SatisfaccionForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                satisfaccion = form.save()
+                messages.success(request, 'SatisfacciÃ³n registrada correctamente en la base de datos.')
+                registrar_auditoria(request, 'CREATE', 'Satisfaccion', satisfaccion.sat_cdgo,
+                                   f'SatisfacciÃ³n: {satisfaccion.sat_calif}/5')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'No se pudo guardar la satisfacciÃ³n. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_satisfaccion.html', {'form': form})
+
+@login_required(login_url='/login/')
+def registrar_servicio(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = ServicioForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            try:
+                servicio = form.save()
+                messages.success(request, 'Servicio registrado correctamente en la base de datos.')
+                registrar_auditoria(request, 'CREATE', 'Servicio', servicio.srv_cdgo,
+                                   f'Servicio: {servicio.srv_nombre}' if hasattr(servicio, 'srv_nombre') else f'Servicio #{servicio.srv_cdgo}')
+                return redirect('modulo_puntos:panel_control')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'No se pudo guardar el servicio. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/registrar_servicio.html', {'form': form})
+
+@login_required(login_url='/login/')
+def exportar_atenciones_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    registrar_auditoria(request, 'EXPORT', 'Atencion', descripcion='ExportaciÃ³n CSV de atenciones')
+    
+    response = HttpResponse(content_type='text/csv')
+    fecha_actual = datetime.now().strftime("%Y-%m-%d")
+    response['Content-Disposition'] = f'attachment; filename="Reporte_Atenciones_PVD_{fecha_actual}.csv"'
+
+    response.write('\ufeff'.encode('utf8'))
+    writer = csv.writer(response)
+    
+    writer.writerow([
+        'ID AtenciÃ³n', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado AtenciÃ³n', 
+        'Documento Ciudadano', 'Nombre Completo', 'GÃ©nero', 'Etnia', 
+        'Discapacidad', 'Detalle Discapacidad', 'Barrio', 'DirecciÃ³n', 'Vereda / Corregimiento',
+        'Operador a Cargo', 'Observaciones'
+    ])
+
+    atenciones = Atencion.objects.select_related('ciu_cdgo', 'opr_cdgo').order_by('-atn_fecha', '-atn_hrini')
+
+    for atencion in atenciones:
+        if atencion.ciu_cdgo:
+            doc_ciu = atencion.ciu_cdgo.ciu_numdoc
+            nom_ciu = f"{atencion.ciu_cdgo.ciu_nmbres} {atencion.ciu_cdgo.ciu_aplldos}"
+            gen_ciu = atencion.ciu_cdgo.get_ciu_genro_display()
+            etnia_ciu = atencion.ciu_cdgo.ciu_etnia
+            discap_ciu = "SÃ­" if atencion.ciu_cdgo.ciu_discapacidad else "No"
+            desc_discap_ciu = atencion.ciu_cdgo.ciu_desc_discapacidad if atencion.ciu_cdgo.ciu_desc_discapacidad else "N/A"
+            barrio_ciu = atencion.ciu_cdgo.ciu_barrio if atencion.ciu_cdgo.ciu_barrio else "N/A"
+            dir_ciu = atencion.ciu_cdgo.ciu_dircion if atencion.ciu_cdgo.ciu_dircion else "N/A"
+            rural_ciu = atencion.ciu_cdgo.ciu_zrural if atencion.ciu_cdgo.ciu_zrural else "N/A"
+        else:
+            doc_ciu = nom_ciu = gen_ciu = etnia_ciu = discap_ciu = desc_discap_ciu = barrio_ciu = dir_ciu = rural_ciu = "N/A"
+
+        operador_info = f"{atencion.opr_cdgo.opr_nmbres} {atencion.opr_cdgo.opr_aplldos}" if atencion.opr_cdgo else "N/A"
+        estado_dict = dict(Atencion.ESTADO_CHOICES)
+        estado_display = estado_dict.get(atencion.atn_estdo, atencion.atn_estdo)
+
+        writer.writerow([
+            atencion.atn_cdgo, atencion.atn_fecha, atencion.atn_hrini,
+            atencion.atn_hrfin if atencion.atn_hrfin else "N/A", estado_display,
+            doc_ciu, nom_ciu, gen_ciu, etnia_ciu, discap_ciu, desc_discap_ciu,
+            barrio_ciu, dir_ciu, rural_ciu, operador_info,
+            atencion.atn_obs if atencion.atn_obs else "Sin observaciones"
+        ])
+
+    return response
+
+
+def _csv_response(filename_base):
+    response = HttpResponse(content_type='text/csv')
+    fecha_actual = datetime.now().strftime("%Y-%m-%d")
+    response['Content-Disposition'] = f'attachment; filename="{filename_base}_{fecha_actual}.csv"'
+    response.write('\ufeff'.encode('utf8'))
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_ciudadanos_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    registrar_auditoria(request, 'EXPORT', 'Ciudadano', descripcion='ExportaciÃ³n CSV de ciudadanos')
+    
+    response = _csv_response('Reporte_Ciudadanos_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Tipo doc.', 'NÃºmero doc.', 'Nombres', 'Apellidos', 'Fecha nacimiento', 'GÃ©nero', 'Etnia',
+        'Nivel educativo', 'OcupaciÃ³n', 'Discapacidad', 'DescripciÃ³n discapacidad', 'DirecciÃ³n', 'Barrio',
+        'Zona rural', 'Estrato', 'Estado', 'Email', 'TelÃ©fono'
+    ])
+    for c in Ciudadano.objects.all().order_by('-ciu_cdgo'):
+        writer.writerow([
+            c.ciu_cdgo, c.ciu_tpodoc, c.ciu_numdoc, c.ciu_nmbres, c.ciu_aplldos, c.ciu_fchancm,
+            c.get_ciu_genro_display(), c.ciu_etnia, c.ciu_nvleduc, c.ciu_ocpcion,
+            'SÃ­' if c.ciu_discapacidad else 'No',
+            c.ciu_desc_discapacidad or '',
+            c.ciu_dircion or '', c.ciu_barrio or '', c.ciu_zrural or '',
+            c.ciu_estrato, c.get_ciu_estdo_display(), c.ciu_email, c.ciu_tlfno
+        ])
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_servicios_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    registrar_auditoria(request, 'EXPORT', 'Servicio', descripcion='ExportaciÃ³n CSV de servicios')
+    
+    response = _csv_response('Reporte_Servicios_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID servicio', 'ID atenciÃ³n', 'Fecha atenciÃ³n', 'Documento ciudadano', 'Nombre ciudadano',
+        'Nombre servicio', 'DescripciÃ³n', 'Tipo servicio', 'Requiere equipo', 'Estado servicio'
+    ])
+    qs = Servicio.objects.select_related('atn_cdgo', 'atn_cdgo__ciu_cdgo').order_by('-srv_cdgo')
+    for s in qs:
+        atn = s.atn_cdgo
+        fecha_atn = atn.atn_fecha if atn else ''
+        doc = nom = ''
+        if atn and atn.ciu_cdgo:
+            doc = atn.ciu_cdgo.ciu_numdoc
+            nom = f"{atn.ciu_cdgo.ciu_nmbres} {atn.ciu_cdgo.ciu_aplldos}"
+        writer.writerow([
+            s.srv_cdgo, atn.atn_cdgo if atn else '', fecha_atn, doc, nom,
+            s.srv_nombre, s.srv_descr or '', s.srv_tipo, s.get_srv_reqeqp_display(),
+            s.get_srv_estdo_display()
+        ])
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_satisfaccion_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    registrar_auditoria(request, 'EXPORT', 'Satisfaccion', descripcion='ExportaciÃ³n CSV de satisfacciÃ³n')
+    
+    response = _csv_response('Reporte_Satisfaccion_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID satisfacciÃ³n', 'ID atenciÃ³n', 'Fecha atenciÃ³n', 'Estado atenciÃ³n', 'Documento ciudadano',
+        'Nombre ciudadano', 'CalificaciÃ³n', 'Comentario', 'Fecha registro satisfacciÃ³n'
+    ])
+    qs = Satisfaccion.objects.select_related('atn_cdgo', 'atn_cdgo__ciu_cdgo').order_by('-sat_cdgo')
+    estado_atn = dict(Atencion.ESTADO_CHOICES)
+    for sat in qs:
+        atn = sat.atn_cdgo
+        doc = nom = fecha_atn = est_atn = ''
+        if atn:
+            fecha_atn = str(atn.atn_fecha)
+            est_atn = estado_atn.get(atn.atn_estdo, atn.atn_estdo)
+            if atn.ciu_cdgo:
+                doc = atn.ciu_cdgo.ciu_numdoc
+                nom = f"{atn.ciu_cdgo.ciu_nmbres} {atn.ciu_cdgo.ciu_aplldos}"
+        writer.writerow([
+            sat.sat_cdgo, atn.atn_cdgo if atn else '', fecha_atn, est_atn, doc, nom,
+            sat.sat_calif, sat.sat_cmntrio or '', sat.sat_fecha
+        ])
+    return response
+
+
+@login_required(login_url='/login/')
+def exportar_prestamos_csv(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este mÃ³dulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    registrar_auditoria(request, 'EXPORT', 'PrestamoRecurso', descripcion='ExportaciÃ³n CSV de prÃ©stamos')
+    
+    response = _csv_response('Reporte_Prestamos_PVD')
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID prÃ©stamo', 'Tipo recurso', 'Fecha entrega', 'Fecha devoluciÃ³n', 'Observaciones', 'Estado'
+    ])
+    for p in PrestamoRecurso.objects.select_related('rec_cdgo').order_by('-prs_cdgo'):
+        tipo = p.rec_cdgo.rec_tipo if p.rec_cdgo else ''
+        dev = p.prs_fchdev if p.prs_fchdev else ''
+        estado = 'Activo (sin devoluciÃ³n)' if not p.prs_fchdev else 'Devuelto'
+        writer.writerow([p.prs_cdgo, tipo, p.prs_fchent, dev, p.prs_obs or '', estado])
+    return response
+
+
+@login_required(login_url='/login/')
+def ayuda_sistema(request):
+    return render(request, 'modulo_puntos/ayuda.html', {
+        'rol_usuario': obtener_rol_usuario(request.user),
+    })
+
+@login_required(login_url='/login/')
+def crear_admin_tic(request):
+    if not usuario_es_superusuario(request.user):
+        messages.error(request, 'No tienes permisos para crear Administradores TIC.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = CrearUsuarioForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            user = form.save()
+            grupo, _ = Group.objects.get_or_create(name='Administrador TIC')
+            user.groups.add(grupo)
+            messages.success(request, f'Administrador TIC ({user.username}) creado correctamente.')
+            return redirect('modulo_puntos:panel_control')
+        else:
+            messages.error(request, 'No se pudo crear el usuario. Revisa los datos ingresados.')
+
+    return render(request, 'modulo_puntos/crear_usuario.html', {
+        'form': form,
+        'titulo': 'Crear Administrador TIC',
+        'rol': 'Administrador TIC'
+    })
+
+@login_required(login_url='/login/')
+def crear_admin_pvd(request):
+    if not (usuario_es_superusuario(request.user) or usuario_es_admin_tic(request.user)):
+        messages.error(request, 'No tienes permisos para crear Administradores PVD.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = CrearUsuarioForm(request.POST or None)
+    pvds = PuntoViveDigital.objects.filter(pvd_estdo='A').order_by('pvd_nombre')
+    pvd_seleccionado = None
+    
+    if request.method == 'POST':
+        pvd_seleccionado = request.POST.get('pvd_asignado')
+        if form.is_valid():
+            user = form.save()
+            grupo, _ = Group.objects.get_or_create(name='Administrador PVD')
+            user.groups.add(grupo)
+
+            # Crear el UserProfile con el PVD asignado
+            if pvd_seleccionado:
+                try:
+                    pvd = PuntoViveDigital.objects.get(pk=pvd_seleccionado)
+                    UserProfile.objects.create(user=user, pvd_asignado=pvd)
+                except PuntoViveDigital.DoesNotExist:
+                    messages.warning(request, 'El PVD seleccionado no existe. El usuario no tendrÃ¡ PVD asignado.')
+
+            # LÃ“GICA DE CREACIÃ“N AUTOMÃTICA DEL OPERADOR
+            num_doc_temp = str(random.randint(10000000, 99999999))
+            pvd_obj = PuntoViveDigital.objects.filter(pk=pvd_seleccionado).first() if pvd_seleccionado else None
+            Operador.objects.create(
+                pvd_cdgo=pvd_obj,
+                opr_tpodoc='CC',
+                opr_numdoc=num_doc_temp,
+                opr_nmbres=user.first_name,
+                opr_aplldos=user.last_name,
+                opr_email=user.email,
+                opr_tlfno='0000000000',
+                opr_estdo='A'
+            )
+
+            messages.success(request, f'Administrador PVD ({user.username}) creado correctamente con PVD asignado.')
+            return redirect('modulo_puntos:panel_control')
+        else:
+            messages.error(request, 'No se pudo crear el usuario. Revisa los errores.')
+
+    return render(request, 'modulo_puntos/crear_usuario.html', {
+        'form': form,
+        'titulo': 'Crear Administrador PVD',
+        'rol': 'Administrador PVD',
+        'pvds': pvds,
+    })
+
+
+# ============================================================
+# GESTIÃ“N DE PUNTOS VIVE DIGITAL (Multi-PVD)
+# ============================================================
+
+@login_required(login_url='/login/')
+def lista_pvd(request):
+    """Lista todos los Puntos Vive Digital registrados."""
+    if not usuario_es_superusuario(request.user) and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para administrar los PVD.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvds = PuntoViveDigital.objects.all().order_by('pvd_nombre')
+    
+    # Contar registros por PVD usando annotate para eficiencia
+    for pvd in pvds:
+        pvd.total_atenciones = Atencion.objects.filter(pvd_cdgo=pvd).count()
+        pvd.total_ciudadanos = Ciudadano.objects.filter(pvd_cdgo=pvd).count()
+        pvd.total_recursos = Recurso.objects.filter(pvd_cdgo=pvd).count()
+        pvd.total_operadores = Operador.objects.filter(pvd_cdgo=pvd).count()
+
+    return render(request, 'modulo_puntos/lista_pvd.html', {
+        'pvds': pvds,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_pvd(request):
+    """Crea un nuevo Punto Vive Digital. SOLO Superuser."""
+    if not usuario_es_superusuario(request.user):
+        messages.error(request, 'Solo el Superusuario puede crear Puntos Vive Digital.')
+        return redirect('modulo_puntos:panel_control')
+
+    form = PuntoViveDigitalForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            pvd = form.save()
+            messages.success(request, f'Punto Vive Digital "{pvd.pvd_nombre}" creado exitosamente.')
+            registrar_auditoria(request, 'CREATE', 'PuntoViveDigital', pvd.pvd_cdgo,
+                               f'Nuevo PVD creado: {pvd.pvd_nombre}')
+            return redirect('modulo_puntos:lista_pvd')
+        else:
+            messages.error(request, 'Error al crear el PVD. Revisa los datos.')
+
+    return render(request, 'modulo_puntos/form_pvd.html', {
+        'form': form,
+        'titulo': 'Crear Nuevo Punto Vive Digital',
+        'accion': 'crear'
+    })
+
+
+@login_required(login_url='/login/')
+def editar_pvd(request, pvd_cdgo):
+    """Edita un Punto Vive Digital existente."""
+    if not usuario_es_superusuario(request.user) and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para editar PVD.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        pvd = PuntoViveDigital.objects.get(pk=pvd_cdgo)
+    except PuntoViveDigital.DoesNotExist:
+        messages.error(request, 'El Punto Vive Digital no existe.')
+        return redirect('modulo_puntos:lista_pvd')
+
+    form = PuntoViveDigitalForm(request.POST or None, instance=pvd)
+    if request.method == 'POST':
+        if form.is_valid():
+            pvd = form.save()
+            messages.success(request, f'Punto Vive Digital "{pvd.pvd_nombre}" actualizado correctamente.')
+            registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pvd_cdgo,
+                               f'PVD actualizado: {pvd.pvd_nombre}')
+            return redirect('modulo_puntos:lista_pvd')
+        else:
+            messages.error(request, 'Error al actualizar el PVD. Revisa los datos.')
+
+    return render(request, 'modulo_puntos/form_pvd.html', {
+        'form': form,
+        'titulo': f'Editar PVD: {pvd.pvd_nombre}',
+        'accion': 'editar'
+    })
+
+
+@login_required(login_url='/login/')
+def activar_pvd(request, pvd_cdgo):
+    """Activa o desactiva un PVD."""
+    if not usuario_es_superusuario(request.user) and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para cambiar el estado del PVD.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        pvd = PuntoViveDigital.objects.get(pk=pvd_cdgo)
+        pvd.pvd_estdo = 'A' if pvd.pvd_estdo != 'A' else 'I'
+        pvd.save()
+        estado = 'activado' if pvd.pvd_estdo == 'A' else 'desactivado'
+        messages.success(request, f'PVD "{pvd.pvd_nombre}" {estado} correctamente.')
+        registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pvd_cdgo,
+                           f'PVD {estado}: {pvd.pvd_nombre}')
+    except PuntoViveDigital.DoesNotExist:
+        messages.error(request, 'El PVD no existe.')
+
+    return redirect('modulo_puntos:lista_pvd')
+
+
+@login_required(login_url='/login/')
+def seleccionar_pvd(request, pvd_cdgo):
+    """Selecciona el PVD activo para la sesiÃ³n del usuario."""
+    try:
+        pvd = PuntoViveDigital.objects.get(pk=pvd_cdgo, pvd_estdo='A')
+        request.session['pvd_activo_id'] = pvd_cdgo
+        messages.success(request, f'Ahora trabajas desde: {pvd.pvd_nombre}')
+        registrar_auditoria(request, 'OTHER', 'PuntoViveDigital', pvd_cdgo,
+                           f'PVD seleccionado: {pvd.pvd_nombre}')
+    except PuntoViveDigital.DoesNotExist:
+        messages.error(request, 'El PVD no existe o estÃ¡ inactivo.')
+
+    return redirect('modulo_puntos:panel_control')

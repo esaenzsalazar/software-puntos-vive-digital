@@ -1,11 +1,18 @@
+"""
+Forms for Puntos Vive Digital system.
+Defines all form classes with validation and custom widgets.
+Contract CD-224-2026 - Alcaldía de Bugalagrande
+"""
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.contrib.auth.password_validation import validate_password
-from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital, Sala
 
-# --- LISTAS DE OPCIONES GLOBALES ---
+# ==============================================================================
+# LISTAS DE OPCIONES GLOBALES
+# ==============================================================================
+
 BARRIO_CHOICES = [
     ('Ninguno / Área Rural', 'Ninguno / Área Rural'),
     ('Centro', 'Centro'), ('Obrero', 'Obrero'), ('Municipal', 'Municipal'),
@@ -53,10 +60,22 @@ TIPO_RECURSO_CHOICES = [
     ('Mobiliario', 'Silla / Mesa'), ('Otro', 'Otro'),
 ]
 
+# ==============================================================================
+# FORMULARIOS PRINCIPALES
+# ==============================================================================
+
 class CiudadanoForm(forms.ModelForm):
+    """
+    Formulario para registrar y editar ciudadanos.
+    Incluye validaciones para documento, email y teléfono.
+    """
     ciu_email = forms.EmailField(
         label='Correo Electrónico',
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'correo@ejemplo.com'
+        })
     )
 
     class Meta:
@@ -65,42 +84,97 @@ class CiudadanoForm(forms.ModelForm):
             'ciu_tpodoc', 'ciu_numdoc', 'ciu_nmbres', 'ciu_aplldos',
             'ciu_fchancm', 'ciu_email', 'ciu_tlfno', 'ciu_genro',
             'ciu_dircion', 'ciu_barrio', 'ciu_zrural',
-            'ciu_etnia', 'ciu_nvleduc', 'ciu_ocpcion', 'ciu_estrato', 
+            'ciu_etnia', 'ciu_nvleduc', 'ciu_ocpcion', 'ciu_estrato',
             'ciu_discapacidad', 'ciu_desc_discapacidad', 'ciu_estdo'
         ]
         labels = {
-            'ciu_tpodoc': 'Tipo de Documento', 'ciu_numdoc': 'Número de Documento',
-            'ciu_nmbres': 'Nombres Completos', 'ciu_aplldos': 'Apellidos Completos',
-            'ciu_fchancm': 'Fecha de Nacimiento', 'ciu_genro': 'Género',
-            'ciu_dircion': 'Dirección de Residencia', 'ciu_barrio': 'Barrio (Cabecera Municipal)',
+            'ciu_tpodoc': 'Tipo de Documento', 
+            'ciu_numdoc': 'Número de Documento',
+            'ciu_nmbres': 'Nombres Completos', 
+            'ciu_aplldos': 'Apellidos Completos',
+            'ciu_fchancm': 'Fecha de Nacimiento', 
+            'ciu_genro': 'Género',
+            'ciu_dircion': 'Dirección de Residencia', 
+            'ciu_barrio': 'Barrio (Cabecera Municipal)',
             'ciu_zrural': 'Vereda / Corregimiento (Opcional)',
-            'ciu_etnia': 'Pertenencia Étnica', 'ciu_nvleduc': 'Nivel Educativo',
-            'ciu_ocpcion': 'Ocupación Actual', 'ciu_estrato': 'Estrato Socioeconómico',
+            'ciu_etnia': 'Pertenencia Étnica', 
+            'ciu_nvleduc': 'Nivel Educativo',
+            'ciu_ocpcion': 'Ocupación Actual', 
+            'ciu_estrato': 'Estrato Socioeconómico',
             'ciu_discapacidad': '¿Tiene alguna discapacidad?',
             'ciu_desc_discapacidad': '¿Cuál discapacidad? (Descríbala)',
-            'ciu_estdo': 'Estado en el Sistema', 'ciu_tlfno': 'Teléfono o Celular',
+            'ciu_estdo': 'Estado en el Sistema', 
+            'ciu_tlfno': 'Teléfono o Celular',
         }
         widgets = {
-            'ciu_tpodoc': forms.Select(choices=[('CC', 'Cédula de Ciudadanía'), ('TI', 'Tarjeta de Identidad'), ('CE', 'Cédula de Extranjería'), ('RC', 'Registro Civil'), ('PA', 'Pasaporte'), ('PEP', 'Permiso Especial de Permanencia'), ('PPT', 'Permiso por Protección Temporal')], attrs={'class': 'form-control'}),
-            'ciu_numdoc': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de documento', 'oninput': "this.value = this.value.replace(/[^0-9]/g, '')"}),
-            'ciu_nmbres': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombres completos'}),
-            'ciu_aplldos': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellidos completos'}),
-            'ciu_fchancm': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
-            'ciu_tlfno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 3001234567', 'oninput': "this.value = this.value.replace(/[^0-9]/g, '')", 'pattern': "[0-9]+"}),
-            'ciu_genro': forms.Select(choices=[('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')], attrs={'class': 'form-control'}),
+            'ciu_tpodoc': forms.Select(
+                choices=[
+                    ('CC', 'Cédula de Ciudadanía'), 
+                    ('TI', 'Tarjeta de Identidad'), 
+                    ('CE', 'Cédula de Extranjería'), 
+                    ('RC', 'Registro Civil'), 
+                    ('PA', 'Pasaporte'), 
+                    ('PEP', 'Permiso Especial de Permanencia'), 
+                    ('PPT', 'Permiso por Protección Temporal')
+                ], 
+                attrs={'class': 'form-control'}
+            ),
+            'ciu_numdoc': forms.TextInput(
+                attrs={
+                    'class': 'form-control', 
+                    'placeholder': 'Número de documento', 
+                    'oninput': "this.value = this.value.replace(/[^0-9]/g, '')"
+                }
+            ),
+            'ciu_nmbres': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Nombres completos'}
+            ),
+            'ciu_aplldos': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Apellidos completos'}
+            ),
+            'ciu_fchancm': forms.DateInput(
+                format='%Y-%m-%d', 
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'ciu_tlfno': forms.TextInput(
+                attrs={
+                    'class': 'form-control', 
+                    'placeholder': 'Ej. 3001234567', 
+                    'oninput': "this.value = this.value.replace(/[^0-9]/g, '')", 
+                    'pattern': "[0-9]+"
+                }
+            ),
+            'ciu_genro': forms.Select(
+                choices=[('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')], 
+                attrs={'class': 'form-control'}
+            ),
             'ciu_dircion': forms.HiddenInput(attrs={'id': 'id_ciu_dircion'}),
             'ciu_barrio': forms.Select(choices=BARRIO_CHOICES, attrs={'class': 'form-control'}),
             'ciu_zrural': forms.HiddenInput(attrs={'id': 'id_ciu_zrural'}),
             'ciu_etnia': forms.Select(choices=ETNIA_CHOICES, attrs={'class': 'form-control'}),
             'ciu_nvleduc': forms.Select(choices=EDUCACION_CHOICES, attrs={'class': 'form-control'}),
             'ciu_ocpcion': forms.Select(choices=OCUPACION_CHOICES, attrs={'class': 'form-control'}),
-            'ciu_estrato': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '3'}),
-            'ciu_estdo': forms.Select(choices=[('A', 'Activo'), ('I', 'Inactivo')], attrs={'class': 'form-control'}),
-            'ciu_discapacidad': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_check_discapacidad'}),
-            'ciu_desc_discapacidad': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_desc_discapacidad', 'placeholder': 'Ej: Visual, Auditiva, Motriz, Cognitiva...'}),
+            'ciu_estrato': forms.NumberInput(
+                attrs={'class': 'form-control', 'min': '1', 'max': '3'}
+            ),
+            'ciu_estdo': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')], 
+                attrs={'class': 'form-control'}
+            ),
+            'ciu_discapacidad': forms.CheckboxInput(
+                attrs={'class': 'form-check-input', 'id': 'id_check_discapacidad'}
+            ),
+            'ciu_desc_discapacidad': forms.TextInput(
+                attrs={
+                    'class': 'form-control', 
+                    'id': 'id_desc_discapacidad', 
+                    'placeholder': 'Ej: Visual, Auditiva, Motriz, Cognitiva...'
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
+        """Inicializar valores por defecto."""
         super().__init__(*args, **kwargs)
         self.fields['ciu_estrato'].initial = 1
         self.fields['ciu_estdo'].initial = 'A'
@@ -141,34 +215,70 @@ class CiudadanoForm(forms.ModelForm):
 
 
 class AtencionForm(forms.ModelForm):
+    """
+    Formulario para registrar atenciones a ciudadanos.
+    Incluye validación de horarios y auto-asignación de operador.
+    """
     class Meta:
         model = Atencion
-        fields = ['ciu_cdgo', 'opr_cdgo', 'prs_cdgo', 'atn_fecha', 'atn_hrini', 'atn_hrfin', 'atn_estdo', 'atn_obs']
+        fields = [
+            'ciu_cdgo', 'opr_cdgo', 'prs_cdgo', 
+            'atn_fecha', 'atn_hrini', 'atn_hrfin', 
+            'atn_estdo', 'atn_obs'
+        ]
         labels = {
-            'ciu_cdgo': 'Ciudadano Atendido', 'opr_cdgo': 'Operador a Cargo',
-            'prs_cdgo': 'Préstamo Vinculado (Opcional)', 'atn_fecha': 'Fecha de Atención',
-            'atn_hrini': 'Hora de Inicio', 'atn_hrfin': 'Hora de Finalización',
-            'atn_estdo': 'Estado de la Atención', 'atn_obs': 'Observaciones / Notas',
+            'ciu_cdgo': 'Ciudadano Atendido', 
+            'opr_cdgo': 'Operador a Cargo',
+            'prs_cdgo': 'Préstamo Vinculado (Opcional)', 
+            'atn_fecha': 'Fecha de Atención',
+            'atn_hrini': 'Hora de Inicio', 
+            'atn_hrfin': 'Hora de Finalización',
+            'atn_estdo': 'Estado de la Atención', 
+            'atn_obs': 'Observaciones / Notas',
         }
         widgets = {
             'ciu_cdgo': forms.Select(attrs={'class': 'form-control'}),
             'opr_cdgo': forms.Select(attrs={'class': 'form-control'}),
             'prs_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'atn_fecha': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
-            'atn_hrini': forms.TimeInput(format='%H:%M', attrs={'class': 'form-control', 'type': 'time'}),
-            'atn_hrfin': forms.TimeInput(format='%H:%M', attrs={'class': 'form-control', 'type': 'time'}),
-            'atn_estdo': forms.Select(choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')], attrs={'class': 'form-control'}),
-            'atn_obs': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe brevemente la atención realizada...'}),
+            'atn_fecha': forms.DateInput(
+                format='%Y-%m-%d', 
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'atn_hrini': forms.TimeInput(
+                format='%H:%M', 
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
+            'atn_hrfin': forms.TimeInput(
+                format='%H:%M', 
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
+            'atn_estdo': forms.Select(
+                choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')], 
+                attrs={'class': 'form-control'}
+            ),
+            'atn_obs': forms.Textarea(
+                attrs={
+                    'class': 'form-control', 
+                    'rows': 3, 
+                    'placeholder': 'Describe brevemente la atención realizada...'
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
+        """Inicializar campos con valores por defecto y bloquear operador si es necesario."""
         super().__init__(*args, **kwargs)
+        # Hacer campos opcionales
         self.fields['ciu_cdgo'].required = False
         self.fields['opr_cdgo'].required = False
         self.fields['prs_cdgo'].required = False
+        
+        # Etiquetas vacías para selects
         self.fields['ciu_cdgo'].empty_label = '--- Seleccione un ciudadano ---'
         self.fields['opr_cdgo'].empty_label = '--- Seleccione un operador ---'
         self.fields['prs_cdgo'].empty_label = '--- Sin préstamo vinculado ---'
+        
+        # Campo hora final opcional
         self.fields['atn_hrfin'].required = False
         self.fields['atn_estdo'].initial = 'P'
 
@@ -178,31 +288,50 @@ class AtencionForm(forms.ModelForm):
             self.fields['opr_cdgo'].widget.attrs['style'] = 'pointer-events: none; background-color: #e2e8f0;'
 
     def clean(self):
+        """Validar que la hora final no sea menor que la hora inicial."""
         cleaned_data = super().clean()
-        if cleaned_data.get('atn_hrini') and cleaned_data.get('atn_hrfin') and cleaned_data.get('atn_hrfin') < cleaned_data.get('atn_hrini'):
+        hr_ini = cleaned_data.get('atn_hrini')
+        hr_fin = cleaned_data.get('atn_hrfin')
+        
+        if hr_ini and hr_fin and hr_fin < hr_ini:
             self.add_error('atn_hrfin', 'La hora final no puede ser menor que la hora inicial.')
+        
         return cleaned_data
 
 
 class SatisfaccionForm(forms.ModelForm):
+    """
+    Formulario para registrar encuestas de satisfacción.
+    Incluye validación de calificación (1-5).
+    """
     sat_fecha = forms.DateTimeField(
         label='Fecha y Hora del Reporte',
         input_formats=['%Y-%m-%dT%H:%M'],
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
+        widget=forms.DateTimeInput(
+            attrs={'class': 'form-control', 'type': 'datetime-local'}
+        )
     )
+    
     class Meta:
         model = Satisfaccion
         fields = ['atn_cdgo', 'sat_calif', 'sat_cmntrio', 'sat_fecha']
         labels = {
-            'atn_cdgo': 'Atención Evaluada', 'sat_calif': 'Calificación (1 a 5)',
+            'atn_cdgo': 'Atención Evaluada', 
+            'sat_calif': 'Calificación (1 a 5)',
             'sat_cmntrio': 'Comentarios del Ciudadano',
         }
         widgets = {
             'atn_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'sat_calif': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '5'}),
-            'sat_cmntrio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'sat_calif': forms.NumberInput(
+                attrs={'class': 'form-control', 'min': '1', 'max': '5'}
+            ),
+            'sat_cmntrio': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3}
+            ),
         }
+    
     def __init__(self, *args, **kwargs):
+        """Inicializar campo de atención como opcional."""
         super().__init__(*args, **kwargs)
         self.fields['atn_cdgo'].required = False
         self.fields['atn_cdgo'].empty_label = '--- Seleccione una atención ---'
@@ -216,23 +345,43 @@ class SatisfaccionForm(forms.ModelForm):
 
 
 class ServicioForm(forms.ModelForm):
+    """
+    Formulario para registrar servicios prestados durante atenciones.
+    """
     class Meta:
         model = Servicio
-        fields = ['atn_cdgo', 'srv_nombre', 'srv_descr', 'srv_tipo', 'srv_reqeqp', 'srv_estdo']
+        fields = [
+            'atn_cdgo', 'srv_nombre', 'srv_descr', 
+            'srv_tipo', 'srv_reqeqp', 'srv_estdo'
+        ]
         labels = {
-            'atn_cdgo': 'Atención Vinculada', 'srv_nombre': 'Nombre del Servicio',
-            'srv_descr': 'Descripción Detallada', 'srv_tipo': 'Categoría',
-            'srv_reqeqp': '¿Requiere equipo?', 'srv_estdo': 'Estado'
+            'atn_cdgo': 'Atención Vinculada', 
+            'srv_nombre': 'Nombre del Servicio',
+            'srv_descr': 'Descripción Detallada', 
+            'srv_tipo': 'Categoría',
+            'srv_reqeqp': '¿Requiere equipo?', 
+            'srv_estdo': 'Estado'
         }
         widgets = {
             'atn_cdgo': forms.Select(attrs={'class': 'form-control'}),
             'srv_nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'srv_descr': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'srv_tipo': forms.Select(choices=TIPO_SERVICIO_CHOICES, attrs={'class': 'form-control'}),
-            'srv_reqeqp': forms.Select(choices=[('S', 'Sí'), ('N', 'No')], attrs={'class': 'form-control'}),
-            'srv_estdo': forms.Select(choices=[('A', 'Activo'), ('I', 'Inactivo')], attrs={'class': 'form-control'}),
+            'srv_tipo': forms.Select(
+                choices=TIPO_SERVICIO_CHOICES, 
+                attrs={'class': 'form-control'}
+            ),
+            'srv_reqeqp': forms.Select(
+                choices=[('S', 'Sí'), ('N', 'No')], 
+                attrs={'class': 'form-control'}
+            ),
+            'srv_estdo': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')], 
+                attrs={'class': 'form-control'}
+            ),
         }
+    
     def __init__(self, *args, **kwargs):
+        """Inicializar campos con valores por defecto."""
         super().__init__(*args, **kwargs)
         self.fields['atn_cdgo'].required = False
         self.fields['atn_cdgo'].empty_label = '--- Seleccione una atención ---'
@@ -241,40 +390,115 @@ class ServicioForm(forms.ModelForm):
 
 
 class PrestamoRecursoForm(forms.ModelForm):
-    prs_fchent = forms.DateTimeField(label='Entrega', input_formats=['%Y-%m-%dT%H:%M'], widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}))
-    prs_fchdev = forms.DateTimeField(label='Devolución', required=False, input_formats=['%Y-%m-%dT%H:%M'], widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}))
+    """
+    Formulario para registrar préstamos de recursos.
+    """
+    prs_fchent = forms.DateTimeField(
+        label='Entrega', 
+        input_formats=['%Y-%m-%dT%H:%M'], 
+        widget=forms.DateTimeInput(
+            attrs={'class': 'form-control', 'type': 'datetime-local'}
+        )
+    )
+    prs_fchdev = forms.DateTimeField(
+        label='Devolución', 
+        required=False, 
+        input_formats=['%Y-%m-%dT%H:%M'], 
+        widget=forms.DateTimeInput(
+            attrs={'class': 'form-control', 'type': 'datetime-local'}
+        )
+    )
+    
     class Meta:
         model = PrestamoRecurso
         fields = ['rec_cdgo', 'prs_fchent', 'prs_fchdev', 'prs_obs']
-        widgets = {'rec_cdgo': forms.Select(attrs={'class': 'form-control'}), 'prs_obs': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})}
+        widgets = {
+            'rec_cdgo': forms.Select(attrs={'class': 'form-control'}), 
+            'prs_obs': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+        }
+    
     def __init__(self, *args, **kwargs):
+        """Inicializar campo de recurso como opcional."""
         super().__init__(*args, **kwargs)
         self.fields['rec_cdgo'].required = False
         self.fields['rec_cdgo'].empty_label = '--- Seleccione un recurso ---'
 
 
 class RecursoForm(forms.ModelForm):
+    """
+    Formulario para registrar recursos/equipos del PVD.
+    """
     class Meta:
         model = Recurso
         fields = ['rec_cdgo', 'rec_tipo', 'rec_estdo']
         widgets = {
             'rec_cdgo': forms.NumberInput(attrs={'class': 'form-control'}),
-            'rec_tipo': forms.Select(choices=TIPO_RECURSO_CHOICES, attrs={'class': 'form-control'}),
-            'rec_estdo': forms.Select(choices=[('A', 'Activo'), ('I', 'Inactivo')], attrs={'class': 'form-control'}),
+            'rec_tipo': forms.Select(
+                choices=TIPO_RECURSO_CHOICES, 
+                attrs={'class': 'form-control'}
+            ),
+            'rec_estdo': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')], 
+                attrs={'class': 'form-control'}
+            ),
         }
+    
     def __init__(self, *args, **kwargs):
+        """Inicializar estado como activo por defecto."""
         super().__init__(*args, **kwargs)
         self.fields['rec_estdo'].initial = 'A'
 
 
+# ==============================================================================
+# FORMULARIOS DE AUTENTICACIÓN Y USUARIOS
+# ==============================================================================
+
 class LoginForm(AuthenticationForm):
-    username = forms.CharField(label='Usuario', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese su usuario'}))
-    password = forms.CharField(label='Contraseña', widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese su contraseña'}))
+    """
+    Formulario de inicio de sesión personalizado.
+    """
+    username = forms.CharField(
+        label='Usuario', 
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ingrese su usuario'
+            }
+        )
+    )
+    password = forms.CharField(
+        label='Contraseña', 
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ingrese su contraseña'
+            }
+        )
+    )
 
 
 class PerfilUsuarioForm(forms.ModelForm):
-    password1 = forms.CharField(label='Nueva contraseña', required=False, widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Déjalo vacío si no deseas cambiarla'}))
-    password2 = forms.CharField(label='Confirmar nueva contraseña', required=False, widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    """
+    Formulario para editar perfil de usuario y cambiar contraseña.
+    """
+    password1 = forms.CharField(
+        label='Nueva contraseña', 
+        required=False, 
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control', 
+                'placeholder': 'Déjalo vacío si no deseas cambiarla'
+            }
+        )
+    )
+    password2 = forms.CharField(
+        label='Confirmar nueva contraseña', 
+        required=False, 
+        widget=forms.PasswordInput(
+            attrs={'class': 'form-control'}
+        )
+    )
+    
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name', 'email']
@@ -284,30 +508,71 @@ class PerfilUsuarioForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
+    
     def clean(self):
+        """Validar que las contraseñas coincidan."""
         cleaned_data = super().clean()
         password1 = cleaned_data.get('password1')
         password2 = cleaned_data.get('password2')
+        
         if password1 or password2:
-            if not password1: self.add_error('password1', 'Requerido')
-            if not password2: self.add_error('password2', 'Requerido')
+            if not password1: 
+                self.add_error('password1', 'Requerido')
+            if not password2: 
+                self.add_error('password2', 'Requerido')
             if password1 and password2 and password1 != password2:
                 self.add_error('password2', 'No coinciden')
+        
         return cleaned_data
 
 
 class CrearUsuarioForm(UserCreationForm):
-    first_name = forms.CharField(label='Nombres (Importante para auto-asignar atenciones)', required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Lady'}))
-    last_name = forms.CharField(label='Apellidos', required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Pérez'}))
-    email = forms.EmailField(label='Correo electrónico', required=False, widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}))
-    
+    """
+    Formulario para crear nuevos usuarios con información básica.
+    Usado para crear Admin TIC y Admin PVD.
+    """
+    first_name = forms.CharField(
+        label='Nombres (Importante para auto-asignar atenciones)', 
+        required=True, 
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: Lady'
+            }
+        )
+    )
+    last_name = forms.CharField(
+        label='Apellidos', 
+        required=True, 
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: Pérez'
+            }
+        )
+    )
+    email = forms.EmailField(
+        label='Correo electrónico', 
+        required=False, 
+        widget=forms.EmailInput(
+            attrs={
+                'class': 'form-control', 
+                'placeholder': 'correo@ejemplo.com'
+            }
+        )
+    )
+
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name', 'email']
-        
+
     def __init__(self, *args, **kwargs):
+        """Aplicar clases CSS a todos los campos."""
         super().__init__(*args, **kwargs)
-        self.fields['username'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Ingrese el nombre de usuario'})
+        self.fields['username'].widget.attrs.update({
+            'class': 'form-control', 
+            'placeholder': 'Ingrese el nombre de usuario'
+        })
         self.fields['first_name'].widget.attrs.update({'class': 'form-control'})
         self.fields['last_name'].widget.attrs.update({'class': 'form-control'})
         self.fields['password1'].widget.attrs.update({'class': 'form-control'})
@@ -315,10 +580,16 @@ class CrearUsuarioForm(UserCreationForm):
 
 
 class PuntoViveDigitalForm(forms.ModelForm):
-    """Formulario para crear y editar Puntos Vive Digital."""
+    """
+    Formulario para crear y editar Puntos Vive Digital.
+    """
     class Meta:
         model = PuntoViveDigital
-        fields = ['pvd_nombre', 'pvd_dircion', 'pvd_barrio', 'pvd_telefono', 'pvd_correo', 'pvd_estdo', 'pvd_descripcion']
+        fields = [
+            'pvd_nombre', 'pvd_dircion', 'pvd_barrio',
+            'pvd_telefono', 'pvd_correo', 'pvd_estdo',
+            'pvd_descripcion'
+        ]
         labels = {
             'pvd_nombre': 'Nombre del Punto Vive Digital',
             'pvd_dircion': 'Dirección',
@@ -329,11 +600,96 @@ class PuntoViveDigitalForm(forms.ModelForm):
             'pvd_descripcion': 'Descripción / Notas',
         }
         widgets = {
-            'pvd_nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: PVD Centro, PVD La María'}),
-            'pvd_dircion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}),
-            'pvd_barrio': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Barrio o vereda'}),
-            'pvd_telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono del PVD'}),
-            'pvd_correo': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
+            'pvd_nombre': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ej: PVD Centro, PVD La María'
+                }
+            ),
+            'pvd_dircion': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}
+            ),
+            'pvd_barrio': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Barrio o vereda'}
+            ),
+            'pvd_telefono': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Teléfono del PVD'}
+            ),
+            'pvd_correo': forms.EmailInput(
+                attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}
+            ),
             'pvd_estdo': forms.Select(attrs={'class': 'form-control'}),
-            'pvd_descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas adicionales sobre el PVD'}),
+            'pvd_descripcion': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 3,
+                    'placeholder': 'Notas adicionales sobre el PVD'
+                }
+            ),
         }
+
+
+# ==============================================================================
+# FORMULARIOS DE SALAS
+# ==============================================================================
+
+class SalaForm(forms.ModelForm):
+    """
+    Formulario para crear y editar salas de un Punto Vive Digital.
+    """
+    class Meta:
+        model = Sala
+        fields = [
+            'pvd_cdgo', 'sala_nombre', 'sala_descr',
+            'sala_capacidad', 'sala_estdo'
+        ]
+        labels = {
+            'pvd_cdgo': 'Punto Vive Digital',
+            'sala_nombre': 'Nombre de la Sala',
+            'sala_descr': 'Descripción',
+            'sala_capacidad': 'Capacidad (personas)',
+            'sala_estdo': 'Estado',
+        }
+        widgets = {
+            'pvd_cdgo': forms.Select(attrs={'class': 'form-control'}),
+            'sala_nombre': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ej: Sala de Capacitación, Sala de Navegación'
+                }
+            ),
+            'sala_descr': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 3,
+                    'placeholder': 'Descripción de la sala y su propósito'
+                }
+            ),
+            'sala_capacidad': forms.NumberInput(
+                attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Número de personas'}
+            ),
+            'sala_estdo': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo'), ('M', 'En mantenimiento')],
+                attrs={'class': 'form-control'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Inicializar campo de PVD como opcional si se pasa por contexto."""
+        super().__init__(*args, **kwargs)
+        self.fields['pvd_cdgo'].empty_label = '--- Seleccione un PVD ---'
+        self.fields['sala_estdo'].initial = 'A'
+
+    def clean_sala_nombre(self):
+        """Valida que no haya otra sala con el mismo nombre en el mismo PVD."""
+        sala_nombre = self.cleaned_data.get('sala_nombre')
+        pvd = self.cleaned_data.get('pvd_cdgo')
+        
+        if sala_nombre and pvd:
+            qs = Sala.objects.filter(sala_nombre=sala_nombre, pvd_cdgo=pvd)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise ValidationError('Ya existe una sala con este nombre en este PVD.')
+        
+        return sala_nombre

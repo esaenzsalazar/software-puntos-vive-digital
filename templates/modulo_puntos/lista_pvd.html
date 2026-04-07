@@ -1,0 +1,76 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Gestión de PVDs{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Administración</span>
+        <h1 class="page-title">Gestión de Puntos Vive Digital</h1>
+        <p class="muted">Administra todos los PVDs del municipio</p>
+        <div class="page-hero__actions" style="margin-top: 16px;">
+            <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn btn-primary">
+                <span style="margin-right: 6px;">➕</span> Nuevo PVD
+            </a>
+        </div>
+    </div>
+
+    {% if pvds %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Dirección</th>
+                    <th>Barrio</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th class="text-center">Atenciones</th>
+                    <th class="text-center">Ciudadanos</th>
+                    <th class="text-center">Recursos</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pvd in pvds %}
+                <tr>
+                    <td><strong>{{ pvd.pvd_nombre }}</strong></td>
+                    <td>{{ pvd.pvd_dircion }}</td>
+                    <td>{{ pvd.pvd_barrio }}</td>
+                    <td>{{ pvd.pvd_telefono|default:"—" }}</td>
+                    <td>
+                        {% if pvd.pvd_estdo == 'A' %}
+                            <span class="badge badge--success">Activo</span>
+                        {% elif pvd.pvd_estdo == 'M' %}
+                            <span class="badge badge--warning">Mantenimiento</span>
+                        {% else %}
+                            <span class="badge badge--danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ pvd.total_atenciones }}</td>
+                    <td class="text-center">{{ pvd.total_ciudadanos }}</td>
+                    <td class="text-center">{{ pvd.total_recursos }}</td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'modulo_puntos:editar_pvd' pvd.pvd_cdgo %}" class="btn btn--sm" title="Editar">✏️</a>
+                            <a href="{% url 'modulo_puntos:activar_pvd' pvd.pvd_cdgo %}" class="btn btn--sm" 
+                               title="{% if pvd.pvd_estdo == 'A' %}Desactivar{% else %}Activar{% endif %}">
+                                {% if pvd.pvd_estdo == 'A' %}⏸️{% else %}▶️{% endif %}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card card--hint" style="text-align: center; padding: 40px;">
+        <p style="font-size: 48px; margin: 0 0 16px 0;">🏢</p>
+        <h3 style="margin: 0 0 8px 0;">No hay Puntos Vive Digital registrados</h3>
+        <p class="muted">Comienza creando tu primer Punto Vive Digital.</p>
+        <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn" style="margin-top: 16px;">Crear primer PVD</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

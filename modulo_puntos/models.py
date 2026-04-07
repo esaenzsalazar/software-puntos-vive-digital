@@ -75,6 +75,14 @@ class Atencion(models.Model):
     ]
 
     atn_cdgo = models.AutoField(primary_key=True, db_column='ATN_CDGO')
+    pvd_cdgo = models.ForeignKey(
+        'PuntoViveDigital',
+        models.SET_NULL,
+        db_column='PVD_CDGO',
+        null=True,
+        blank=True,
+        verbose_name='Punto Vive Digital'
+    )
     ciu_cdgo = models.ForeignKey(
         'Ciudadano',
         models.DO_NOTHING,
@@ -116,6 +124,14 @@ class Operador(models.Model):
     ]
 
     opr_cdgo = models.AutoField(primary_key=True, db_column='OPR_CDGO')
+    pvd_cdgo = models.ForeignKey(
+        'PuntoViveDigital',
+        models.SET_NULL,
+        db_column='PVD_CDGO',
+        null=True,
+        blank=True,
+        verbose_name='Punto Vive Digital'
+    )
     usu_cdgo = models.ForeignKey(UsuarioSistema, models.DO_NOTHING, db_column='USU_CDGO', null=True, blank=True)
     opr_tpodoc = models.CharField(max_length=32, db_column='OPR_TPODOC', null=True, blank=True)
     opr_numdoc = models.CharField(max_length=32, db_column='OPR_NUMDOC', null=True, blank=True)
@@ -145,15 +161,23 @@ class Ciudadano(models.Model):
     ]
 
     ciu_cdgo = models.AutoField(primary_key=True, db_column='CIU_CDGO')
-    ciu_tpodoc = models.CharField(max_length=32, db_column='CIU_TPODOC')
-    ciu_numdoc = models.CharField(max_length=32, db_column='CIU_NUMDOC')
-    ciu_nmbres = models.CharField(max_length=128, db_column='CIU_NMBRES')
-    ciu_aplldos = models.CharField(max_length=128, db_column='CIU_APLLDOS')
-    ciu_fchancm = models.DateField(db_column='CIU_FCHANCM')
-    ciu_genro = models.CharField(max_length=32, db_column='CIU_GENRO', choices=GENERO_CHOICES)
-    ciu_etnia = models.CharField(max_length=64, db_column='CIU_ETNIA')
-    ciu_nvleduc = models.CharField(max_length=64, db_column='CIU_NVLEDUC')
-    ciu_ocpcion = models.CharField(max_length=64, db_column='CIU_OCPCION')
+    pvd_cdgo = models.ForeignKey(
+        'PuntoViveDigital',
+        models.SET_NULL,
+        db_column='PVD_CDGO',
+        null=True,
+        blank=True,
+        verbose_name='Punto Vive Digital'
+    )
+    ciu_tpodoc = models.CharField(max_length=32, db_column='CIU_TPODOC', null=True, blank=True)
+    ciu_numdoc = models.CharField(max_length=32, db_column='CIU_NUMDOC', null=True, blank=True)
+    ciu_nmbres = models.CharField(max_length=128, db_column='CIU_NMBRES', null=True, blank=True)
+    ciu_aplldos = models.CharField(max_length=128, db_column='CIU_APLLDOS', null=True, blank=True)
+    ciu_fchancm = models.DateField(db_column='CIU_FCHANCM', null=True, blank=True)
+    ciu_genro = models.CharField(max_length=32, db_column='CIU_GENRO', choices=GENERO_CHOICES, null=True, blank=True)
+    ciu_etnia = models.CharField(max_length=64, db_column='CIU_ETNIA', null=True, blank=True)
+    ciu_nvleduc = models.CharField(max_length=64, db_column='CIU_NVLEDUC', null=True, blank=True)
+    ciu_ocpcion = models.CharField(max_length=64, db_column='CIU_OCPCION', null=True, blank=True)
     ciu_discapacidad = models.BooleanField(db_column='CIU_DISCAPACIDAD', default=False)
     ciu_desc_discapacidad = models.CharField(max_length=128, db_column='CIU_DESC_DISCAPACIDAD', null=True, blank=True)
     
@@ -164,8 +188,8 @@ class Ciudadano(models.Model):
     
     ciu_estrato = models.IntegerField(db_column='CIU_ESTRATO', default=1)
     ciu_estdo = models.CharField(max_length=1, db_column='CIU_ESTDO', default='A', choices=ESTADO_CHOICES)
-    ciu_email = models.CharField(max_length=128, db_column='CIU_EMAIL')
-    ciu_tlfno = models.CharField(max_length=32, db_column='CIU_TLFNO')
+    ciu_email = models.CharField(max_length=128, db_column='CIU_EMAIL', default='', blank=True)
+    ciu_tlfno = models.CharField(max_length=32, db_column='CIU_TLFNO', null=True, blank=True)
 
     class Meta:
         db_table = 'ciu_ciudadano'
@@ -181,6 +205,14 @@ class Recurso(models.Model):
     ]
 
     rec_cdgo = models.IntegerField(primary_key=True, db_column='REC_CDGO')
+    pvd_cdgo = models.ForeignKey(
+        'PuntoViveDigital',
+        models.SET_NULL,
+        db_column='PVD_CDGO',
+        null=True,
+        blank=True,
+        verbose_name='Punto Vive Digital'
+    )
     rec_tipo = models.CharField(max_length=64, db_column='REC_TIPO')
     rec_estdo = models.CharField(max_length=1, db_column='REC_ESTDO', choices=ESTADO_CHOICES)
 
@@ -224,18 +256,100 @@ class Servicio(models.Model):
 
 
 class PuntoViveDigital(models.Model):
-    pvd_cdgo = models.IntegerField(primary_key=True, db_column='PVD_CDGO')
-    srv_cdgo = models.ForeignKey(Servicio, models.DO_NOTHING, db_column='SRV_CDGO', null=True, blank=True)
-    rec_cdgo = models.ForeignKey(Recurso, models.DO_NOTHING, db_column='REC_CDGO', null=True, blank=True)
-    opr_cdgo = models.ForeignKey(Operador, models.DO_NOTHING, db_column='OPR_CDGO', null=True, blank=True)
-    atn_cdgo = models.ForeignKey(Atencion, models.DO_NOTHING, db_column='ATN_CDGO', null=True, blank=True)
-    pvd_dircion = models.CharField(max_length=128, db_column='PVD_DIRCION')
-    pvd_barrio = models.CharField(max_length=64, db_column='PVD_BARRIO')
-    pvd_estdo = models.CharField(max_length=1, db_column='PVD_ESTDO')
-    pvd_correo = models.CharField(max_length=128, db_column='PVD_CORREO')
+    """
+    Modelo expandible para gestionar múltiples Puntos Vive Digital.
+    Permite crear nuevos PVDs dinámicamente desde el sistema.
+    """
+    ESTADO_CHOICES = [
+        ('A', 'Activo'),
+        ('I', 'Inactivo'),
+        ('M', 'En mantenimiento'),
+    ]
+
+    pvd_cdgo = models.AutoField(primary_key=True, db_column='PVD_CDGO')
+    pvd_nombre = models.CharField(max_length=128, db_column='PVD_NOMBRE', null=True,
+                                  verbose_name='Nombre del Punto Vive Digital')
+    pvd_dircion = models.CharField(max_length=128, db_column='PVD_DIRCION', null=True,
+                                   verbose_name='Dirección')
+    pvd_barrio = models.CharField(max_length=64, db_column='PVD_BARRIO', null=True,
+                                  verbose_name='Barrio/Vereda')
+    pvd_telefono = models.CharField(max_length=32, db_column='PVD_TELEFONO', null=True, blank=True,
+                                    verbose_name='Teléfono')
+    pvd_correo = models.CharField(max_length=128, db_column='PVD_CORREO', null=True, blank=True,
+                                  verbose_name='Correo electrónico')
+    pvd_estdo = models.CharField(max_length=1, db_column='PVD_ESTDO', default='A',
+                                 choices=ESTADO_CHOICES, verbose_name='Estado')
+    pvd_fch_crea = models.DateField(auto_now_add=True, db_column='PVD_FCH_CREA', null=True,
+                                    verbose_name='Fecha de creación')
+    pvd_descripcion = models.TextField(db_column='PVD_DESCRIPCION', null=True, blank=True,
+                                       verbose_name='Descripción/Notas')
 
     class Meta:
         db_table = 'pvd_puntovivedigital'
+        ordering = ['pvd_nombre']
+        verbose_name = 'Punto Vive Digital'
+        verbose_name_plural = 'Puntos Vive Digital'
 
     def __str__(self):
-        return f"PVD {self.pvd_barrio}"
+        return self.pvd_nombre
+
+    def get_total_atenciones(self):
+        return self.atencion_set.count()
+
+    def get_total_ciudadanos(self):
+        return self.ciudadano_set.count()
+
+
+class AuditoriaAccion(models.Model):
+    """Modelo para registrar auditoría de acciones del sistema (contrato CD-224-2026)."""
+    TIPO_ACCION = [
+        ('CREATE', 'Creación'),
+        ('UPDATE', 'Actualización'),
+        ('DELETE', 'Eliminación'),
+        ('LOGIN', 'Inicio de sesión'),
+        ('LOGOUT', 'Cierre de sesión'),
+        ('EXPORT', 'Exportación de datos'),
+        ('OTHER', 'Otra acción'),
+    ]
+
+    aud_cdgo = models.AutoField(primary_key=True, db_column='AUD_CDGO')
+    usuario = models.CharField(max_length=128, db_column='AUD_USUARIO', null=True, blank=True)
+    accion = models.CharField(max_length=32, db_column='AUD_ACCION', choices=TIPO_ACCION)
+    modelo_afectado = models.CharField(max_length=128, db_column='AUD_MODELO', null=True, blank=True)
+    objeto_id = models.CharField(max_length=128, db_column='AUD_OBJETO_ID', null=True, blank=True)
+    descripcion = models.TextField(db_column='AUD_DESCRIPCION', null=True, blank=True)
+    ip_address = models.CharField(max_length=45, db_column='AUD_IP', null=True, blank=True)
+    fecha_accion = models.DateTimeField(auto_now_add=True, db_column='AUD_FECHA')
+
+    class Meta:
+        db_table = 'aud_auditoria_accion'
+        ordering = ['-fecha_accion']
+        verbose_name = 'Registro de auditoría'
+        verbose_name_plural = 'Registros de auditoría'
+
+    def __str__(self):
+        return f"[{self.get_accion_display()}] {self.usuario} - {self.modelo_afectado} ({self.fecha_accion.strftime('%Y-%m-%d %H:%M')})"
+
+
+class UserProfile(models.Model):
+    """
+    Perfil de usuario para almacenar la relación con un PVD.
+    Permite que los Admin PVD tengan asignado su edificio específico.
+    """
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='pvd_profile')
+    pvd_asignado = models.ForeignKey(
+        'PuntoViveDigital',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='PVD Asignado'
+    )
+
+    class Meta:
+        db_table = 'usr_userprofile'
+        verbose_name = 'Perfil de Usuario'
+        verbose_name_plural = 'Perfiles de Usuario'
+
+    def __str__(self):
+        pvd_name = self.pvd_asignado.pvd_nombre if self.pvd_asignado else 'Sin PVD'
+        return f"{self.user.username} - {pvd_name}"

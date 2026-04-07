@@ -1,49 +1,154 @@
-{% extends 'modulo_puntos/base.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Puntos Vive Digital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .role-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .role-option {
+            flex: 1;
+            padding: 16px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .role-option:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+        }
+        .role-option.selected {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+        .role-option input[type="radio"] {
+            display: none;
+        }
+        .role-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        .role-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+        .role-description {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        #credentials-section {
+            display: none;
+        }
+        #credentials-section.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body style="background:#f3f4f6;min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;font-family:'Inter',sans-serif;">
+    <div style="background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);max-width:480px;width:92%;overflow:hidden;">
 
-{% block body_class %}page-auth{% endblock %}
-{% block title %}Iniciar Sesión - PVD Bugalagrande{% endblock %}
-
-{% block content %}
-<div class="auth-layout">
-    <div class="card auth-card">
-        <div class="auth-logos">
-            <img src="{% static 'img/logo-alcaldia.png' %}" alt="Alcaldía de Bugalagrande">
-            <span class="auth-logos__sep" aria-hidden="true"></span>
-            <img src="{% static 'img/logo-pvd.png' %}" alt="Punto Vive Digital">
+        <!-- Header con logos -->
+        <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:32px 24px;text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:16px;">
+                <img src="{% static 'img/logo-alcaldia.png' %}" alt="Alcaldía de Bugalagrande" style="height:60px;width:auto;object-fit:contain;">
+                <div style="width:1px;height:50px;background:rgba(255,255,255,0.3);"></div>
+                <img src="{% static 'img/logo-pvd.png' %}" alt="Punto Vive Digital" style="height:60px;width:auto;object-fit:contain;">
+            </div>
+            <h1 style="margin:0 0 4px;font-size:20px;font-weight:600;color:white;">Puntos Vive Digital</h1>
+            <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);">Bugalagrande - Valle del Cauca</p>
         </div>
 
-        <h2>Bienvenido</h2>
-        <p class="lead">Ingresa tus credenciales para acceder al sistema de gestión del Punto Vive Digital.</p>
+        <!-- Formulario -->
+        <div style="padding:32px 28px;">
+            <h2 style="margin:0 0 24px;font-size:18px;font-weight:600;color:#111827;text-align:center;">Iniciar Sesión</h2>
 
-        {% if form.errors %}
-            <div class="alert alert-error" style="justify-content: center;">
-                Usuario o contraseña incorrectos.
-            </div>
-        {% endif %}
+            {% if messages %}
+            {% for message in messages %}
+            <div style="background:{% if message.tags == 'error' %}#fef2f2{% else %}#f0fdf4{% endif %};border:1px solid {% if message.tags == 'error' %}#fecaca{% else %}#bbf7d0{% endif %};color:{% if message.tags == 'error' %}#991b1b{% else %}#166534{% endif %};padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px;">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
 
-        <form method="POST">
-            {% csrf_token %}
+            <form method="POST" id="login-form">
+                {% csrf_token %}
+                
+                <!-- Selector de rol -->
+                <div class="role-selector">
+                    <label class="role-option" onclick="selectRole('superuser')">
+                        <input type="radio" name="role" value="superuser" id="role-superuser">
+                        <div class="role-icon">👑</div>
+                        <div class="role-label">Superusuario</div>
+                        <div class="role-description">Acceso total al sistema</div>
+                    </label>
+                    <label class="role-option" onclick="selectRole('admin_tic')">
+                        <input type="radio" name="role" value="admin_tic" id="role-admin-tic">
+                        <div class="role-icon">🖥️</div>
+                        <div class="role-label">Admin TIC</div>
+                        <div class="role-description">Gestión de PVDs</div>
+                    </label>
+                    <label class="role-option" onclick="selectRole('admin_pvd')">
+                        <input type="radio" name="role" value="admin_pvd" id="role-admin-pvd">
+                        <div class="role-icon">🏢</div>
+                        <div class="role-label">Admin PVD</div>
+                        <div class="role-description">Operación de PVD</div>
+                    </label>
+                </div>
 
-            <div class="form-field">
-                <label for="{{ form.username.id_for_label }}">Usuario</label>
-                {{ form.username }}
-            </div>
+                <!-- Credenciales (oculto hasta seleccionar rol) -->
+                <div id="credentials-section">
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Usuario</label>
+                        <input type="text" name="username" id="username-input" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:24px;">
+                        <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Contraseña</label>
+                        <input type="password" name="password" id="password-input" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                    </div>
+                    <button type="submit" style="display:block;width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;">Ingresar</button>
+                </div>
+            </form>
+        </div>
 
-            <div class="form-field">
-                <label for="{{ form.password.id_for_label }}">Contraseña</label>
-                {{ form.password }}
-            </div>
-
-            <input type="hidden" name="next" value="{{ next }}">
-
-            <button type="submit" class="btn btn--block">Ingresar al sistema</button>
-        </form>
-
-        <p class="auth-footer">
-            &copy; 2026 Puntos Vive Digital — Bugalagrande<br>
-            <span style="opacity: 0.85;">Software de apoyo a la gestión TIC · CD-224-2026</span>
-        </p>
+        <!-- Footer -->
+        <div style="background:#f9fafb;padding:16px 28px;text-align:center;border-top:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:11px;color:#6b7280;line-height:1.6;">
+                © 2026 Puntos Vive Digital — Bugalagrande<br>
+                Software de apoyo a la gestión TIC · Contrato CD-224-2026
+            </p>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <script>
+        function selectRole(role) {
+            // Remove selected class from all options
+            document.querySelectorAll('.role-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            event.currentTarget.classList.add('selected');
+            
+            // Check the radio
+            document.getElementById('role-' + role).checked = true;
+            
+            // Show credentials section
+            document.getElementById('credentials-section').classList.add('visible');
+            
+            // Focus on username input
+            setTimeout(() => {
+                document.getElementById('username-input').focus();
+            }, 100);
+        }
+    </script>
+</body>
+</html>

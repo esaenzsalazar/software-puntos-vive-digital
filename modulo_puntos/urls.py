@@ -4,11 +4,12 @@ from . import views
 app_name = 'modulo_puntos'
 
 urlpatterns = [
-    path('', views.inicio, name='inicio'),
     path('login/', views.login_usuario, name='login'),
+    path('', views.login_usuario, name='home'),
     path('logout/', views.logout_usuario, name='logout'),
-    path('historial-ciudadano/<int:ciu_cdgo>/', views.historial_ciudadano, name='historial_ciudadano'),
     path('panel/', views.panel_control, name='panel_control'),
+    path('seleccionar-pvd/', views.seleccionar_pvd_view, name='seleccionar_pvd_view'),
+    path('historial-ciudadano/<int:ciu_cdgo>/', views.historial_ciudadano, name='historial_ciudadano'),
     path('perfil/', views.perfil_usuario, name='perfil_usuario'),
     path('registrar-recurso/', views.registrar_recurso, name='registrar_recurso'),
     path('consultar-ciudadanos/', views.consultar_ciudadanos, name='consultar_ciudadanos'),
@@ -27,4 +28,11 @@ urlpatterns = [
     path('ayuda/', views.ayuda_sistema, name='ayuda'),
     path('crear-admin-tic/', views.crear_admin_tic, name='crear_admin_tic'),
     path('crear-admin-pvd/', views.crear_admin_pvd, name='crear_admin_pvd'),
+
+    # Gestión de Puntos Vive Digital
+    path('pvd/', views.lista_pvd, name='lista_pvd'),
+    path('pvd/crear/', views.crear_pvd, name='crear_pvd'),
+    path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
+    path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
+    path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
 ]

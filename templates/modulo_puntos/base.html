@@ -14,16 +14,37 @@
     {% if user.is_authenticated %}
     <div class="app-shell">
         <header class="app-topbar">
-            <button type="button" class="app-topbar__menu" id="sidebar-toggle" aria-label="Abrir o cerrar menú" aria-expanded="false" aria-controls="app-sidebar">
-                <span class="app-topbar__menu-bar"></span>
-                <span class="app-topbar__menu-bar"></span>
-                <span class="app-topbar__menu-bar"></span>
-            </button>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="app-topbar__brand">
-                <span class="app-topbar__brand-title">Puntos Vive Digital</span>
-                <span class="app-topbar__brand-sub">Bugalagrande</span>
-            </a>
-            <span class="app-topbar__user" title="Usuario en sesión">{{ user.username }}</span>
+            <div class="app-topbar__left">
+                <button type="button" class="app-topbar__menu" id="sidebar-toggle" aria-label="Abrir o cerrar menú" aria-expanded="false" aria-controls="app-sidebar">
+                    <span class="app-topbar__menu-bar"></span>
+                    <span class="app-topbar__menu-bar"></span>
+                    <span class="app-topbar__menu-bar"></span>
+                </button>
+                <a href="{% url 'modulo_puntos:panel_control' %}" class="app-topbar__brand">
+                    <span class="app-topbar__brand-title">Puntos Vive Digital</span>
+                    <span class="app-topbar__brand-sub">Bugalagrande</span>
+                </a>
+            </div>
+
+            <div class="app-topbar__center">
+                {% if pvd_activo and pvds_disponibles %}
+                <div class="pvd-selector">
+                    <span class="pvd-selector__label">📍</span>
+                    <select class="pvd-selector__select" id="pvd-selector-top" onchange="if(this.value) window.location.href=this.value">
+                        {% for pvd in pvds_disponibles %}
+                        <option value="{% url 'modulo_puntos:seleccionar_pvd' pvd.pvd_cdgo %}" 
+                                {% if pvd_activo.pvd_cdgo == pvd.pvd_cdgo %}selected{% endif %}>
+                            {{ pvd.pvd_nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="app-topbar__right">
+                <span class="app-topbar__user" title="Usuario en sesión">{{ user.username }}</span>
+            </div>
         </header>
 
         <div class="app-sidebar-backdrop" id="sidebar-backdrop" hidden aria-hidden="true"></div>
@@ -34,12 +55,12 @@
                     <p class="side-nav__heading">General</p>
                     <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:panel_control' %}" class="side-nav__link {% if current_url_name == 'panel_control' %}is-active{% endif %}">Inicio / Panel</a>
+                            <a href="{% url 'modulo_puntos:panel_control' %}" class="side-nav__link {% if current_url_name == 'panel_control' %}is-active{% endif %}">📊 Panel de Control</a>
                         </li>
                     </ul>
 
                     {% if nav_pvd %}
-                    <p class="side-nav__heading">Ciudadanos</p>
+                    <p class="side-nav__heading">👥 Ciudadanos</p>
                     <ul class="side-nav__list">
                         <li>
                             <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="side-nav__link {% if current_url_name == 'consultar_ciudadanos' or current_url_name == 'historial_ciudadano' or current_url_name == 'editar_ciudadano' %}is-active{% endif %}">Consultar</a>
@@ -49,46 +70,49 @@
                         </li>
                     </ul>
 
-                    <p class="side-nav__heading">Atención y calidad</p>
+                    <p class="side-nav__heading">🎯 Atención y Calidad</p>
                     <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="side-nav__link {% if current_url_name == 'registrar_atencion' %}is-active{% endif %}">Registrar atención</a>
+                            <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="side-nav__link {% if current_url_name == 'registrar_atencion' %}is-active{% endif %}">Registrar Atención</a>
                         </li>
                         <li>
-                            <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="side-nav__link {% if current_url_name == 'registrar_servicio' %}is-active{% endif %}">Registrar servicio</a>
+                            <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="side-nav__link {% if current_url_name == 'registrar_servicio' %}is-active{% endif %}">Registrar Servicio</a>
                         </li>
                         <li>
-                            <a href="{% url 'modulo_puntos:registrar_satisfaccion' %}" class="side-nav__link {% if current_url_name == 'registrar_satisfaccion' %}is-active{% endif %}">Satisfacción</a>
+                            <a href="{% url 'modulo_puntos:registrar_satisfaccion' %}" class="side-nav__link {% if current_url_name == 'registrar_satisfaccion' %}is-active{% endif %}">Encuesta Satisfacción</a>
                         </li>
                     </ul>
 
-                    <p class="side-nav__heading">Inventario</p>
+                    <p class="side-nav__heading">📦 Inventario</p>
                     <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="side-nav__link {% if current_url_name == 'registrar_recurso' %}is-active{% endif %}">Registrar recurso</a>
+                            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="side-nav__link {% if current_url_name == 'registrar_recurso' %}is-active{% endif %}">Registrar Recurso</a>
                         </li>
                         <li>
-                            <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="side-nav__link {% if current_url_name == 'registrar_prestamo' %}is-active{% endif %}">Registrar préstamo</a>
+                            <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="side-nav__link {% if current_url_name == 'registrar_prestamo' %}is-active{% endif %}">Registrar Préstamo</a>
                         </li>
                     </ul>
 
-                    <p class="side-nav__heading">Informes</p>
+                    <p class="side-nav__heading">📈 Informes</p>
                     <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y exportación</a>
+                            <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y Exportación</a>
                         </li>
                     </ul>
                     {% endif %}
 
                     {% if nav_tic %}
-                    <p class="side-nav__heading">Administración</p>
+                    <p class="side-nav__heading">⚙️ Administración</p>
                     <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear usuario PVD</a>
+                            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="side-nav__link {% if 'pvd' in current_url_name %}is-active{% endif %}">Gestionar PVDs</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear Usuario PVD</a>
                         </li>
                         {% if nav_super %}
                         <li>
-                            <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear usuario TIC</a>
+                            <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear Usuario TIC</a>
                         </li>
                         {% endif %}
                     </ul>
@@ -96,9 +120,9 @@
                 </nav>
 
                 <div class="app-sidebar__footer">
-                    <a href="{% url 'modulo_puntos:ayuda' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'ayuda' %}is-active{% endif %}">Ayuda</a>
-                    <a href="{% url 'modulo_puntos:perfil_usuario' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'perfil_usuario' %}is-active{% endif %}">Mi perfil</a>
-                    <a href="{% url 'modulo_puntos:logout' %}" class="side-nav__link side-nav__link--footer side-nav__link--logout">Cerrar sesión</a>
+                    <a href="{% url 'modulo_puntos:ayuda' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'ayuda' %}is-active{% endif %}">❓ Ayuda</a>
+                    <a href="{% url 'modulo_puntos:perfil_usuario' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'perfil_usuario' %}is-active{% endif %}">👤 Mi Perfil</a>
+                    <a href="{% url 'modulo_puntos:logout' %}" class="side-nav__link side-nav__link--footer side-nav__link--logout">🚪 Cerrar Sesión</a>
                 </div>
             </aside>
 
@@ -106,8 +130,9 @@
                 <div class="container container--app">
                     {% if messages %}
                         {% for message in messages %}
-                            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
-                                {{ message }}
+                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                                <strong>{{ message }}</strong>
+                                <button type="button" class="alert-close" onclick="this.parentElement.remove()" aria-label="Cerrar">&times;</button>
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -116,8 +141,9 @@
     <div class="container">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
-                    {{ message }}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    <strong>{{ message }}</strong>
+                    <button type="button" class="alert-close" onclick="this.parentElement.remove()" aria-label="Cerrar">&times;</button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -181,6 +207,11 @@
                 language: {
                     noResults: function() { return "No se encontraron resultados"; }
                 }
+            });
+            // Inicializar select2 en el selector de PVD
+            $('#pvd-selector-top').select2({
+                minimumResultsForSearch: -1,
+                width: '200px'
             });
         });
     </script>

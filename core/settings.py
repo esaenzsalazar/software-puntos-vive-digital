@@ -1,14 +1,21 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-g9@zgxyl-bfe0qrc9h8@$=d09ldfo7+oygr6q&=ykp=y2xzqb)'
+# Cargar variables de entorno desde archivo .env
+load_dotenv(BASE_DIR / '.env')
 
-DEBUG = True
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-g9@zgxyl-bfe0qrc9h8@$=d09ldfo7+oygr6q&=ykp=y2xzqb)')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.1.82']
-CSRF_TRUSTED_ORIGINS = ['http://192.168.1.82']
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost,testserver,*').split(',')
+ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS]
+if '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('*')
+CSRF_TRUSTED_ORIGINS = [f'http://{h}' for h in ALLOWED_HOSTS if h not in ('127.0.0.1', 'localhost', '*')]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -53,12 +60,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql', 
-        'NAME': 'modeladobd', 
-        'USER': 'avnadmin',
-        'PASSWORD': 'AVNS_fl3LSi0cjPU3tyZUFgf',
-        'HOST': 'mysql-3bb67bf0-alcaldiaesteban-d1bc.k.aivencloud.com', 
-        'PORT': '27827', 
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('DB_NAME', 'modeladobd'),
+        'USER': os.getenv('DB_USER', 'avnadmin'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'mysql-3bb67bf0-alcaldiaesteban-d1bc.k.aivencloud.com'),
+        'PORT': os.getenv('DB_PORT', '27827'),
     }
 }
 

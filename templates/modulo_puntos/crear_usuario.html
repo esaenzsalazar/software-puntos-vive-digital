@@ -26,6 +26,19 @@
             </div>
         {% endfor %}
 
+        {% if pvds %}
+        <div class="form-field">
+            <label for="pvd_asignado">PVD Asignado</label>
+            <select name="pvd_asignado" id="pvd_asignado" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                <option value="">-- Selecciona un PVD --</option>
+                {% for pvd in pvds %}
+                <option value="{{ pvd.pvd_cdgo }}">{{ pvd.pvd_nombre }} - {{ pvd.pvd_barrio|default:"Sin barrio" }}</option>
+                {% endfor %}
+            </select>
+            <span class="help-text">El Punto Vive Digital donde este usuario trabajará como administrador.</span>
+        </div>
+        {% endif %}
+
         <div class="actions" style="justify-content: flex-end; margin-top: 8px;">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn">Crear usuario</button>

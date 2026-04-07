@@ -3,7 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
-from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital
 
 # --- LISTAS DE OPCIONES GLOBALES ---
 BARRIO_CHOICES = [
@@ -106,6 +106,39 @@ class CiudadanoForm(forms.ModelForm):
         self.fields['ciu_estdo'].initial = 'A'
         self.fields['ciu_discapacidad'].required = False
 
+    def clean_ciu_numdoc(self):
+        """Valida que el número de documento no esté duplicado."""
+        numdoc = self.cleaned_data.get('ciu_numdoc')
+        if numdoc:
+            qs = Ciudadano.objects.filter(ciu_numdoc=numdoc)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise ValidationError('Ya existe un ciudadano registrado con este número de documento.')
+        return numdoc.strip() if numdoc else numdoc
+
+    def clean_ciu_email(self):
+        """Valida formato de email si se proporciona."""
+        email = self.cleaned_data.get('ciu_email')
+        if email:
+            qs = Ciudadano.objects.filter(ciu_email=email)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise ValidationError('Este correo electrónico ya está registrado.')
+        return email
+
+    def clean_ciu_tlfno(self):
+        """Valida formato de teléfono."""
+        tlfno = self.cleaned_data.get('ciu_tlfno')
+        if tlfno:
+            limpio = tlfno.replace(' ', '').replace('-', '')
+            if not limpio.isdigit():
+                raise ValidationError('El teléfono solo debe contener números.')
+            if len(limpio) < 7:
+                raise ValidationError('El teléfono debe tener al menos 7 dígitos.')
+        return tlfno
+
 
 class AtencionForm(forms.ModelForm):
     class Meta:
@@ -173,6 +206,13 @@ class SatisfaccionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['atn_cdgo'].required = False
         self.fields['atn_cdgo'].empty_label = '--- Seleccione una atención ---'
+
+    def clean_sat_calif(self):
+        """Valida que la calificación esté entre 1 y 5."""
+        calif = self.cleaned_data.get('sat_calif')
+        if calif is not None and (calif < 1 or calif > 5):
+            raise ValidationError('La calificación debe estar entre 1 y 5 estrellas.')
+        return calif
 
 
 class ServicioForm(forms.ModelForm):
@@ -268,3 +308,32 @@ class CrearUsuarioForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['username'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Ingrese el nombre de usuario'})
+        self.fields['first_name'].widget.attrs.update({'class': 'form-control'})
+        self.fields['last_name'].widget.attrs.update({'class': 'form-control'})
+        self.fields['password1'].widget.attrs.update({'class': 'form-control'})
+        self.fields['password2'].widget.attrs.update({'class': 'form-control'})
+
+
+class PuntoViveDigitalForm(forms.ModelForm):
+    """Formulario para crear y editar Puntos Vive Digital."""
+    class Meta:
+        model = PuntoViveDigital
+        fields = ['pvd_nombre', 'pvd_dircion', 'pvd_barrio', 'pvd_telefono', 'pvd_correo', 'pvd_estdo', 'pvd_descripcion']
+        labels = {
+            'pvd_nombre': 'Nombre del Punto Vive Digital',
+            'pvd_dircion': 'Dirección',
+            'pvd_barrio': 'Barrio / Vereda',
+            'pvd_telefono': 'Teléfono',
+            'pvd_correo': 'Correo electrónico',
+            'pvd_estdo': 'Estado',
+            'pvd_descripcion': 'Descripción / Notas',
+        }
+        widgets = {
+            'pvd_nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: PVD Centro, PVD La María'}),
+            'pvd_dircion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}),
+            'pvd_barrio': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Barrio o vereda'}),
+            'pvd_telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono del PVD'}),
+            'pvd_correo': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
+            'pvd_estdo': forms.Select(attrs={'class': 'form-control'}),
+            'pvd_descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas adicionales sobre el PVD'}),
+        }

@@ -1,0 +1,230 @@
+{% extends 'modulo_puntos/base_simple.html' %}
+
+{% block title %}Seleccionar PVD{% endblock %}
+
+{% block body_class %}page-seleccion{% endblock %}
+
+{% block content %}
+<div class="seleccion-container">
+    <div class="seleccion-header">
+        <h1 class="seleccion-title">📍 Seleccionar Punto Vive Digital</h1>
+        <p class="seleccion-subtitle">Elige un PVD para comenzar a trabajar</p>
+        <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
+            <a href="{% url 'modulo_puntos:logout' %}" class="btn-back">← Cambiar usuario</a>
+            {% if request.user.is_superuser %}
+            <a href="/pvd/crear/" class="btn-back" style="background: #10b981;">➕ Crear PVD</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if pvds %}
+    <div class="pvd-list">
+        {% for pvd in pvds %}
+        <div class="pvd-item-card" onclick="window.location.href='{% url 'modulo_puntos:seleccionar_pvd' pvd.pvd_cdgo %}'" style="cursor: pointer;">
+            <div class="pvd-item__content">
+                <div class="pvd-item__icon">🏢</div>
+                <div class="pvd-item__info">
+                    <h3>{{ pvd.pvd_nombre }}</h3>
+                    {% if pvd.pvd_barrio or pvd.pvd_dircion %}
+                    <p class="pvd-item__location">
+                        {% if pvd.pvd_barrio %}📍 {{ pvd.pvd_barrio }}{% endif %}
+                        {% if pvd.pvd_dircion %} • {{ pvd.pvd_dircion }}{% endif %}
+                    </p>
+                    {% endif %}
+                    <div class="pvd-item__stats">
+                        <span>👥 {{ pvd.total_ciudadanos|default:0 }} ciudadanos</span>
+                        <span>•</span>
+                        <span>🎯 {{ pvd.total_atenciones|default:0 }} atenciones</span>
+                        <span>•</span>
+                        <span>📦 {{ pvd.total_recursos|default:0 }} recursos</span>
+                    </div>
+                </div>
+                <div class="pvd-item__action">
+                    <span class="btn-enter">▶️ Entrar</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state__icon">🏢</div>
+        <h3 class="empty-state__title">No hay Puntos Vive Digital disponibles</h3>
+        <p class="empty-state__message">
+            {% if nav_pvd %}
+                No tienes un PVD asignado. Contacta a un Administrador TIC para que te asigne uno.
+            {% else %}
+                Contacta a un Administrador TIC para crear el primer PVD.
+            {% endif %}
+        </p>
+        {% if nav_tic %}
+        <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn btn-primary">
+            ➕ Crear primer PVD
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+body.page-seleccion {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+.seleccion-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.seleccion-header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.seleccion-title {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.seleccion-subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+    margin: 0 0 16px 0;
+}
+
+.btn-back {
+    display: inline-block;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.pvd-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pvd-item-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.pvd-item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.pvd-item__content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.pvd-item__icon {
+    font-size: 48px;
+    flex-shrink: 0;
+}
+
+.pvd-item__info {
+    flex: 1;
+}
+
+.pvd-item__info h3 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.pvd-item__location {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.pvd-item__stats {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.pvd-item__action {
+    flex-shrink: 0;
+}
+
+.btn-enter {
+    display: inline-block;
+    padding: 12px 24px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.btn-enter:hover {
+    background: #2563eb;
+}
+
+.empty-state {
+    text-align: center;
+    background: white;
+    border-radius: 16px;
+    padding: 60px 40px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state__icon {
+    font-size: 80px;
+    margin-bottom: 16px;
+}
+
+.empty-state__title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.empty-state__message {
+    font-size: 16px;
+    color: #6b7280;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+    .seleccion-title {
+        font-size: 28px;
+    }
+    
+    .pvd-item__content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .pvd-item__stats {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+</style>
+{% endblock %}

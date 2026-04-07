@@ -1,56 +1,124 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Panel de Control{% endblock %}
+{% block title %}{% if pvd_activo %}Panel - {{ pvd_activo.pvd_nombre }}{% else %}Panel de Control{% endif %}{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="page-hero">
-        <span class="eyebrow">Panel principal</span>
-        <h2 class="page-title">Resumen operativo</h2>
-        <p class="muted">Indicadores del Punto Vive Digital. Para registrar o consultar información usa el <strong>menú lateral</strong>, organizado por áreas (ciudadanos, atención, inventario e informes).</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <span class="eyebrow">Panel de Control</span>
+                {% if pvd_activo %}
+                <h1 class="page-title">📊 {{ pvd_activo.pvd_nombre }}</h1>
+                {% if pvd_activo.pvd_barrio or pvd_activo.pvd_dircion %}
+                <p class="muted">
+                    {% if pvd_activo.pvd_barrio %}📍 {{ pvd_activo.pvd_barrio }}{% endif %}
+                    {% if pvd_activo.pvd_dircion %} | 🏠 {{ pvd_activo.pvd_dircion }}{% endif %}
+                </p>
+                {% endif %}
+                {% else %}
+                <h1 class="page-title">📊 Vista Global del Sistema</h1>
+                <p class="muted">Administración general de todos los Puntos Vive Digital</p>
+                {% endif %}
+            </div>
+            <div>
+                {% if pvd_activo %}
+                <span class="badge badge--success">PVD Activo</span>
+                <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left: 8px;">
+                    🔄 Cambiar PVD
+                </a>
+                {% else %}
+                <span class="badge badge--info">Vista Global</span>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <div class="user-banner">
         <p>
-            <strong>Sesión:</strong> <span class="text-accent">{{ request.user.username }}</span>
+            <strong>Usuario:</strong> <span class="text-accent">{{ request.user.username }}</span>
             <span class="user-banner__sep">|</span>
             <strong>Perfil:</strong> <span class="text-accent">{{ rol_usuario }}</span>
+            {% if pvd_activo %}
+            <span class="user-banner__sep">|</span>
+            <strong>PVD:</strong> <span class="text-accent">{{ pvd_activo.pvd_nombre }}</span>
+            {% endif %}
         </p>
     </div>
 </div>
 
 <div class="content-section">
     <div class="section-header">
-        <h3 class="section-title">Indicadores globales</h3>
+        <h3 class="section-title">📈 Indicadores {% if pvd_activo %}del PVD{% else %}Globales{% endif %}</h3>
     </div>
     <div class="stats-grid">
         <div class="stat-card stat-card--accent-blue">
-            <h3>Ciudadanos</h3>
+            <h3>👥 Ciudadanos</h3>
             <p class="stat-card__value">{{ total_ciudadanos }}</p>
         </div>
         <div class="stat-card stat-card--accent-emerald">
-            <h3>Atenciones</h3>
+            <h3>🎯 Atenciones</h3>
             <p class="stat-card__value">{{ atenciones_registradas }}</p>
         </div>
         <div class="stat-card stat-card--accent-amber">
-            <h3>Satisfacción</h3>
+            <h3>⭐ Satisfacción</h3>
             <p class="stat-card__value">{{ total_satisfacciones }}</p>
         </div>
         <div class="stat-card stat-card--accent-violet">
-            <h3>Servicios</h3>
+            <h3>🛠️ Servicios</h3>
             <p class="stat-card__value">{{ total_servicios }}</p>
         </div>
         <div class="stat-card stat-card--accent-rose">
-            <h3>Préstamos</h3>
+            <h3>📦 Préstamos</h3>
             <p class="stat-card__value">{{ total_prestamos }}</p>
         </div>
     </div>
 </div>
 
 {% if mostrar_modulos_pvd %}
-<div class="card card--hint">
-    <h3 class="section-title section-title--rule">Acceso a módulos</h3>
-    <p class="muted" style="margin: 0;">Todos los formularios de registro y consulta están en el menú izquierdo, agrupados por tema. En pantallas pequeñas, pulsa el icono <strong>☰</strong> arriba para abrir el menú.</p>
+<div class="grid" style="margin-top: 24px;">
+    <div class="menu-card">
+        <h3>👤 Ciudadanos</h3>
+        <p>Consultar y registrar ciudadanos.</p>
+        <div class="menu-card__actions">
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
+            <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
+        </div>
+    </div>
+    
+    <div class="menu-card menu-card--featured">
+        <h3>🎯 Atención</h3>
+        <p>Registrar atenciones y servicios.</p>
+        <div class="menu-card__actions">
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_atencion' %}">Nueva Atención</a>
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
+        </div>
+    </div>
+    
+    <div class="menu-card">
+        <h3>📦 Inventario</h3>
+        <p>Gestionar recursos y préstamos.</p>
+        <div class="menu-card__actions">
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+        </div>
+    </div>
+    
+    <div class="menu-card">
+        <h3>📈 Reportes</h3>
+        <p>Informes y exportación de datos.</p>
+        <div class="menu-card__actions">
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
+        </div>
+    </div>
+    
+    <div class="menu-card">
+        <h3>⭐ Satisfacción</h3>
+        <p>Registrar encuestas de satisfacción.</p>
+        <div class="menu-card__actions">
+            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Registrar</a>
+        </div>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

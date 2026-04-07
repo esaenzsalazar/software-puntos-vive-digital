@@ -1,0 +1,87 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Administración</span>
+        <h1 class="page-title">{{ titulo }}</h1>
+    </div>
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Información del Punto Vive Digital
+            </legend>
+            
+            <div class="form-group">
+                <label for="{{ form.pvd_nombre.id_for_label }}">Nombre del PVD *</label>
+                {{ form.pvd_nombre }}
+                {% if form.pvd_nombre.errors %}
+                    <div class="form-error">{{ form.pvd_nombre.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label for="{{ form.pvd_dircion.id_for_label }}">Dirección</label>
+                    {{ form.pvd_dircion }}
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="{{ form.pvd_barrio.id_for_label }}">Barrio / Vereda</label>
+                    {{ form.pvd_barrio }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.pvd_telefono.id_for_label }}">Teléfono</label>
+                    {{ form.pvd_telefono }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.pvd_correo.id_for_label }}">Correo electrónico</label>
+                    {{ form.pvd_correo }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.pvd_estdo.id_for_label }}">Estado</label>
+                    {{ form.pvd_estdo }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.pvd_descripcion.id_for_label }}">Descripción / Notas</label>
+                {{ form.pvd_descripcion }}
+            </div>
+        </fieldset>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">
+                {% if accion == 'crear' %}➕ Crear PVD{% else %}💾 Guardar Cambios{% endif %}
+            </button>
+            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+.form-row .form-group {
+    flex: 1;
+}
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+}
+</style>
+{% endblock %}

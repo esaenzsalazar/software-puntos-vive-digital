@@ -27,8 +27,74 @@
 
             <div class="form-row">
                 <div class="form-group" style="flex: 2;">
-                    <label for="{{ form.pvd_dircion.id_for_label }}">Dirección</label>
-                    {{ form.pvd_dircion }}
+                    <label>Dirección del PVD</label>
+                    
+                    <!-- Selector de tipo de zona -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="margin-right: 15px; cursor: pointer;">
+                            <input type="radio" name="tipo_zona" value="Urbana" checked onchange="toggleZonaPVD()"> Cabecera Municipal (Urbana)
+                        </label>
+                        <label style="cursor: pointer;">
+                            <input type="radio" name="tipo_zona" value="Rural" onchange="toggleZonaPVD()"> Vereda / Corregimiento (Rural)
+                        </label>
+                    </div>
+
+                    <!-- Constructor Urbano -->
+                    <div id="pvd_constructor_urbano">
+                        <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas y el sistema armará la dirección urbana automáticamente.</p>
+
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                            <select id="pvd_dir_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
+                                <option value="Calle">Calle</option>
+                                <option value="Carrera">Carrera</option>
+                                <option value="Transversal">Transversal</option>
+                                <option value="Diagonal">Diagonal</option>
+                                <option value="Avenida">Avenida</option>
+                                <option value="Vía">Vía</option>
+                                <option value="Manzana">Manzana</option>
+                                <option value="Lote">Lote</option>
+                            </select>
+
+                            <input type="text" id="pvd_dir_num1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                            <input type="text" id="pvd_dir_letra1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
+
+                            <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
+
+                            <input type="text" id="pvd_dir_num2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+                            <input type="text" id="pvd_dir_letra2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
+
+                            <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
+
+                            <input type="text" id="pvd_dir_num3" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
+
+                            <input type="text" id="pvd_dir_comp" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Complemento (Apto, Piso, Casa...)">
+                        </div>
+
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                            <p style="margin: 0; font-size: 14px; color: #64748b;">Dirección urbana a guardar: <strong id="pvd_dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                        </div>
+
+                        {{ form.pvd_dircion }}
+                    </div>
+
+                    <!-- Constructor Rural -->
+                    <div id="pvd_constructor_rural" style="display: none;">
+                        <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Selecciona el tipo y escribe el nombre para armar la ubicación.</p>
+
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                            <select id="pvd_rur_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
+                                <option value="Vereda">Vereda</option>
+                                <option value="Corregimiento">Corregimiento</option>
+                            </select>
+
+                            <input type="text" id="pvd_rur_nombre" class="form-control" style="flex-grow: 1; min-width: 150px; margin:0; padding: 8px;" placeholder="Nombre (Ej: San Antonio)">
+                            <input type="text" id="pvd_rur_finca" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Finca / Lote (Opcional)">
+                        </div>
+
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                            <p style="margin: 0; font-size: 14px; color: #64748b;">Ubicación rural a guardar: <strong id="pvd_rur_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group" style="flex: 1;">
                     <label for="{{ form.pvd_barrio.id_for_label }}">Barrio / Vereda</label>
@@ -84,4 +150,87 @@
     }
 }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // Toggle entre zona urbana y rural
+    window.toggleZonaPVD = function() {
+        const zonaSeleccionada = document.querySelector('input[name="tipo_zona"]:checked').value;
+        const constructorUrbano = document.getElementById('pvd_constructor_urbano');
+        const constructorRural = document.getElementById('pvd_constructor_rural');
+
+        if (zonaSeleccionada === 'Urbana') {
+            constructorUrbano.style.display = 'block';
+            constructorRural.style.display = 'none';
+            document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = '';
+        } else {
+            constructorUrbano.style.display = 'none';
+            constructorRural.style.display = 'block';
+            updateDireccionRuralPVD();
+        }
+    };
+
+    // Constructor de dirección urbana
+    function updateDireccionPVD() {
+        const tipo = document.getElementById('pvd_dir_tipo').value || '';
+        const num1 = document.getElementById('pvd_dir_num1').value || '';
+        const letra1 = document.getElementById('pvd_dir_letra1').value || '';
+        const num2 = document.getElementById('pvd_dir_num2').value || '';
+        const letra2 = document.getElementById('pvd_dir_letra2').value || '';
+        const num3 = document.getElementById('pvd_dir_num3').value || '';
+        const comp = document.getElementById('pvd_dir_comp').value || '';
+
+        let dir = "";
+        if (num1) {
+            dir = `${tipo} ${num1} ${letra1}`;
+            if (num2) dir += ` # ${num2} ${letra2}`;
+            if (num3) dir += ` - ${num3}`;
+            if (comp) dir += ` ${comp}`;
+        }
+
+        dir = dir.replace(/\s+/g, ' ').trim();
+        document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = dir;
+        document.getElementById('pvd_dir_preview').textContent = dir;
+    }
+
+    const dirInputs = ['pvd_dir_tipo', 'pvd_dir_num1', 'pvd_dir_letra1', 'pvd_dir_num2', 'pvd_dir_letra2', 'pvd_dir_num3', 'pvd_dir_comp'];
+    dirInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', updateDireccionPVD);
+            if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccionPVD);
+        }
+    });
+
+    // Constructor de dirección rural
+    function updateDireccionRuralPVD() {
+        const tipo = document.getElementById('pvd_rur_tipo').value || '';
+        const nombre = document.getElementById('pvd_rur_nombre').value || '';
+        const finca = document.getElementById('pvd_rur_finca').value || '';
+
+        let dir = "";
+        if (nombre) {
+            dir = `${tipo} ${nombre}`;
+            if (finca) dir += ` - Finca/Lote: ${finca}`;
+        }
+
+        dir = dir.replace(/\s+/g, ' ').trim();
+        document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = dir;
+        document.getElementById('pvd_rur_preview').textContent = dir;
+    }
+
+    const rurInputs = ['pvd_rur_tipo', 'pvd_rur_nombre', 'pvd_rur_finca'];
+    rurInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', updateDireccionRuralPVD);
+            if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccionRuralPVD);
+        }
+    });
+
+    // Inicializar
+    toggleZonaPVD();
+});
+</script>
 {% endblock %}

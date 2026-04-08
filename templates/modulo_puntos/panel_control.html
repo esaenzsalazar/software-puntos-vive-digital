@@ -17,8 +17,10 @@
                 </p>
                 {% endif %}
                 {% else %}
-                <h1 class="page-title">📊 Vista Global del Sistema</h1>
-                <p class="muted">Administración general de todos los Puntos Vive Digital</p>
+                <h1 class="page-title">📊 {% if es_superusuario %}Funciones de Superusuario{% elif es_admin_tic_only %}Funciones de Admin TIC{% else %}Funciones de Admin PVD{% endif %}</h1>
+                <p class="muted">
+                    {% if es_superusuario %}Administración general del sistema{% elif es_admin_tic_only %}Gestión de PVDs y monitoreo{% else %}Operación del Punto Vive Digital{% endif %}
+                </p>
                 {% endif %}
             </div>
             <div>
@@ -27,8 +29,6 @@
                 <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left: 8px;">
                     🔄 Cambiar PVD
                 </a>
-                {% else %}
-                <span class="badge badge--info">Vista Global</span>
                 {% endif %}
             </div>
         </div>
@@ -47,6 +47,139 @@
     </div>
 </div>
 
+{# ============================================================================ #}
+{# PANEL SUPERUSUARIO #}
+{# ============================================================================ #}
+{% if es_superusuario %}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title">👑 Funciones de Superusuario</h3>
+    </div>
+    
+    <div class="grid" style="margin-top: 24px;">
+        <div class="menu-card">
+            <h3>📈 Informes</h3>
+            <p>Reportes y exportación de datos del sistema.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🏛️ Infraestructura</h3>
+            <p>Gestionar PVDs y salas del sistema.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
+            </div>
+        </div>
+
+        <div class="menu-card menu-card--featured">
+            <h3>⚙️ Administración</h3>
+            <p>Crear usuarios administradores.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Usuario PVD</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear Usuario TIC</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ============================================================================ #}
+{# PANEL ADMIN TIC #}
+{# ============================================================================ #}
+{% elif es_admin_tic_only %}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title">🖥️ Funciones de Admin TIC</h3>
+    </div>
+    
+    <div class="grid" style="margin-top: 24px;">
+        <div class="menu-card">
+            <h3>👥 Ciudadanos</h3>
+            <p>Consultar ciudadanos registrados.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>📈 Informes</h3>
+            <p>Reportes y exportación de datos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🏛️ Infraestructura</h3>
+            <p>Gestionar PVDs y salas.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
+            </div>
+        </div>
+
+        <div class="menu-card menu-card--featured">
+            <h3>⚙️ Administración</h3>
+            <p>Crear usuarios administradores PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Usuario PVD</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ============================================================================ #}
+{# PANEL ADMIN PVD #}
+{# ============================================================================ #}
+{% elif es_admin_pvd_only %}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title">🏢 Funciones de Admin PVD</h3>
+    </div>
+    
+    <div class="grid" style="margin-top: 24px;">
+        <div class="menu-card">
+            <h3>👥 Ciudadanos</h3>
+            <p>Consultar, registrar y aprobar ciudadanos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
+                <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
+                {% if total_pendientes > 0 %}
+                <a class="btn btn-warning btn--sm" href="{% url 'modulo_puntos:ciudadanos_pendientes' %}">
+                    Aprobar ({{ total_pendientes }})
+                </a>
+                {% else %}
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:ciudadanos_pendientes' %}">Aprobar Registros</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="menu-card menu-card--featured">
+            <h3>🎯 Atención al Ciudadano</h3>
+            <p>Registrar atenciones y servicios.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_atencion' %}">Nueva Atención</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>📦 Inventario</h3>
+            <p>Gestionar recursos y préstamos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ============================================================================ #}
+{# PANEL POR DEFECTO (si no coincide ningún rol) #}
+{# ============================================================================ #}
+{% else %}
 <div class="content-section">
     <div class="section-header">
         <h3 class="section-title">📈 Indicadores {% if pvd_activo %}del PVD{% else %}Globales{% endif %}</h3>
@@ -71,52 +204,6 @@
         <div class="stat-card stat-card--accent-rose">
             <h3>📦 Préstamos</h3>
             <p class="stat-card__value">{{ total_prestamos }}</p>
-        </div>
-    </div>
-</div>
-
-{% if mostrar_modulos_pvd %}
-<div class="grid" style="margin-top: 24px;">
-    <div class="menu-card">
-        <h3>👤 Ciudadanos</h3>
-        <p>Consultar y registrar ciudadanos.</p>
-        <div class="menu-card__actions">
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
-            <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
-        </div>
-    </div>
-    
-    <div class="menu-card menu-card--featured">
-        <h3>🎯 Atención</h3>
-        <p>Registrar atenciones y servicios.</p>
-        <div class="menu-card__actions">
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_atencion' %}">Nueva Atención</a>
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
-        </div>
-    </div>
-    
-    <div class="menu-card">
-        <h3>📦 Inventario</h3>
-        <p>Gestionar recursos y préstamos.</p>
-        <div class="menu-card__actions">
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
-        </div>
-    </div>
-    
-    <div class="menu-card">
-        <h3>📈 Reportes</h3>
-        <p>Informes y exportación de datos.</p>
-        <div class="menu-card__actions">
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
-        </div>
-    </div>
-    
-    <div class="menu-card">
-        <h3>⭐ Satisfacción</h3>
-        <p>Registrar encuestas de satisfacción.</p>
-        <div class="menu-card__actions">
-            <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Registrar</a>
         </div>
     </div>
 </div>

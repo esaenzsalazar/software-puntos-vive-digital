@@ -59,37 +59,49 @@
                         </li>
                     </ul>
 
-                    {% if nav_pvd %}
+                    {# ============================================================================ #}
+                    {# NAVEGACIÓN SUPERUSUARIO #}
+                    {# ============================================================================ #}
+                    {% if es_superusuario %}
+                    <p class="side-nav__heading">👑 Funciones de Superusuario</p>
+                    
+                    <p class="side-nav__heading">📈 Informes</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y Exportación</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">🏛️ Infraestructura</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="side-nav__link {% if 'pvd' in current_url_name %}is-active{% endif %}">Gestionar PVDs</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">Salas</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">⚙️ Administración</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear Usuario PVD</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear Usuario TIC</a>
+                        </li>
+                    </ul>
+
+                    {# ============================================================================ #}
+                    {# NAVEGACIÓN ADMIN TIC #}
+                    {# ============================================================================ #}
+                    {% elif es_admin_tic_only %}
+                    <p class="side-nav__heading">🖥️ Funciones de Admin TIC</p>
+                    
                     <p class="side-nav__heading">👥 Ciudadanos</p>
                     <ul class="side-nav__list">
                         <li>
                             <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="side-nav__link {% if current_url_name == 'consultar_ciudadanos' or current_url_name == 'historial_ciudadano' or current_url_name == 'editar_ciudadano' %}is-active{% endif %}">Consultar</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_ciudadano' %}" class="side-nav__link {% if current_url_name == 'registrar_ciudadano' %}is-active{% endif %}">Registrar</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">🎯 Atención y Calidad</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="side-nav__link {% if current_url_name == 'registrar_atencion' %}is-active{% endif %}">Registrar Atención</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="side-nav__link {% if current_url_name == 'registrar_servicio' %}is-active{% endif %}">Registrar Servicio</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_satisfaccion' %}" class="side-nav__link {% if current_url_name == 'registrar_satisfaccion' %}is-active{% endif %}">Encuesta Satisfacción</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">📦 Inventario</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="side-nav__link {% if current_url_name == 'registrar_recurso' %}is-active{% endif %}">Registrar Recurso</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="side-nav__link {% if current_url_name == 'registrar_prestamo' %}is-active{% endif %}">Registrar Préstamo</a>
                         </li>
                     </ul>
 
@@ -103,28 +115,57 @@
                     <p class="side-nav__heading">🏛️ Infraestructura</p>
                     <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">Salas</a>
-                        </li>
-                    </ul>
-                    {% endif %}
-
-                    {% if nav_tic %}
-                    <p class="side-nav__heading">⚙️ Administración</p>
-                    <ul class="side-nav__list">
-                        <li>
                             <a href="{% url 'modulo_puntos:lista_pvd' %}" class="side-nav__link {% if 'pvd' in current_url_name %}is-active{% endif %}">Gestionar PVDs</a>
                         </li>
                         <li>
-                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">🏛️ Salas</a>
+                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">Salas</a>
                         </li>
+                    </ul>
+
+                    <p class="side-nav__heading">⚙️ Administración</p>
+                    <ul class="side-nav__list">
                         <li>
                             <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear Usuario PVD</a>
                         </li>
-                        {% if nav_super %}
+                    </ul>
+
+                    {# ============================================================================ #}
+                    {# NAVEGACIÓN ADMIN PVD #}
+                    {# ============================================================================ #}
+                    {% elif es_admin_pvd_only %}
+                    <p class="side-nav__heading">🏢 Funciones de Admin PVD</p>
+                    
+                    <p class="side-nav__heading">👥 Ciudadanos</p>
+                    <ul class="side-nav__list">
                         <li>
-                            <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear Usuario TIC</a>
+                            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="side-nav__link {% if current_url_name == 'consultar_ciudadanos' or current_url_name == 'historial_ciudadano' or current_url_name == 'editar_ciudadano' %}is-active{% endif %}">Consultar</a>
                         </li>
-                        {% endif %}
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_ciudadano' %}" class="side-nav__link {% if current_url_name == 'registrar_ciudadano' %}is-active{% endif %}">Registrar</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:ciudadanos_pendientes' %}" class="side-nav__link {% if current_url_name == 'ciudadanos_pendientes' %}is-active{% endif %}">⏳ Aprobar Registros</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">🎯 Atención al Ciudadano</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="side-nav__link {% if current_url_name == 'registrar_atencion' %}is-active{% endif %}">Registrar Atención</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="side-nav__link {% if current_url_name == 'registrar_servicio' %}is-active{% endif %}">Registrar Servicio</a>
+                        </li>
+                    </ul>
+
+                    <p class="side-nav__heading">📦 Inventario</p>
+                    <ul class="side-nav__list">
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="side-nav__link {% if current_url_name == 'registrar_recurso' %}is-active{% endif %}">Registrar Recurso</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="side-nav__link {% if current_url_name == 'registrar_prestamo' %}is-active{% endif %}">Registrar Préstamo</a>
+                        </li>
                     </ul>
                     {% endif %}
                 </nav>

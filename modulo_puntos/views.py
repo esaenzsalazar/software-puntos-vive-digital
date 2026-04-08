@@ -210,7 +210,8 @@ def perfil_usuario(request):
 def panel_control(request):
     """
     Panel principal del sistema.
-    - Superuser y Admin TIC: ven el dashboard completo sin necesidad de seleccionar PVD
+    - Superuser: ve funciones de administración del sistema
+    - Admin TIC: ve funciones de gestión de PVDs
     - Admin PVD: debe seleccionar un PVD activo antes de acceder
     """
     pvd_activo_id = request.session.get('pvd_activo_id')
@@ -225,7 +226,7 @@ def panel_control(request):
 
     # Admin PVD DEBE tener un PVD seleccionado
     es_admin_pvd = (
-        not usuario_es_admin_tic(request.user) and 
+        not usuario_es_admin_tic(request.user) and
         request.user.groups.filter(name='Administrador PVD').exists()
     )
 
@@ -242,15 +243,15 @@ def panel_control(request):
         total_ciudadanos = Ciudadano.objects.filter(pvd_cdgo=pvd_activo).count()
         atenciones_registradas = atenciones_pvd.count()
         total_satisfacciones = (
-            Satisfaccion.objects.filter(atn_cdgo__in=atencion_ids).count() 
+            Satisfaccion.objects.filter(atn_cdgo__in=atencion_ids).count()
             if atencion_ids else 0
         )
         total_servicios = (
-            Servicio.objects.filter(atn_cdgo__in=atencion_ids).count() 
+            Servicio.objects.filter(atn_cdgo__in=atencion_ids).count()
             if atencion_ids else 0
         )
         total_prestamos = (
-            PrestamoRecurso.objects.filter(rec_cdgo__in=recurso_ids).count() 
+            PrestamoRecurso.objects.filter(rec_cdgo__in=recurso_ids).count()
             if recurso_ids else 0
         )
     else:
@@ -261,16 +262,32 @@ def panel_control(request):
         total_servicios = Servicio.objects.count()
         total_prestamos = PrestamoRecurso.objects.count()
 
+    # Contar ciudadanos pendientes de aprobación para Admin PVD
+    total_pendientes = 0
+    if es_admin_pvd:
+        total_pendientes = Ciudadano.objects.filter(ciu_pendiente_aprobacion=True).count()
+        if pvd_activo:
+            total_pendientes = Ciudadano.objects.filter(
+                ciu_pendiente_aprobacion=True,
+                pvd_cdgo=pvd_activo
+            ).count()
+
+    # Determinar roles
+    es_superusuario = request.user.is_superuser
+    es_admin_tic_only = request.user.groups.filter(name='Administrador TIC').exists() and not request.user.is_superuser
+    es_admin_pvd_only = request.user.groups.filter(name='Administrador PVD').exists() and not request.user.is_superuser and not usuario_es_admin_tic(request.user)
+
     context = {
         'total_ciudadanos': total_ciudadanos,
         'atenciones_registradas': atenciones_registradas,
         'total_satisfacciones': total_satisfacciones,
         'total_servicios': total_servicios,
         'total_prestamos': total_prestamos,
+        'total_pendientes': total_pendientes,
         'pvd_activo': pvd_activo,
-        'es_superusuario': usuario_es_superusuario(request.user),
-        'mostrar_modulos_tic': usuario_es_admin_tic(request.user),
-        'mostrar_modulos_pvd': usuario_puede_usar_modulos_pvd(request.user),
+        'es_superusuario': es_superusuario,
+        'es_admin_tic_only': es_admin_tic_only,
+        'es_admin_pvd_only': es_admin_pvd_only,
         'rol_usuario': obtener_rol_usuario(request.user),
     }
 
@@ -346,9 +363,14 @@ def registrar_ciudadano(request):
     if request.method == 'POST':
         if form.is_valid():
             try:
-                ciudadano = form.save()
+                ciudadano = form.save(commit=False)
+                # Si el registro viene de un admin (no del formulario público), no queda pendiente
+                # Solo queda pendiente si viene del formulario público de usuarios
+                ciudadano.ciu_pendiente_aprobacion = False
+                ciudadano.save()
+                
                 messages.success(
-                    request, 
+                    request,
                     'Ciudadano registrado exitosamente en la base de datos.'
                 )
                 registrar_auditoria(
@@ -362,8 +384,8 @@ def registrar_ciudadano(request):
             messages.error(request, 'Formulario inválido. Revisa los campos.')
 
     return render(
-        request, 
-        'modulo_puntos/registrar_ciudadano.html', 
+        request,
+        'modulo_puntos/registrar_ciudadano.html',
         {'form': form}
     )
 
@@ -1430,5 +1452,156 @@ def activar_sala(request, sala_cdgo):
         )
     except Sala.DoesNotExist:
         messages.error(request, 'La sala no existe.')
-    
+
     return redirect('modulo_puntos:lista_salas')
+
+
+# ==============================================================================
+# REGISTRO DE USUARIO CIUDADANO (Sin autenticación)
+# ==============================================================================
+
+def registrar_usuario_ciudadano(request):
+    """
+    Vista para que los usuarios se registren como ciudadanos.
+    No requiere autenticación. Los registros quedan pendientes de aprobación.
+    """
+    if request.method == 'POST':
+        form = CiudadanoForm(request.POST)
+        if form.is_valid():
+            try:
+                ciudadano = form.save(commit=False)
+                ciudadano.ciu_pendiente_aprobacion = True
+                ciudadano.ciu_estdo = 'A'
+                ciudadano.save()
+                
+                messages.success(
+                    request,
+                    '¡Registro exitoso! Tu información ha sido enviada para aprobación. '
+                    'Un administrador del PVD revisará tus datos.'
+                )
+                registrar_auditoria(
+                    request, 'CREATE', 'Ciudadano', ciudadano.ciu_cdgo,
+                    f'Registro pendiente de aprobación: {ciudadano.ciu_nmbres} {ciudadano.ciu_aplldos}'
+                )
+                return redirect('modulo_puntos:registro_exitoso')
+            except Exception as e:
+                messages.error(request, f'Error al guardar en BD: {e}')
+        else:
+            messages.error(request, 'Formulario inválido. Revisa los campos.')
+    else:
+        form = CiudadanoForm()
+
+    return render(
+        request,
+        'modulo_puntos/registrar_usuario_ciudadano.html',
+        {'form': form}
+    )
+
+
+def registro_exitoso(request):
+    """Vista de confirmación de registro exitoso."""
+    return render(request, 'modulo_puntos/registro_exitoso.html')
+
+
+# ==============================================================================
+# APROBACIÓN DE CIUDADANOS PENDIENTES (Admin PVD)
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def ciudadanos_pendientes(request):
+    """
+    Vista para que los Admin PVD revisen y aprueben ciudadanos pendientes.
+    SOLO accesible para Admin PVD (no Superusuario ni Admin TIC).
+    """
+    # Verificar que sea SOLO Admin PVD (no superuser ni admin TIC)
+    es_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
+    if not es_admin_pvd or request.user.is_superuser:
+        messages.error(request, 'Solo los Administradores PVD pueden aprobar registros de ciudadanos.')
+        return redirect('modulo_puntos:panel_control')
+
+    # Obtener ciudadanos pendientes de aprobación
+    ciudadanos_pendientes = Ciudadano.objects.filter(
+        ciu_pendiente_aprobacion=True
+    ).order_by('-ciu_fecha_registro')
+
+    # Filtrar por PVD activo si hay uno seleccionado
+    pvd_activo_id = request.session.get('pvd_activo_id')
+    if pvd_activo_id:
+        ciudadanos_pendientes = ciudadanos_pendientes.filter(
+            Q(pvd_cdgo_id=pvd_activo_id) | Q(pvd_cdgo__isnull=True)
+        )
+
+    context = {
+        'ciudadanos_pendientes': ciudadanos_pendientes,
+        'total_pendientes': ciudadanos_pendientes.count(),
+    }
+    return render(request, 'modulo_puntos/ciudadanos_pendientes.html', context)
+
+
+@login_required(login_url='/login/')
+def aprobar_ciudadano(request, ciu_cdgo):
+    """
+    Aprobar un ciudadano pendiente.
+    SOLO Admin PVD puede aprobar (no Superusuario ni Admin TIC).
+    """
+    es_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
+    if not es_admin_pvd or request.user.is_superuser:
+        messages.error(request, 'Solo los Administradores PVD pueden aprobar registros.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        ciudadano = Ciudadano.objects.get(pk=ciu_cdgo, ciu_pendiente_aprobacion=True)
+        ciudadano.ciu_pendiente_aprobacion = False
+        
+        # Asignar al PVD activo si hay uno seleccionado
+        pvd_activo_id = request.session.get('pvd_activo_id')
+        if pvd_activo_id and not ciudadano.pvd_cdgo_id:
+            try:
+                ciudadano.pvd_cdgo_id = pvd_activo_id
+            except PuntoViveDigital.DoesNotExist:
+                pass
+        
+        ciudadano.save()
+        
+        messages.success(
+            request,
+            f'Ciudadano {ciudadano.ciu_nmbres} {ciudadano.ciu_aplldos} aprobado correctamente.'
+        )
+        registrar_auditoria(
+            request, 'UPDATE', 'Ciudadano', ciudadano.ciu_cdgo,
+            f'Ciudadano aprobado: {ciudadano.ciu_nmbres} {ciudadano.ciu_aplldos}'
+        )
+    except Ciudadano.DoesNotExist:
+        messages.error(request, 'El ciudadano no existe o ya fue aprobado.')
+
+    return redirect('modulo_puntos:ciudadanos_pendientes')
+
+
+@login_required(login_url='/login/')
+def rechazar_ciudadano(request, ciu_cdgo):
+    """
+    Rechazar/Eliminar un ciudadano pendiente.
+    SOLO Admin PVD puede rechazar (no Superusuario ni Admin TIC).
+    """
+    es_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
+    if not es_admin_pvd or request.user.is_superuser:
+        messages.error(request, 'Solo los Administradores PVD pueden rechazar registros.')
+        return redirect('modulo_puntos:panel_control')
+
+    try:
+        ciudadano = Ciudadano.objects.get(pk=ciu_cdgo, ciu_pendiente_aprobacion=True)
+        nombre_completo = f"{ciudadano.ciu_nmbres} {ciudadano.ciu_aplldos}"
+        ciudadano.delete()
+        
+        messages.success(
+            request,
+            f'El registro de {nombre_completo} ha sido rechazado/eliminado.'
+        )
+        registrar_auditoria(
+            request, 'DELETE', 'Ciudadano', ciu_cdgo,
+            f'Ciudadano rechazado/eliminado: {nombre_completo}'
+        )
+    except Ciudadano.DoesNotExist:
+        messages.error(request, 'El ciudadano no existe o ya fue procesado.')
+
+    return redirect('modulo_puntos:ciudadanos_pendientes')

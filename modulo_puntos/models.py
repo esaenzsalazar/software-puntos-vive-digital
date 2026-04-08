@@ -368,11 +368,22 @@ class Ciudadano(models.Model):
         verbose_name='Correo Electrónico'
     )
     ciu_tlfno = models.CharField(
-        max_length=32, 
-        db_column='CIU_TLFNO', 
-        null=True, 
+        max_length=32,
+        db_column='CIU_TLFNO',
+        null=True,
         blank=True,
         verbose_name='Teléfono'
+    )
+    ciu_pendiente_aprobacion = models.BooleanField(
+        db_column='CIU_PENDIENTE_APROBACION',
+        default=False,
+        verbose_name='Pendiente de Aprobación'
+    )
+    ciu_fecha_registro = models.DateTimeField(
+        db_column='CIU_FECHA_REGISTRO',
+        auto_now_add=True,
+        null=True,
+        verbose_name='Fecha de Registro'
     )
 
     class Meta:

@@ -35,10 +35,21 @@ def pvd_navigation(request):
     # Determinar permisos de navegación
     ctx['nav_super'] = u.is_superuser
     ctx['nav_tic'] = u.is_superuser or u.groups.filter(name='Administrador TIC').exists()
+    
+    # Verificar si es SOLO Admin PVD (no superuser ni admin TIC)
+    es_admin_pvd = u.groups.filter(name='Administrador PVD').exists()
+    ctx['es_admin_pvd_only'] = es_admin_pvd and not u.is_superuser and not ctx['nav_tic']
+    
+    # Verificar si es SOLO Admin TIC (no superuser)
+    ctx['es_admin_tic_only'] = u.groups.filter(name='Administrador TIC').exists() and not u.is_superuser
+    
+    # Verificar si es SOLO Superusuario
+    ctx['es_superusuario'] = u.is_superuser
+    
     ctx['nav_pvd'] = (
         u.is_superuser
         or ctx['nav_tic']
-        or u.groups.filter(name='Administrador PVD').exists()
+        or es_admin_pvd
     )
 
     # NO auto-seleccionar PVD - el usuario debe seleccionar manualmente

@@ -102,6 +102,12 @@
                         <div class="role-label">Admin PVD</div>
                         <div class="role-description">Operación de PVD</div>
                     </label>
+                    <label class="role-option" onclick="selectRole('usuario')" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;">
+                        <input type="radio" name="role" value="usuario" id="role-usuario">
+                        <div class="role-icon">👤</div>
+                        <div class="role-label" style="color: white;">Usuario</div>
+                        <div class="role-description" style="color: rgba(255,255,255,0.9);">Registro ciudadano</div>
+                    </label>
                 </div>
 
                 <!-- Credenciales (oculto hasta seleccionar rol) -->
@@ -134,16 +140,22 @@
             document.querySelectorAll('.role-option').forEach(el => {
                 el.classList.remove('selected');
             });
-            
+
             // Add selected class to clicked option
             event.currentTarget.classList.add('selected');
-            
+
             // Check the radio
             document.getElementById('role-' + role).checked = true;
-            
+
+            // If 'usuario' role is selected, redirect to citizen registration
+            if (role === 'usuario') {
+                window.location.href = '/registrar-usuario-ciudadano/';
+                return;
+            }
+
             // Show credentials section
             document.getElementById('credentials-section').classList.add('visible');
-            
+
             // Focus on username input
             setTimeout(() => {
                 document.getElementById('username-input').focus();

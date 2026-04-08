@@ -32,6 +32,19 @@ urlpatterns = [
     path('registrar-ciudadano/', views.registrar_ciudadano, name='registrar_ciudadano'),
     path('editar-ciudadano/<int:ciu_cdgo>/', views.editar_ciudadano, name='editar_ciudadano'),
     path('historial-ciudadano/<int:ciu_cdgo>/', views.historial_ciudadano, name='historial_ciudadano'),
+
+    # ==========================================================================
+    # REGISTRO DE USUARIO CIUDADANO (Sin autenticación)
+    # ==========================================================================
+    path('registrar-usuario-ciudadano/', views.registrar_usuario_ciudadano, name='registrar_usuario_ciudadano'),
+    path('registro-exitoso/', views.registro_exitoso, name='registro_exitoso'),
+
+    # ==========================================================================
+    # APROBACIÓN DE CIUDADANOS PENDIENTES
+    # ==========================================================================
+    path('ciudadanos-pendientes/', views.ciudadanos_pendientes, name='ciudadanos_pendientes'),
+    path('aprobar-ciudadano/<int:ciu_cdgo>/', views.aprobar_ciudadano, name='aprobar_ciudadano'),
+    path('rechazar-ciudadano/<int:ciu_cdgo>/', views.rechazar_ciudadano, name='rechazar_ciudadano'),
     
     # ==========================================================================
     # REGISTRO DE ATENCIONES Y SERVICIOS

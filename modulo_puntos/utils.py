@@ -2,6 +2,10 @@
 Utilidades para el sistema PVD - Contrato CD-224-2026
 Funciones helper para auditoría, validaciones y otras utilidades.
 """
+import re
+import random
+import string
+from datetime import datetime
 from django.contrib import messages
 
 
@@ -78,3 +82,191 @@ def mensaje_advertencia(request, texto):
 def mensaje_info(request, texto):
     """Muestra un mensaje informativo al usuario."""
     messages.info(request, texto)
+
+
+def generar_username(primer_nombre, segundo_nombre='', primer_apellido='', segundo_apellido='', rol='usuario'):
+    """
+    Genera un nombre de usuario único basado en los nombres y apellidos.
+    
+    Args:
+        primer_nombre: Primer nombre del usuario
+        segundo_nombre: Segundo nombre del usuario (opcional)
+        primer_apellido: Primer apellido del usuario
+        segundo_apellido: Segundo apellido del usuario (opcional)
+        rol: Rol del usuario para prefijo (admin_tic, admin_pvd, usuario)
+    
+    Returns:
+        str: Nombre de usuario generado
+    """
+    # Limpiar caracteres especiales y convertir a minúsculas
+    def limpiar(texto):
+        if not texto:
+            return ''
+        texto = texto.lower().strip()
+        texto = texto.replace(' ', '')
+        # Eliminar caracteres especiales excepto ñ y vocales acentuadas
+        texto = re.sub(r'[^a-záéíóúñ]', '', texto)
+        # Convertir vocales acentuadas a normales
+        texto = texto.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
+        return texto
+    
+    primer_nombre = limpiar(primer_nombre)
+    segundo_nombre = limpiar(segundo_nombre)
+    primer_apellido = limpiar(primer_apellido)
+    segundo_apellido = limpiar(segundo_apellido)
+    
+    # Generar username: primera letra del primer nombre + primer apellido completo
+    if primer_apellido:
+        username = primer_nombre[0] + primer_apellido if primer_nombre else primer_apellido
+    else:
+        username = primer_nombre
+    
+    # Agregar segundo apellido si existe
+    if segundo_apellido:
+        username += segundo_apellido[0]
+    
+    # Agregar un número aleatorio para unicidad
+    numero = random.randint(100, 999)
+    username = f"{username}{numero}"
+    
+    # Truncar a 30 caracteres (límite de Django)
+    username = username[:30]
+    
+    return username
+
+
+def generar_password(longitud=10):
+    """
+    Genera una contraseña segura aleatoria.
+    
+    Args:
+        longitud: Longitud de la contraseña (por defecto 10)
+    
+    Returns:
+        str: Contraseña generada
+    """
+    # Asegurar al menos una mayúscula, una minúscula, un número y un carácter especial
+    mayusculas = random.choice(string.ascii_uppercase)
+    minusculas = random.choice(string.ascii_lowercase)
+    numeros = random.choice(string.digits)
+    especiales = random.choice('!@#$%^&*')
+    
+    # Rellenar con caracteres aleatorios
+    restante = longitud - 4
+    caracteres = string.ascii_letters + string.digits + '!@#$%^&*'
+    restante = ''.join(random.choice(caracteres) for _ in range(restante))
+    
+    # Combinar y mezclar
+    password = list(mayusculas + minusculas + numeros + especiales + restante)
+    random.shuffle(password)
+    
+    return ''.join(password)
+
+
+def validar_formato_documento(documento):
+    """
+    Valida el formato de un número de documento.
+    
+    Args:
+        documento: Número de documento a validar
+    
+    Returns:
+        tuple: (es_valido, mensaje_error)
+    """
+    if not documento:
+        return False, 'El número de documento es requerido'
+    
+    documento = documento.strip()
+    
+    if not documento.isdigit():
+        return False, 'El documento solo debe contener números'
+    
+    if len(documento) < 6:
+        return False, 'El documento debe tener al menos 6 dígitos'
+    
+    if len(documento) > 20:
+        return False, 'El documento no puede tener más de 20 dígitos'
+    
+    return True, ''
+
+
+def validar_formato_direccion(direccion):
+    """
+    Valida el formato de una dirección.
+    
+    Args:
+        direccion: Dirección a validar
+    
+    Returns:
+        tuple: (es_valido, mensaje_error)
+    """
+    if not direccion:
+        return False, 'La dirección es requerida'
+    
+    direccion = direccion.strip()
+    
+    if len(direccion) < 5:
+        return False, 'La dirección debe tener al menos 5 caracteres'
+    
+    if len(direccion) > 200:
+        return False, 'La dirección no puede tener más de 200 caracteres'
+    
+    # Verificar que tenga al menos una palabra
+    palabras = direccion.split()
+    if len(palabras) < 2:
+        return False, 'La dirección debe incluir calle y número al menos'
+    
+    return True, ''
+
+
+def validar_formato_telefono(telefono):
+    """
+    Valida el formato de un número de teléfono.
+    
+    Args:
+        telefono: Número de teléfono a validar
+    
+    Returns:
+        tuple: (es_valido, mensaje_error)
+    """
+    if not telefono:
+        return False, 'El teléfono es requerido'
+    
+    telefono = telefono.strip().replace(' ', '').replace('-', '')
+    
+    if not telefono.isdigit():
+        return False, 'El teléfono solo debe contener números'
+    
+    if len(telefono) < 7:
+        return False, 'El teléfono debe tener al menos 7 dígitos'
+    
+    if len(telefono) > 15:
+        return False, 'El teléfono no puede tener más de 15 dígitos'
+    
+    return True, ''
+
+
+def validar_formato_email(email):
+    """
+    Valida el formato de un correo electrónico.
+    
+    Args:
+        email: Correo electrónico a validar
+    
+    Returns:
+        tuple: (es_valido, mensaje_error)
+    """
+    if not email:
+        return True, ''  # Email es opcional en muchos casos
+    
+    email = email.strip()
+    
+    # Regex básico para email
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        return False, 'El formato del correo electrónico no es válido'
+    
+    if len(email) > 100:
+        return False, 'El correo electrónico no puede tener más de 100 caracteres'
+    
+    return True, ''

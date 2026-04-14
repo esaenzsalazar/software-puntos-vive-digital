@@ -20,7 +20,7 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.db.models import Q, Count, Avg
 from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect
@@ -38,7 +38,7 @@ from .forms import (
 )
 from .utils import (
     registrar_auditoria, mensaje_exito, mensaje_error,
-    mensaje_advertencia, mensaje_info
+    mensaje_advertencia, mensaje_info, generar_username, generar_password
 )
 
 # ==============================================================================
@@ -96,8 +96,8 @@ def logout_usuario(request):
 
 def login_usuario(request):
     """
-    Vista de login con selección de rol.
-    Permite al usuario seleccionar su rol antes de autenticar.
+    Vista de login simplificada - solo usuario y contraseña.
+    El sistema valida automáticamente el rol del usuario y redirige según corresponda.
     """
     # Si ya está autenticado, redirigir al panel
     if request.user.is_authenticated:
@@ -106,39 +106,30 @@ def login_usuario(request):
     if request.method == 'POST':
         username = request.POST.get('username', '')
         password = request.POST.get('password', '')
-        selected_role = request.POST.get('role', '')
-        
+
         from django.contrib.auth import authenticate
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            # Validar que el rol seleccionado coincida con el tipo de usuario
-            role_valid = False
-
-            if selected_role == 'superuser' and user.is_superuser:
-                role_valid = True
-            elif selected_role == 'admin_tic' and (user.is_superuser or user.groups.filter(name='Administrador TIC').exists()):
-                role_valid = True
-            elif selected_role == 'admin_pvd' and user.groups.filter(name='Administrador PVD').exists():
-                role_valid = True
-
-            if not role_valid:
-                messages.error(request, 'El rol seleccionado no corresponde a tu tipo de usuario.')
-                return render(request, 'registration/login.html', {'rol': ''})
-
             # Login exitoso
             login(request, user)
-            messages.success(request, 'Inicio de sesión correcto.')
+            messages.success(request, f'Bienvenido, {username}.')
 
-            # Redirigir según el rol
-            if selected_role in ['superuser', 'admin_tic']:
+            # Redirigir automáticamente según el rol del usuario
+            if user.is_superuser:
                 return redirect('/panel/')
-            else:  # admin_pvd
+            elif user.groups.filter(name='Administrador TIC').exists():
+                return redirect('/panel/')
+            elif user.groups.filter(name='Administrador PVD').exists():
                 return redirect('/seleccionar-pvd/')
+            else:
+                # Usuario sin rol definido - redirigir a registro ciudadano
+                messages.info(request, 'Por favor, contacta a un administrador para que te asigne un rol.')
+                return redirect('/registrar-usuario-ciudadano/')
         else:
             messages.error(request, 'Usuario o contraseña incorrectos.')
 
-    return render(request, 'registration/login.html', {'rol': ''})
+    return render(request, 'registration/login.html')
 
 
 # ==============================================================================
@@ -1180,23 +1171,58 @@ def lista_pvd(request):
 
 @login_required(login_url='/login/')
 def crear_pvd(request):
-    """Crea un nuevo Punto Vive Digital. SOLO Superuser."""
+    """Crea un nuevo Punto Vive Digital. SOLO Superuser.
+    La asignación de Admin PVD es opcional y se puede hacer después.
+    """
     if not usuario_es_superusuario(request.user):
         messages.error(request, 'Solo el Superusuario puede crear Puntos Vive Digital.')
         return redirect('modulo_puntos:panel_control')
 
     form = PuntoViveDigitalForm(request.POST or None)
+    
+    # Obtener lista de administradores PVD disponibles para asignación opcional
+    admins_pvd_disponibles = User.objects.filter(
+        groups__name='Administrador PVD'
+    ).select_related('pvd_profile').order_by('username')
+    
     if request.method == 'POST':
         if form.is_valid():
             pvd = form.save()
             messages.success(
-                request, 
+                request,
                 f'Punto Vive Digital "{pvd.pvd_nombre}" creado exitosamente.'
             )
             registrar_auditoria(
                 request, 'CREATE', 'PuntoViveDigital', pvd.pvd_cdgo,
                 f'Nuevo PVD creado: {pvd.pvd_nombre}'
             )
+            
+            # Verificar si se quiere asignar un admin PVD ahora
+            admin_pvd_id = request.POST.get('admin_pvd_asignado', '')
+            if admin_pvd_id:
+                try:
+                    admin_user = User.objects.get(pk=admin_pvd_id)
+                    # Verificar que el usuario no tenga ya un PVD asignado
+                    if not hasattr(admin_user, 'pvd_profile') or not admin_user.pvd_profile.pvd_asignado:
+                        profile, created = UserProfile.objects.get_or_create(user=admin_user)
+                        profile.pvd_asignado = pvd
+                        profile.save()
+                        messages.success(
+                            request,
+                            f'Administrador {admin_user.username} asignado al PVD correctamente.'
+                        )
+                        registrar_auditoria(
+                            request, 'UPDATE', 'UserProfile', profile.pk,
+                            f'Admin {admin_user.username} asignado a PVD: {pvd.pvd_nombre}'
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            f'El administrador {admin_user.username} ya tiene un PVD asignado.'
+                        )
+                except User.DoesNotExist:
+                    pass
+            
             return redirect('modulo_puntos:lista_pvd')
         else:
             messages.error(request, 'Error al crear el PVD. Revisa los datos.')
@@ -1204,7 +1230,8 @@ def crear_pvd(request):
     return render(request, 'modulo_puntos/form_pvd.html', {
         'form': form,
         'titulo': 'Crear Nuevo Punto Vive Digital',
-        'accion': 'crear'
+        'accion': 'crear',
+        'admins_pvd': admins_pvd_disponibles
     })
 
 
@@ -1605,3 +1632,139 @@ def rechazar_ciudadano(request, ciu_cdgo):
         messages.error(request, 'El ciudadano no existe o ya fue procesado.')
 
     return redirect('modulo_puntos:ciudadanos_pendientes')
+
+
+# ==============================================================================
+# GESTIÓN DE ROLES Y PERMISOS
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def gestionar_roles(request):
+    """
+    Vista para que el Superusuario gestione roles y permisos de usuarios.
+    Solo el Superusuario puede acceder a esta vista.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para gestionar roles.')
+        return redirect('modulo_puntos:panel_control')
+
+    from django.contrib.auth.models import User, Group
+    from django.db.models import Q
+
+    # Obtener todos los usuarios excepto el superusuario actual
+    usuarios = User.objects.filter(is_superuser=False).order_by('username')
+    
+    # Obtener todos los grupos disponibles
+    grupos = Group.objects.all().order_by('name')
+    
+    # Búsqueda y filtros
+    busqueda = request.GET.get('q', '')
+    rol_filtro = request.GET.get('rol', '')
+    
+    if busqueda:
+        usuarios = usuarios.filter(
+            Q(username__icontains=busqueda) |
+            Q(first_name__icontains=busqueda) |
+            Q(last_name__icontains=busqueda) |
+            Q(email__icontains=busqueda)
+        )
+    
+    if rol_filtro:
+        usuarios = usuarios.filter(groups__name=rol_filtro)
+    
+    # Contar usuarios por rol
+    stats_roles = {}
+    for grupo in grupos:
+        stats_roles[grupo.name] = grupo.user_set.count()
+    
+    context = {
+        'usuarios': usuarios,
+        'grupos': grupos,
+        'stats_roles': stats_roles,
+        'busqueda': busqueda,
+        'rol_filtro': rol_filtro,
+    }
+    
+    return render(request, 'modulo_puntos/gestionar_roles.html', context)
+
+
+@login_required(login_url='/login/')
+def asignar_rol_usuario(request, user_id):
+    """
+    Asigna o cambia el rol de un usuario.
+    Solo el Superusuario puede realizar esta acción.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para asignar roles.')
+        return redirect('modulo_puntos:panel_control')
+    
+    from django.contrib.auth.models import User, Group
+    
+    try:
+        usuario = User.objects.get(pk=user_id)
+        
+        if request.method == 'POST':
+            nuevo_rol = request.POST.get('nuevo_rol', '')
+            
+            # Remover todos los grupos actuales
+            usuario.groups.clear()
+            
+            # Agregar al nuevo grupo si se especificó
+            if nuevo_rol:
+                try:
+                    grupo = Group.objects.get(name=nuevo_rol)
+                    usuario.groups.add(grupo)
+                    messages.success(
+                        request,
+                        f'Rol "{nuevo_rol}" asignado correctamente a {usuario.username}.'
+                    )
+                    registrar_auditoria(
+                        request, 'UPDATE', 'User', user_id,
+                        f'Rol asignado: {nuevo_rol} a usuario {usuario.username}'
+                    )
+                except Group.DoesNotExist:
+                    messages.error(request, f'El rol "{nuevo_rol}" no existe.')
+            else:
+                messages.info(request, f'Se removieron todos los roles de {usuario.username}.')
+                registrar_auditoria(
+                    request, 'UPDATE', 'User', user_id,
+                    f'Roles removidos de usuario {usuario.username}'
+                )
+            
+            return redirect('modulo_puntos:gestionar_roles')
+        
+    except User.DoesNotExist:
+        messages.error(request, 'El usuario no existe.')
+        return redirect('modulo_puntos:gestionar_roles')
+
+
+@login_required(login_url='/login/')
+def crear_grupo_rol(request):
+    """
+    Crea un nuevo grupo/rol personalizado.
+    Solo el Superusuario puede crear nuevos roles.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para crear roles.')
+        return redirect('modulo_puntos:panel_control')
+    
+    from django.contrib.auth.models import Group
+    
+    if request.method == 'POST':
+        nombre_rol = request.POST.get('nombre_rol', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        
+        if not nombre_rol:
+            messages.error(request, 'El nombre del rol es requerido.')
+        elif Group.objects.filter(name=nombre_rol).exists():
+            messages.error(request, f'Ya existe un rol con el nombre "{nombre_rol}".')
+        else:
+            grupo = Group.objects.create(name=nombre_rol)
+            messages.success(request, f'Rol "{nombre_rol}" creado correctamente.')
+            registrar_auditoria(
+                request, 'CREATE', 'Group', grupo.pk,
+                f'Nuevo rol creado: {nombre_rol}'
+            )
+            return redirect('modulo_puntos:gestionar_roles')
+    
+    return redirect('modulo_puntos:gestionar_roles')

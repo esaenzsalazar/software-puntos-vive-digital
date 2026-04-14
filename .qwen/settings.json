@@ -13,7 +13,12 @@
       "Bash(rmdir *)",
       "Bash(cd *)",
       "Bash(pip show *)",
-      "Bash(netstat *)"
+      "Bash(netstat *)",
+      "Bash(dir *)",
+      "Bash(\"c:\\users\\jorge eliecer rojas\\software-puntos-vive-digital\\entorno\\scripts\\activate\")",
+      "Bash(entorno\\scripts\\activate)",
+      "Bash(setx *)",
+      "Bash(set *)"
     ]
   },
   "$version": 3

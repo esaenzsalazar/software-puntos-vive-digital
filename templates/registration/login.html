@@ -6,57 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - Puntos Vive Digital</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        .role-selector {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .role-option {
-            flex: 1;
-            padding: 16px;
-            background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        .role-option:hover {
-            background: #eff6ff;
-            border-color: #93c5fd;
-        }
-        .role-option.selected {
-            background: #dbeafe;
-            border-color: #3b82f6;
-        }
-        .role-option input[type="radio"] {
-            display: none;
-        }
-        .role-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-        }
-        .role-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-        }
-        .role-description {
-            font-size: 11px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-        #credentials-section {
-            display: none;
-        }
-        #credentials-section.visible {
-            display: block;
-        }
-    </style>
 </head>
 <body style="background:#f3f4f6;min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;font-family:'Inter',sans-serif;">
-    <div style="background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);max-width:480px;width:92%;overflow:hidden;">
+    <div style="background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);max-width:420px;width:92%;overflow:hidden;">
 
         <!-- Header con logos -->
         <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:32px 24px;text-align:center;">
@@ -75,54 +27,38 @@
 
             {% if messages %}
             {% for message in messages %}
-            <div style="background:{% if message.tags == 'error' %}#fef2f2{% else %}#f0fdf4{% endif %};border:1px solid {% if message.tags == 'error' %}#fecaca{% else %}#bbf7d0{% endif %};color:{% if message.tags == 'error' %}#991b1b{% else %}#166534{% endif %};padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px;">{{ message }}</div>
+            <div style="background:{% if message.tags == 'error' %}#fef2f2{% elif message.tags == 'info' %}#eff6ff{% else %}#f0fdf4{% endif %};border:1px solid {% if message.tags == 'error' %}#fecaca{% elif message.tags == 'info' %}#bfdbfe{% else %}#bbf7d0{% endif %};color:{% if message.tags == 'error' %}#991b1b{% elif message.tags == 'info' %}#1e40af{% else %}#166534{% endif %};padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px;">{{ message }}</div>
             {% endfor %}
             {% endif %}
 
-            <form method="POST" id="login-form">
+            <form method="POST">
                 {% csrf_token %}
                 
-                <!-- Selector de rol -->
-                <div class="role-selector">
-                    <label class="role-option" onclick="selectRole('superuser')">
-                        <input type="radio" name="role" value="superuser" id="role-superuser">
-                        <div class="role-icon">👑</div>
-                        <div class="role-label">Superusuario</div>
-                        <div class="role-description">Acceso total al sistema</div>
-                    </label>
-                    <label class="role-option" onclick="selectRole('admin_tic')">
-                        <input type="radio" name="role" value="admin_tic" id="role-admin-tic">
-                        <div class="role-icon">🖥️</div>
-                        <div class="role-label">Admin TIC</div>
-                        <div class="role-description">Gestión de PVDs</div>
-                    </label>
-                    <label class="role-option" onclick="selectRole('admin_pvd')">
-                        <input type="radio" name="role" value="admin_pvd" id="role-admin-pvd">
-                        <div class="role-icon">🏢</div>
-                        <div class="role-label">Admin PVD</div>
-                        <div class="role-description">Operación de PVD</div>
-                    </label>
-                    <label class="role-option" onclick="selectRole('usuario')" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;">
-                        <input type="radio" name="role" value="usuario" id="role-usuario">
-                        <div class="role-icon">👤</div>
-                        <div class="role-label" style="color: white;">Usuario</div>
-                        <div class="role-description" style="color: rgba(255,255,255,0.9);">Registro ciudadano</div>
-                    </label>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Usuario</label>
+                    <input type="text" name="username" id="username-input" required 
+                           style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;"
+                           placeholder="Ingrese su usuario" autofocus>
                 </div>
-
-                <!-- Credenciales (oculto hasta seleccionar rol) -->
-                <div id="credentials-section">
-                    <div style="margin-bottom:16px;">
-                        <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Usuario</label>
-                        <input type="text" name="username" id="username-input" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
-                    </div>
-                    <div style="margin-bottom:24px;">
-                        <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Contraseña</label>
-                        <input type="password" name="password" id="password-input" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
-                    </div>
-                    <button type="submit" style="display:block;width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;">Ingresar</button>
+                
+                <div style="margin-bottom:24px;">
+                    <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Contraseña</label>
+                    <input type="password" name="password" id="password-input" required 
+                           style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;"
+                           placeholder="Ingrese su contraseña">
                 </div>
+                
+                <button type="submit" style="display:block;width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;" 
+                        onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                    Ingresar al Sistema
+                </button>
             </form>
+            
+            <div style="margin-top:20px;text-align:center;">
+                <a href="/registrar-usuario-ciudadano/" style="font-size:13px;color:#2563eb;text-decoration:none;">
+                    ¿Eres ciudadano? Regístrate aquí
+                </a>
+            </div>
         </div>
 
         <!-- Footer -->
@@ -133,34 +69,5 @@
             </p>
         </div>
     </div>
-
-    <script>
-        function selectRole(role) {
-            // Remove selected class from all options
-            document.querySelectorAll('.role-option').forEach(el => {
-                el.classList.remove('selected');
-            });
-
-            // Add selected class to clicked option
-            event.currentTarget.classList.add('selected');
-
-            // Check the radio
-            document.getElementById('role-' + role).checked = true;
-
-            // If 'usuario' role is selected, redirect to citizen registration
-            if (role === 'usuario') {
-                window.location.href = '/registrar-usuario-ciudadano/';
-                return;
-            }
-
-            // Show credentials section
-            document.getElementById('credentials-section').classList.add('visible');
-
-            // Focus on username input
-            setTimeout(() => {
-                document.getElementById('username-input').focus();
-            }, 100);
-        }
-    </script>
 </body>
 </html>

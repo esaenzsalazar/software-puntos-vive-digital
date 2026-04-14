@@ -1,4 +1,5 @@
 {% extends 'modulo_puntos/base.html' %}
+{% load static %}
 
 {% block title %}{{ titulo }}{% endblock %}
 
@@ -9,7 +10,7 @@
         <h1 class="page-title">{{ titulo }}</h1>
     </div>
 
-    <form method="POST" novalidate>
+    <form method="POST" novalidate id="form-pvd">
         {% csrf_token %}
         
         <fieldset style="margin-bottom: 20px;">
@@ -124,6 +125,26 @@
                 <label for="{{ form.pvd_descripcion.id_for_label }}">Descripción / Notas</label>
                 {{ form.pvd_descripcion }}
             </div>
+            
+            {% if accion == 'crear' and admins_pvd %}
+            <div class="form-group" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
+                <label for="admin_pvd_asignado" style="font-weight: 600; color: #1e40af;">
+                    <i class="fas fa-user-shield me-1"></i>Asignar Administrador PVD (Opcional)
+                </label>
+                <select name="admin_pvd_asignado" id="admin_pvd_asignado" class="form-control" style="margin-top: 8px;">
+                    <option value="">-- Sin administrador asignado (se puede asignar después) --</option>
+                    {% for admin in admins_pvd %}
+                    <option value="{{ admin.id }}">
+                        {{ admin.username }} - {{ admin.get_full_name|default:"Sin nombre completo" }}
+                        {% if admin.pvd_profile.pvd_asignado %}(Ya tiene PVD: {{ admin.pvd_profile.pvd_asignado }}){% else %}(Sin PVD asignado){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                    <i class="fas fa-info-circle"></i> Puedes asignar un administrador ahora o hacerlo más tarde desde la gestión de roles.
+                </small>
+            </div>
+            {% endif %}
         </fieldset>
 
         <div class="actions">
@@ -151,9 +172,10 @@
 }
 </style>
 
+<script src="{% static 'js/validaciones.js' %}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    
+
     // Toggle entre zona urbana y rural
     window.toggleZonaPVD = function() {
         const zonaSeleccionada = document.querySelector('input[name="tipo_zona"]:checked').value;
@@ -192,6 +214,10 @@ document.addEventListener("DOMContentLoaded", function() {
         dir = dir.replace(/\s+/g, ' ').trim();
         document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = dir;
         document.getElementById('pvd_dir_preview').textContent = dir;
+        
+        // Validar dirección en tiempo real
+        const input = document.getElementById('{{ form.pvd_dircion.id_for_label }}');
+        ValidacionPVD.validarYMostrar(input, ValidacionPVD.validarDireccion, 'Dirección');
     }
 
     const dirInputs = ['pvd_dir_tipo', 'pvd_dir_num1', 'pvd_dir_letra1', 'pvd_dir_num2', 'pvd_dir_letra2', 'pvd_dir_num3', 'pvd_dir_comp'];
@@ -218,6 +244,10 @@ document.addEventListener("DOMContentLoaded", function() {
         dir = dir.replace(/\s+/g, ' ').trim();
         document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = dir;
         document.getElementById('pvd_rur_preview').textContent = dir;
+        
+        // Validar dirección en tiempo real
+        const input = document.getElementById('{{ form.pvd_dircion.id_for_label }}');
+        ValidacionPVD.validarYMostrar(input, ValidacionPVD.validarDireccion, 'Dirección');
     }
 
     const rurInputs = ['pvd_rur_tipo', 'pvd_rur_nombre', 'pvd_rur_finca'];
@@ -228,6 +258,75 @@ document.addEventListener("DOMContentLoaded", function() {
             if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccionRuralPVD);
         }
     });
+
+    // Validaciones en tiempo real para otros campos del PVD
+    const nombreInput = document.getElementById('{{ form.pvd_nombre.id_for_label }}');
+    if (nombreInput) {
+        nombreInput.addEventListener('blur', function() {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombre del PVD');
+        });
+        nombreInput.addEventListener('input', function() {
+            if (this.classList.contains('input-error')) {
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombre del PVD');
+            }
+        });
+    }
+
+    const telefonoInput = document.getElementById('{{ form.pvd_telefono.id_for_label }}');
+    if (telefonoInput) {
+        telefonoInput.addEventListener('blur', function() {
+            if (this.value) {
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
+            }
+        });
+        telefonoInput.addEventListener('input', function() {
+            // Solo permitir números
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.classList.contains('input-error')) {
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
+            }
+        });
+    }
+
+    const emailInput = document.getElementById('{{ form.pvd_correo.id_for_label }}');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+            if (this.value) {
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
+            }
+        });
+        emailInput.addEventListener('input', function() {
+            if (this.classList.contains('input-error')) {
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
+            }
+        });
+    }
+
+    // Validación al enviar el formulario
+    const formPVD = document.getElementById('form-pvd');
+    if (formPVD) {
+        formPVD.addEventListener('submit', function(e) {
+            let formularioValido = true;
+            
+            // Validar nombre
+            if (nombreInput) {
+                const resultado = ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarNombre, 'Nombre del PVD');
+                if (!resultado.valido) formularioValido = false;
+            }
+            
+            // Validar dirección
+            const direccionInput = document.getElementById('{{ form.pvd_dircion.id_for_label }}');
+            if (direccionInput && direccionInput.value) {
+                const resultado = ValidacionPVD.validarYMostrar(direccionInput, ValidacionPVD.validarDireccion, 'Dirección');
+                if (!resultado.valido) formularioValido = false;
+            }
+            
+            if (!formularioValido) {
+                e.preventDefault();
+                alert('Por favor corrige los errores antes de enviar el formulario');
+            }
+        });
+    }
 
     // Inicializar
     toggleZonaPVD();

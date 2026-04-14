@@ -1,4 +1,5 @@
 {% extends 'modulo_puntos/base.html' %}
+{% load static %}
 
 {% block title %}{{ titulo }}{% endblock %}
 
@@ -7,42 +8,206 @@
     <div class="page-hero">
         <span class="eyebrow">Usuarios</span>
         <h2 class="page-title">{{ titulo }}</h2>
-        <p class="muted">Completa los datos del nuevo {{ rol }}. El nombre se usará para asociar atenciones al operador cuando corresponda.</p>
+        <p class="muted">Completa los datos del nuevo {{ rol }}. El sistema generará automáticamente un usuario y contraseña basado en los nombres.</p>
     </div>
 
-    <form method="POST">
+    <form method="POST" id="form-crear-usuario" novalidate>
         {% csrf_token %}
 
-        {% for field in form %}
+        <!-- Sección de Nombres Separados -->
+        <fieldset style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 6px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+                <i class="fas fa-user me-1"></i>Información Personal
+            </legend>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-field">
+                    <label for="id_primer_nombre">{{ form.primer_nombre.label }} *</label>
+                    {{ form.primer_nombre }}
+                    {% if form.primer_nombre.errors %}
+                        <span class="field-error">{{ form.primer_nombre.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="id_segundo_nombre">{{ form.segundo_nombre.label }}</label>
+                    {{ form.segundo_nombre }}
+                    {% if form.segundo_nombre.errors %}
+                        <span class="field-error">{{ form.segundo_nombre.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-field">
+                    <label for="id_primer_apellido">{{ form.primer_apellido.label }} *</label>
+                    {{ form.primer_apellido }}
+                    {% if form.primer_apellido.errors %}
+                        <span class="field-error">{{ form.primer_apellido.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="id_segundo_apellido">{{ form.segundo_apellido.label }}</label>
+                    {{ form.segundo_apellido }}
+                    {% if form.segundo_apellido.errors %}
+                        <span class="field-error">{{ form.segundo_apellido.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="form-field">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.help_text %}
-                    <span class="help-text">{{ field.help_text }}</span>
-                {% endif %}
-                {% if field.errors %}
-                    <span class="field-error">{{ field.errors.0 }}</span>
+                <label for="id_email">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <span class="field-error">{{ form.email.errors.0 }}</span>
                 {% endif %}
             </div>
-        {% endfor %}
+        </fieldset>
 
+        <!-- Sección de Credenciales Generadas -->
+        <fieldset style="margin-bottom: 20px; padding: 15px; background: #eff6ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; color: #1e40af;">
+                <i class="fas fa-key me-1"></i>Credenciales de Acceso (Generadas Automáticamente)
+            </legend>
+
+            <div class="form-field">
+                <label for="id_username_generado">{{ form.username_generado.label }}</label>
+                {{ form.username_generado }}
+                <span class="help-text">Este usuario se genera automáticamente basado en tus nombres. Puedes modificarlo si es necesario.</span>
+            </div>
+
+            <div class="form-field" style="margin-top: 16px;">
+                <label for="id_password_generado">{{ form.password_generado.label }}</label>
+                <div style="display: flex; gap: 8px;">
+                    {{ form.password_generado }}
+                    <button type="button" id="btn-generar-password" class="btn btn-secondary" style="white-space: nowrap;">
+                        <i class="fas fa-sync-alt"></i> Regenerar
+                    </button>
+                </div>
+                <span class="help-text">Contraseña segura generada automáticamente. Puedes modificarla o regenerarla.</span>
+            </div>
+
+            <!-- Campos ocultos para password1 y password2 (requeridos por Django) -->
+            <input type="hidden" id="id_password1" name="password1">
+            <input type="hidden" id="id_password2" name="password2">
+        </fieldset>
+
+        <!-- PVD Asignado (si aplica) -->
         {% if pvds %}
-        <div class="form-field">
-            <label for="pvd_asignado">PVD Asignado</label>
-            <select name="pvd_asignado" id="pvd_asignado" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
-                <option value="">-- Selecciona un PVD --</option>
-                {% for pvd in pvds %}
-                <option value="{{ pvd.pvd_cdgo }}">{{ pvd.pvd_nombre }} - {{ pvd.pvd_barrio|default:"Sin barrio" }}</option>
-                {% endfor %}
-            </select>
-            <span class="help-text">El Punto Vive Digital donde este usuario trabajará como administrador.</span>
-        </div>
+        <fieldset style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #10b981;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; color: #166534;">
+                <i class="fas fa-building me-1"></i>Asignación de PVD
+            </legend>
+
+            <div class="form-field">
+                <label for="pvd_asignado">PVD Asignado</label>
+                <select name="pvd_asignado" id="pvd_asignado" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                    <option value="">-- Selecciona un PVD (opcional) --</option>
+                    {% for pvd in pvds %}
+                    <option value="{{ pvd.pvd_cdgo }}">{{ pvd.pvd_nombre }} - {{ pvd.pvd_barrio|default:"Sin barrio" }}</option>
+                    {% endfor %}
+                </select>
+                <span class="help-text">El Punto Vive Digital donde este usuario trabajará como administrador. Puedes asignarlo después si lo prefieres.</span>
+            </div>
+        </fieldset>
         {% endif %}
 
         <div class="actions" style="justify-content: flex-end; margin-top: 8px;">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn">Crear usuario</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i>Crear usuario
+            </button>
         </div>
     </form>
 </div>
+
+<script src="{% static 'js/validaciones.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos del DOM
+    const primerNombre = document.getElementById('id_primer_nombre');
+    const segundoNombre = document.getElementById('id_segundo_nombre');
+    const primerApellido = document.getElementById('id_primer_apellido');
+    const segundoApellido = document.getElementById('id_segundo_apellido');
+    const usernameGenerado = document.getElementById('id_username_generado');
+    const passwordGenerado = document.getElementById('id_password_generado');
+    const password1 = document.getElementById('id_password1');
+    const password2 = document.getElementById('id_password2');
+    const btnGenerarPassword = document.getElementById('btn-generar-password');
+    const formCrearUsuario = document.getElementById('form-crear-usuario');
+
+    // Función para actualizar username
+    function actualizarUsername() {
+        const username = ValidacionPVD.generarUsername(
+            primerNombre.value,
+            segundoNombre.value,
+            primerApellido.value,
+            segundoApellido.value
+        );
+        usernameGenerado.value = username;
+    }
+
+    // Función para generar password
+    function generarPassword() {
+        const password = ValidacionPVD.generarPassword(10);
+        passwordGenerado.value = password;
+        password1.value = password;
+        password2.value = password;
+    }
+
+    // Event listeners para actualizar username cuando cambian los nombres
+    [primerNombre, segundoNombre, primerApellido, segundoApellido].forEach(input => {
+        if (input) {
+            input.addEventListener('input', actualizarUsername);
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, this.placeholder.split(':')[0] || 'Campo');
+                }
+            });
+        }
+    });
+
+    // Validación de email
+    const emailInput = document.getElementById('id_email');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+            if (this.value) {
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
+            }
+        });
+    }
+
+    // Botón para regenerar password
+    if (btnGenerarPassword) {
+        btnGenerarPassword.addEventListener('click', generarPassword);
+    }
+
+    // Generar username y password iniciales
+    actualizarUsername();
+    generarPassword();
+
+    // Validación al enviar el formulario
+    if (formCrearUsuario) {
+        formCrearUsuario.addEventListener('submit', function(e) {
+            let formularioValido = true;
+
+            // Validar campos requeridos
+            const resultadoNombre = ValidacionPVD.validarYMostrar(primerNombre, ValidacionPVD.validarNombre, 'Primer nombre');
+            if (!resultadoNombre.valido) formularioValido = false;
+
+            const resultadoApellido = ValidacionPVD.validarYMostrar(primerApellido, ValidacionPVD.validarNombre, 'Primer apellido');
+            if (!resultadoApellido.valido) formularioValido = false;
+
+            if (!formularioValido) {
+                e.preventDefault();
+                alert('Por favor corrige los errores antes de enviar el formulario');
+            } else {
+                // Asegurar que los passwords estén sincronizados
+                password1.value = passwordGenerado.value;
+                password2.value = passwordGenerado.value;
+            }
+        });
+    }
+});
+</script>
+
 {% endblock %}

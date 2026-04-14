@@ -74,6 +74,13 @@ urlpatterns = [
     # ==========================================================================
     path('crear-admin-tic/', views.crear_admin_tic, name='crear_admin_tic'),
     path('crear-admin-pvd/', views.crear_admin_pvd, name='crear_admin_pvd'),
+
+    # ==========================================================================
+    # GESTIÓN DE ROLES Y PERMISOS (Solo Superusuario)
+    # ==========================================================================
+    path('gestionar-roles/', views.gestionar_roles, name='gestionar_roles'),
+    path('asignar-rol/<int:user_id>/', views.asignar_rol_usuario, name='asignar_rol_usuario'),
+    path('crear-rol/', views.crear_grupo_rol, name='crear_grupo_rol'),
     
     # ==========================================================================
     # GESTIÓN DE PUNTOS VIVE DIGITAL (Multi-PVD)

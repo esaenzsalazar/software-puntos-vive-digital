@@ -90,4 +90,43 @@
     margin-top: 4px;
 }
 </style>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[method="POST"]');
+    const nombreInput = document.getElementById('{{ form.sala_nombre.id_for_label }}');
+    const capacidadInput = document.getElementById('{{ form.sala_capacidad.id_for_label }}');
+
+    if (nombreInput) {
+        nombreInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre de la sala');
+        });
+        nombreInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre de la sala');
+        });
+    }
+
+    if (capacidadInput) {
+        capacidadInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value && parseInt(this.value) < 1) {
+                ValidacionPVD.mostrarError(this, 'La capacidad debe ser mayor a 0');
+            } else {
+                ValidacionPVD.ocultarError(this);
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let ok = true;
+            if (nombreInput && !ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre de la sala').valido) ok = false;
+            if (!ok) e.preventDefault();
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

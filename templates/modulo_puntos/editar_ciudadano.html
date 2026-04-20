@@ -1,4 +1,5 @@
 {% extends 'modulo_puntos/base.html' %}
+{% load static %}
 
 {% block title %}Editar Ciudadano{% endblock %}
 
@@ -16,14 +17,134 @@
     </div>
 
     {% if form.errors %}
-        <div class="alert alert-error">
-            Revisa los errores del formulario.
-        </div>
+        <div class="alert alert-error">Revisa los errores del formulario.</div>
     {% endif %}
 
-    <form method="POST">
+    <form method="POST" id="form-editar-ciudadano" novalidate>
         {% csrf_token %}
-        {{ form.as_p }}
+
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Identificación
+            </legend>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_tpodoc.id_for_label }}">Tipo de Documento *</label>
+                    {{ form.ciu_tpodoc }}
+                    {% if form.ciu_tpodoc.errors %}<div class="form-error">{{ form.ciu_tpodoc.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_numdoc.id_for_label }}">Número de Documento *</label>
+                    {{ form.ciu_numdoc }}
+                    {% if form.ciu_numdoc.errors %}<div class="form-error">{{ form.ciu_numdoc.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_nmbres.id_for_label }}">Nombres *</label>
+                    {{ form.ciu_nmbres }}
+                    {% if form.ciu_nmbres.errors %}<div class="form-error">{{ form.ciu_nmbres.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_aplldos.id_for_label }}">Apellidos *</label>
+                    {{ form.ciu_aplldos }}
+                    {% if form.ciu_aplldos.errors %}<div class="form-error">{{ form.ciu_aplldos.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_fchancm.id_for_label }}">Fecha de Nacimiento</label>
+                    {{ form.ciu_fchancm }}
+                    {% if form.ciu_fchancm.errors %}<div class="form-error">{{ form.ciu_fchancm.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_genro.id_for_label }}">Género</label>
+                    {{ form.ciu_genro }}
+                    {% if form.ciu_genro.errors %}<div class="form-error">{{ form.ciu_genro.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Contacto
+            </legend>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_email.id_for_label }}">Correo Electrónico</label>
+                    {{ form.ciu_email }}
+                    {% if form.ciu_email.errors %}<div class="form-error">{{ form.ciu_email.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_tlfno.id_for_label }}">Teléfono</label>
+                    {{ form.ciu_tlfno }}
+                    {% if form.ciu_tlfno.errors %}<div class="form-error">{{ form.ciu_tlfno.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_dircion.id_for_label }}">Dirección</label>
+                    {{ form.ciu_dircion }}
+                    {% if form.ciu_dircion.errors %}<div class="form-error">{{ form.ciu_dircion.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_barrio.id_for_label }}">Barrio</label>
+                    {{ form.ciu_barrio }}
+                    {% if form.ciu_barrio.errors %}<div class="form-error">{{ form.ciu_barrio.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="{{ form.ciu_zrural.id_for_label }}">Zona Rural (si aplica)</label>
+                {{ form.ciu_zrural }}
+                {% if form.ciu_zrural.errors %}<div class="form-error">{{ form.ciu_zrural.errors }}</div>{% endif %}
+            </div>
+        </fieldset>
+
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Información Socioeconómica
+            </legend>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_etnia.id_for_label }}">Etnia</label>
+                    {{ form.ciu_etnia }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_nvleduc.id_for_label }}">Nivel Educativo</label>
+                    {{ form.ciu_nvleduc }}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.ciu_ocpcion.id_for_label }}">Ocupación</label>
+                    {{ form.ciu_ocpcion }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.ciu_estrato.id_for_label }}">Estrato</label>
+                    {{ form.ciu_estrato }}
+                    {% if form.ciu_estrato.errors %}<div class="form-error">{{ form.ciu_estrato.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label>
+                    {{ form.ciu_discapacidad }} Tiene discapacidad
+                </label>
+            </div>
+            <div class="form-group" id="grupo_discapacidad" style="display: none;">
+                <label for="{{ form.ciu_desc_discapacidad.id_for_label }}">Descripción de la discapacidad</label>
+                {{ form.ciu_desc_discapacidad }}
+            </div>
+        </fieldset>
+
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Estado
+            </legend>
+            <div class="form-group">
+                <label for="{{ form.ciu_estdo.id_for_label }}">Estado del ciudadano</label>
+                {{ form.ciu_estdo }}
+            </div>
+        </fieldset>
 
         <div class="actions">
             <button type="submit" class="btn">Guardar cambios</button>
@@ -31,4 +152,120 @@
         </div>
     </form>
 </div>
+
+<style>
+.form-row { display: flex; gap: 16px; }
+.form-row .form-group { flex: 1; }
+@media (max-width: 768px) { .form-row { flex-direction: column; gap: 0; } }
+</style>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('form-editar-ciudadano');
+
+    const numdocInput = document.getElementById('{{ form.ciu_numdoc.id_for_label }}');
+    const nmbresInput = document.getElementById('{{ form.ciu_nmbres.id_for_label }}');
+    const aplldosInput = document.getElementById('{{ form.ciu_aplldos.id_for_label }}');
+    const emailInput = document.getElementById('{{ form.ciu_email.id_for_label }}');
+    const tlfnoInput = document.getElementById('{{ form.ciu_tlfno.id_for_label }}');
+    const dircionInput = document.getElementById('{{ form.ciu_dircion.id_for_label }}');
+    const estratoInput = document.getElementById('{{ form.ciu_estrato.id_for_label }}');
+    const discapacidadCheck = document.getElementById('{{ form.ciu_discapacidad.id_for_label }}');
+    const grupoDiscapacidad = document.getElementById('grupo_discapacidad');
+
+    // Toggle campo discapacidad
+    function toggleDiscapacidad() {
+        if (discapacidadCheck && grupoDiscapacidad) {
+            grupoDiscapacidad.style.display = discapacidadCheck.checked ? 'block' : 'none';
+        }
+    }
+    if (discapacidadCheck) {
+        discapacidadCheck.addEventListener('change', toggleDiscapacidad);
+        toggleDiscapacidad();
+    }
+
+    // Validaciones en tiempo real
+    if (numdocInput) {
+        numdocInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarDocumento, 'Número de documento');
+        });
+        numdocInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarDocumento, 'Número de documento');
+        });
+    }
+
+    if (nmbresInput) {
+        nmbresInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombres');
+        });
+        nmbresInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombres');
+        });
+    }
+
+    if (aplldosInput) {
+        aplldosInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Apellidos');
+        });
+        aplldosInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Apellidos');
+        });
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener('blur', function () {
+            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
+        });
+        emailInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
+        });
+    }
+
+    if (tlfnoInput) {
+        tlfnoInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
+        });
+        tlfnoInput.addEventListener('blur', function () {
+            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
+        });
+    }
+
+    if (dircionInput) {
+        dircionInput.addEventListener('blur', function () {
+            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarDireccion, 'Dirección');
+        });
+    }
+
+    if (estratoInput) {
+        estratoInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            const val = parseInt(this.value);
+            if (this.value && (val < 1 || val > 6)) {
+                ValidacionPVD.mostrarError(this, 'El estrato debe ser entre 1 y 6');
+            } else {
+                ValidacionPVD.ocultarError(this);
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let ok = true;
+            if (numdocInput && !ValidacionPVD.validarYMostrar(numdocInput, ValidacionPVD.validarDocumento, 'Número de documento').valido) ok = false;
+            if (nmbresInput && !ValidacionPVD.validarYMostrar(nmbresInput, ValidacionPVD.validarNombre, 'Nombres').valido) ok = false;
+            if (aplldosInput && !ValidacionPVD.validarYMostrar(aplldosInput, ValidacionPVD.validarNombre, 'Apellidos').valido) ok = false;
+            if (emailInput && emailInput.value && !ValidacionPVD.validarYMostrar(emailInput, ValidacionPVD.validarEmail, 'Correo electrónico').valido) ok = false;
+            if (tlfnoInput && tlfnoInput.value && !ValidacionPVD.validarYMostrar(tlfnoInput, ValidacionPVD.validarTelefono, 'Teléfono').valido) ok = false;
+            if (!ok) e.preventDefault();
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

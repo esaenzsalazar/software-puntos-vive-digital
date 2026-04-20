@@ -172,10 +172,11 @@ class Operador(models.Model):
         verbose_name='Tipo de Documento'
     )
     opr_numdoc = models.CharField(
-        max_length=32, 
-        db_column='OPR_NUMDOC', 
-        null=True, 
+        max_length=32,
+        db_column='OPR_NUMDOC',
+        null=True,
         blank=True,
+        unique=True,
         verbose_name='Número de Documento'
     )
     opr_nmbres = models.CharField(
@@ -257,10 +258,11 @@ class Ciudadano(models.Model):
         verbose_name='Tipo de Documento'
     )
     ciu_numdoc = models.CharField(
-        max_length=32, 
-        db_column='CIU_NUMDOC', 
-        null=True, 
+        max_length=32,
+        db_column='CIU_NUMDOC',
+        null=True,
         blank=True,
+        unique=True,
         verbose_name='Número de Documento'
     )
     ciu_nmbres = models.CharField(
@@ -390,6 +392,10 @@ class Ciudadano(models.Model):
         db_table = 'ciu_ciudadano'
         verbose_name = 'Ciudadano'
         verbose_name_plural = 'Ciudadanos'
+        indexes = [
+            models.Index(fields=['ciu_nmbres', 'ciu_aplldos'], name='idx_ciu_nombres'),
+            models.Index(fields=['pvd_cdgo', 'ciu_estdo'], name='idx_ciu_pvd_estdo'),
+        ]
 
     def __str__(self):
         return f"{self.ciu_nmbres} {self.ciu_aplldos} ({self.ciu_numdoc})"
@@ -447,7 +453,7 @@ class PrestamoRecurso(models.Model):
     prs_cdgo = models.AutoField(primary_key=True, db_column='PRS_CDGO')
     rec_cdgo = models.ForeignKey(
         'Recurso',
-        models.DO_NOTHING,
+        models.PROTECT,
         db_column='REC_CDGO',
         null=True,
         blank=True,
@@ -502,7 +508,7 @@ class Atencion(models.Model):
     )
     ciu_cdgo = models.ForeignKey(
         'Ciudadano',
-        models.DO_NOTHING,
+        models.PROTECT,
         db_column='CIU_CDGO',
         null=True,
         blank=True,
@@ -510,7 +516,7 @@ class Atencion(models.Model):
     )
     opr_cdgo = models.ForeignKey(
         'Operador',
-        models.DO_NOTHING,
+        models.PROTECT,
         db_column='OPR_CDGO',
         null=True,
         blank=True,
@@ -518,7 +524,7 @@ class Atencion(models.Model):
     )
     prs_cdgo = models.ForeignKey(
         'PrestamoRecurso',
-        models.DO_NOTHING,
+        models.SET_NULL,
         db_column='PRS_CDGO',
         null=True,
         blank=True,
@@ -557,6 +563,10 @@ class Atencion(models.Model):
         db_table = 'atn_atencion'
         verbose_name = 'Atención'
         verbose_name_plural = 'Atenciones'
+        indexes = [
+            models.Index(fields=['pvd_cdgo', 'atn_fecha'], name='idx_atn_pvd_fecha'),
+            models.Index(fields=['atn_estdo'], name='idx_atn_estdo'),
+        ]
 
     def __str__(self):
         return f"Atención {self.atn_cdgo} - {self.atn_fecha}"
@@ -580,7 +590,7 @@ class Servicio(models.Model):
     srv_cdgo = models.AutoField(primary_key=True, db_column='SRV_CDGO')
     atn_cdgo = models.ForeignKey(
         'Atencion',
-        models.DO_NOTHING,
+        models.PROTECT,
         db_column='ATN_CDGO',
         null=True,
         blank=True,
@@ -635,7 +645,7 @@ class Satisfaccion(models.Model):
     sat_cdgo = models.AutoField(primary_key=True, db_column='SAT_CDGO')
     atn_cdgo = models.ForeignKey(
         'Atencion',
-        models.DO_NOTHING,
+        models.PROTECT,
         db_column='ATN_CDGO',
         null=True,
         blank=True,

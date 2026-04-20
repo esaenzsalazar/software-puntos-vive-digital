@@ -32,4 +32,67 @@
         </div>
     </form>
 </div>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[method="POST"]');
+
+    const fechaInput = document.getElementById('id_atn_fecha');
+    const hrIniInput = document.getElementById('id_atn_hrini');
+    const hrFinInput = document.getElementById('id_atn_hrfin');
+    const obsInput = document.getElementById('id_atn_obs');
+
+    function wrap(input) {
+        if (!input) return;
+        if (!input.closest('.form-group')) {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            input.parentNode.insertBefore(div, input);
+            div.appendChild(input);
+        }
+    }
+    [fechaInput, hrIniInput, hrFinInput, obsInput].forEach(wrap);
+
+    function validarHoras() {
+        if (!hrIniInput || !hrFinInput) return true;
+        if (hrFinInput.value && hrIniInput.value && hrFinInput.value < hrIniInput.value) {
+            ValidacionPVD.mostrarError(hrFinInput, 'La hora de finalización debe ser mayor o igual a la hora de inicio');
+            return false;
+        }
+        ValidacionPVD.ocultarError(hrFinInput);
+        return true;
+    }
+
+    if (fechaInput) {
+        fechaInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Fecha de atención');
+        });
+    }
+    if (hrIniInput) {
+        hrIniInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Hora de inicio');
+        });
+    }
+    if (hrFinInput) {
+        hrFinInput.addEventListener('blur', validarHoras);
+    }
+    if (obsInput) {
+        obsInput.addEventListener('input', function () {
+            ValidacionPVD.validarYMostrar(this, (v) => ValidacionPVD.validarLongitudMaxima(v, 512, 'Observaciones'), 'Observaciones');
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let ok = true;
+            if (fechaInput && !ValidacionPVD.validarYMostrar(fechaInput, ValidacionPVD.validarRequerido, 'Fecha de atención').valido) ok = false;
+            if (hrIniInput && !ValidacionPVD.validarYMostrar(hrIniInput, ValidacionPVD.validarRequerido, 'Hora de inicio').valido) ok = false;
+            if (!validarHoras()) ok = false;
+            if (!ok) e.preventDefault();
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

@@ -90,6 +90,9 @@
                         <li>
                             <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear Usuario TIC</a>
                         </li>
+                        <li>
+                            <a href="{% url 'modulo_puntos:gestionar_roles' %}" class="side-nav__link {% if current_url_name == 'gestionar_roles' or current_url_name == 'asignar_rol_usuario' %}is-active{% endif %}">🔐 Roles y Permisos</a>
+                        </li>
                     </ul>
 
                     {# ============================================================================ #}

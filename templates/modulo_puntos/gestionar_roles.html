@@ -1,235 +1,170 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Gestión de Roles y Permisos{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="h3 mb-3">
-                <i class="fas fa-user-shield me-2"></i>Gestión de Roles y Permisos
-            </h1>
-            <p class="text-muted">Administra los roles y permisos de los usuarios del sistema</p>
-        </div>
-    </div>
+<div class="apple-container">
+    <header class="module-header">
+        <h1>Control de Acceso</h1>
+        <p>Define roles y asigna permisos específicos para el personal</p>
+    </header>
 
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    <!-- Estadísticas de Roles -->
-    <div class="row mb-4">
-        {% for rol_nombre, cantidad in stats_roles.items %}
-        <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-users fa-2x text-primary"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h6 class="card-title mb-1">{{ rol_nombre }}</h6>
-                            <p class="mb-0 text-muted">{{ cantidad }} usuario{{ cantidad|pluralize }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Barra de herramientas -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <form method="GET" class="row g-3 align-items-center">
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" name="q" class="form-control" placeholder="Buscar usuario..." value="{{ busqueda }}">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <select name="rol" class="form-select">
-                                <option value="">Todos los roles</option>
-                                {% for grupo in grupos %}
-                                <option value="{{ grupo.name }}" {% if rol_filtro == grupo.name %}selected{% endif %}>
-                                    {{ grupo.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-filter me-1"></i>Filtrar
-                            </button>
-                        </div>
-                        <div class="col-md-3 text-end">
-                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCrearRol">
-                                <i class="fas fa-plus-circle me-1"></i>Crear Rol
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabla de Usuarios -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Usuario</th>
-                                    <th>Nombre Completo</th>
-                                    <th>Email</th>
-                                    <th>Roles</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for usuario in usuarios %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ usuario.username }}</strong>
-                                    </td>
-                                    <td>{{ usuario.get_full_name|default:"-" }}</td>
-                                    <td>{{ usuario.email|default:"-" }}</td>
-                                    <td>
-                                        {% for grupo in usuario.groups.all %}
-                                        <span class="badge bg-primary me-1">{{ grupo.name }}</span>
-                                        {% empty %}
-                                        <span class="badge bg-secondary">Sin rol</span>
-                                        {% endfor %}
-                                    </td>
-                                    <td>
-                                        {% if usuario.is_active %}
-                                        <span class="badge bg-success">Activo</span>
-                                        {% else %}
-                                        <span class="badge bg-danger">Inactivo</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                data-bs-toggle="modal" data-bs-target="#modalAsignarRol"
-                                                data-user-id="{{ usuario.id }}"
-                                                data-user-name="{{ usuario.username }}"
-                                                data-user-roles="{% for grupo in usuario.groups.all %}{{ grupo.name }}{% if not forloop.last %},{% endif %}{% endfor %}">
-                                            <i class="fas fa-edit me-1"></i>Editar Rol
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        <i class="fas fa-user-slash fa-2x mb-2"></i>
-                                        <p>No se encontraron usuarios</p>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Asignar Rol -->
-<div class="modal fade" id="modalAsignarRol" tabindex="-1" aria-labelledby="modalAsignarRolLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{% url 'modulo_puntos:asignar_rol_usuario' 0 %}" id="formAsignarRol">
+    <div class="apple-grid">
+        <section class="apple-card shadow-sm">
+            <h2 class="card-title">Configurar Nuevo Rol</h2>
+            <form method="POST" class="apple-form">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalAsignarRolLabel">Asignar Rol a Usuario</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <input type="hidden" name="rol_id" id="rol_id">
+                
+                <div class="input-group">
+                    <label>Nombre del Rol</label>
+                    <input type="text" name="nombre_rol" id="nombre_rol" placeholder="Ej: Administrador, Operador, Consultor" required>
                 </div>
-                <div class="modal-body">
-                    <p><strong>Usuario:</strong> <span id="userName"></span></p>
-                    <p><strong>Rol Actual:</strong> <span id="userRoles"></span></p>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Nuevo Rol</label>
-                        <select name="nuevo_rol" class="form-select" required>
-                            <option value="">-- Seleccionar Rol --</option>
-                            {% for grupo in grupos %}
-                            <option value="{{ grupo.name }}">{{ grupo.name }}</option>
+
+                <div class="input-group">
+                    <label>Seleccionar Permisos (Multiselección)</label>
+                    <div class="custom-select-wrapper">
+                        <select name="permisos" id="permisos_select" multiple class="apple-select-multiple">
+                            {% for permiso in permisos_disponibles %}
+                                <option value="{{ permiso.id }}">{{ permiso.name }} | {{ permiso.content_type.model }}</option>
                             {% endfor %}
                         </select>
-                        <small class="text-muted">Dejar vacío para remover todos los roles</small>
+                        <small class="hint">Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar varios.</small>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Asignar Rol</button>
-                </div>
+
+                <button type="submit" class="btn-primary-apple">Guardar Cambios</button>
             </form>
-        </div>
+        </section>
+
+        <section class="apple-card">
+            <h2 class="card-title">Roles del Sistema</h2>
+            <div class="roles-list">
+                {% for rol in roles %}
+                <div class="role-item">
+                    <div class="role-info">
+                        <h3>{{ rol.name }}</h3>
+                        <span>{{ rol.permissions.count }} permisos activos</span>
+                    </div>
+                    <button class="btn-edit-minimal" onclick="editarRol('{{ rol.id }}', '{{ rol.name }}', [{% for p in rol.permissions.all %}'{{ p.id }}',{% endfor %}])">
+                        Editar
+                    </button>
+                </div>
+                {% empty %}
+                <p class="empty-state">No hay roles definidos aún.</p>
+                {% endfor %}
+            </div>
+        </section>
     </div>
 </div>
 
-<!-- Modal Crear Rol -->
-<div class="modal fade" id="modalCrearRol" tabindex="-1" aria-labelledby="modalCrearRolLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{% url 'modulo_puntos:crear_grupo_rol' %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalCrearRolLabel">Crear Nuevo Rol</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nombre del Rol</label>
-                        <input type="text" name="nombre_rol" class="form-control" required placeholder="Ej: Supervisor TIC">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Descripción (Opcional)</label>
-                        <textarea name="descripcion" class="form-control" rows="3" placeholder="Describe las funciones de este rol..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">Crear Rol</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<style>
+    /* Estética Apple: Limpia, Espaciada y Responsive */
+    :root {
+        --apple-bg: #f5f5f7;
+        --apple-card: #ffffff;
+        --apple-blue: #0071e3;
+        --apple-text: #1d1d1f;
+        --apple-gray: #86868b;
+    }
 
-{% endblock %}
+    .apple-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--apple-text);
+    }
 
-{% block extra_js %}
+    .module-header { text-align: center; margin-bottom: 50px; }
+    .module-header h1 { font-size: 40px; font-weight: 600; letter-spacing: -1px; margin-bottom: 10px; }
+    .module-header p { color: var(--apple-gray); font-size: 19px; }
+
+    .apple-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+    }
+
+    @media (max-width: 850px) { .apple-grid { grid-template-columns: 1fr; } }
+
+    .apple-card {
+        background: var(--apple-card);
+        border-radius: 22px;
+        padding: 30px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+        transition: transform 0.3s ease;
+    }
+
+    .card-title { font-size: 22px; font-weight: 600; margin-bottom: 25px; }
+
+    .input-group { margin-bottom: 20px; }
+    .input-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+    
+    input[type="text"], .apple-select-multiple {
+        width: 100%;
+        padding: 14px;
+        border: 1.5px solid #d2d2d7;
+        border-radius: 12px;
+        background: #fbfbfd;
+        font-size: 16px;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    input:focus, .apple-select-multiple:focus {
+        border-color: var(--apple-blue);
+        outline: none;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    }
+
+    .apple-select-multiple { height: 200px; }
+
+    .btn-primary-apple {
+        width: 100%;
+        background: var(--apple-blue);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    .role-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid #f5f5f7;
+    }
+
+    .role-info h3 { font-size: 17px; font-weight: 600; margin: 0; }
+    .role-info span { font-size: 13px; color: var(--apple-gray); }
+
+    .btn-edit-minimal {
+        background: #f5f5f7;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        color: var(--apple-blue);
+        font-weight: 500;
+        cursor: pointer;
+    }
+</style>
+
 <script>
-// Configurar modal de asignar rol
-document.addEventListener('DOMContentLoaded', function() {
-    const modalAsignarRol = document.getElementById('modalAsignarRol');
-    modalAsignarRol.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        const userId = button.getAttribute('data-user-id');
-        const userName = button.getAttribute('data-user-name');
-        const userRoles = button.getAttribute('data-user-roles');
+    function editarRol(id, nombre, permisos) {
+        document.getElementById('rol_id').value = id;
+        document.getElementById('nombre_rol').value = nombre;
         
-        document.getElementById('userName').textContent = userName;
-        document.getElementById('userRoles').textContent = userRoles || 'Sin rol';
+        const select = document.getElementById('permisos_select');
+        Array.from(select.options).forEach(option => {
+            option.selected = permisos.includes(option.value);
+        });
         
-        // Actualizar acción del formulario
-        const form = document.getElementById('formAsignarRol');
-        form.action = `/asignar-rol/${userId}/`;
-    });
-});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 </script>
 {% endblock %}

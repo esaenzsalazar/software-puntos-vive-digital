@@ -32,4 +32,59 @@
         </div>
     </form>
 </div>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[method="POST"]');
+    const fchEntInput = document.getElementById('id_prs_fchent');
+    const fchDevInput = document.getElementById('id_prs_fchdev');
+    const obsInput = document.getElementById('id_prs_obs');
+
+    function wrap(input) {
+        if (!input) return;
+        if (!input.closest('.form-group')) {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            input.parentNode.insertBefore(div, input);
+            div.appendChild(input);
+        }
+    }
+    [fchEntInput, fchDevInput, obsInput].forEach(wrap);
+
+    function validarFechaDevolucion() {
+        if (!fchDevInput || !fchEntInput) return true;
+        if (fchDevInput.value && fchEntInput.value && fchDevInput.value < fchEntInput.value) {
+            ValidacionPVD.mostrarError(fchDevInput, 'La fecha de devolución debe ser posterior a la fecha de entrega');
+            return false;
+        }
+        ValidacionPVD.ocultarError(fchDevInput);
+        return true;
+    }
+
+    if (fchEntInput) {
+        fchEntInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Fecha de entrega');
+        });
+    }
+    if (fchDevInput) {
+        fchDevInput.addEventListener('blur', validarFechaDevolucion);
+    }
+    if (obsInput) {
+        obsInput.addEventListener('input', function () {
+            ValidacionPVD.validarYMostrar(this, (v) => ValidacionPVD.validarLongitudMaxima(v, 512, 'Observaciones'), 'Observaciones');
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let ok = true;
+            if (fchEntInput && !ValidacionPVD.validarYMostrar(fchEntInput, ValidacionPVD.validarRequerido, 'Fecha de entrega').valido) ok = false;
+            if (!validarFechaDevolucion()) ok = false;
+            if (!ok) e.preventDefault();
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

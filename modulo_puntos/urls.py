@@ -90,7 +90,7 @@ urlpatterns = [
     path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
     path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
     path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
-
+    path('configuracion/roles/', views.gestionar_roles, name='gestionar_roles'),
     # ==========================================================================
     # GESTIÓN DE SALAS
     # ==========================================================================

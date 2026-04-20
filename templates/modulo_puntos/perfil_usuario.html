@@ -62,4 +62,66 @@
         </form>
     </div>
 </div>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const pw1 = document.getElementById('new_password1');
+    const pw2 = document.getElementById('new_password2');
+    const oldPw = document.getElementById('old_password');
+
+    function wrapInGroup(input) {
+        if (!input) return;
+        if (!input.closest('.form-group')) {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            input.parentNode.insertBefore(div, input);
+            div.appendChild(input);
+        }
+    }
+    [oldPw, pw1, pw2].forEach(wrapInGroup);
+
+    function validarPassword(valor, nombre) {
+        if (!valor || valor.trim() === '') return { valido: false, mensaje: `${nombre} es requerida` };
+        if (valor.length < 8) return { valido: false, mensaje: `${nombre} debe tener al menos 8 caracteres` };
+        return { valido: true, mensaje: '' };
+    }
+
+    function validarConfirmacion() {
+        if (!pw2 || !pw1) return true;
+        if (pw2.value && pw1.value && pw2.value !== pw1.value) {
+            ValidacionPVD.mostrarError(pw2, 'Las contraseñas no coinciden');
+            return false;
+        }
+        if (pw2.value === pw1.value && pw2.value) {
+            ValidacionPVD.ocultarError(pw2);
+            pw2.style.borderColor = '#10b981';
+        }
+        return true;
+    }
+
+    if (pw1) {
+        pw1.addEventListener('input', function () {
+            ValidacionPVD.validarYMostrar(this, (v) => validarPassword(v, 'Nueva contraseña'), 'Nueva contraseña');
+            if (pw2.value) validarConfirmacion();
+        });
+    }
+    if (pw2) {
+        pw2.addEventListener('input', validarConfirmacion);
+        pw2.addEventListener('blur', validarConfirmacion);
+    }
+
+    const pwForm = pw1 ? pw1.closest('form') : null;
+    if (pwForm) {
+        pwForm.addEventListener('submit', function (e) {
+            let ok = true;
+            if (oldPw && !ValidacionPVD.validarYMostrar(oldPw, ValidacionPVD.validarRequerido, 'Contraseña actual').valido) ok = false;
+            if (pw1 && !ValidacionPVD.validarYMostrar(pw1, (v) => validarPassword(v, 'Nueva contraseña'), 'Nueva contraseña').valido) ok = false;
+            if (!validarConfirmacion()) ok = false;
+            if (!ok) e.preventDefault();
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

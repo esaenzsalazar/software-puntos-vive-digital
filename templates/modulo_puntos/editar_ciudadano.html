@@ -12,8 +12,8 @@
     </div>
 
     <div class="callout">
-        <p style="margin: 0 0 6px 0;"><strong>Nombre:</strong> {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</p>
-        <p style="margin: 0;"><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
+        <p style="margin: 0 0 6px 0;"><strong>Nombre:</strong> {{ ciudadano.get_nombre_completo }}</p>
+        <p style="margin: 0;"><strong>Documento:</strong> {{ ciudadano.tipo_documento }} {{ ciudadano.numero_documento }}</p>
     </div>
 
     {% if form.errors %}
@@ -29,38 +29,50 @@
             </legend>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.ciu_tpodoc.id_for_label }}">Tipo de Documento *</label>
-                    {{ form.ciu_tpodoc }}
-                    {% if form.ciu_tpodoc.errors %}<div class="form-error">{{ form.ciu_tpodoc.errors }}</div>{% endif %}
+                    <label for="{{ form.tipo_documento.id_for_label }}">Tipo de Documento <span style="color:red;">*</span></label>
+                    {{ form.tipo_documento }}
+                    {% if form.tipo_documento.errors %}<div class="form-error">{{ form.tipo_documento.errors }}</div>{% endif %}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.ciu_numdoc.id_for_label }}">Número de Documento *</label>
-                    {{ form.ciu_numdoc }}
-                    {% if form.ciu_numdoc.errors %}<div class="form-error">{{ form.ciu_numdoc.errors }}</div>{% endif %}
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.ciu_nmbres.id_for_label }}">Nombres *</label>
-                    {{ form.ciu_nmbres }}
-                    {% if form.ciu_nmbres.errors %}<div class="form-error">{{ form.ciu_nmbres.errors }}</div>{% endif %}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.ciu_aplldos.id_for_label }}">Apellidos *</label>
-                    {{ form.ciu_aplldos }}
-                    {% if form.ciu_aplldos.errors %}<div class="form-error">{{ form.ciu_aplldos.errors }}</div>{% endif %}
+                    <label for="{{ form.numero_documento.id_for_label }}">Número de Documento <span style="color:red;">*</span></label>
+                    {{ form.numero_documento }}
+                    {% if form.numero_documento.errors %}<div class="form-error">{{ form.numero_documento.errors }}</div>{% endif %}
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.ciu_fchancm.id_for_label }}">Fecha de Nacimiento</label>
-                    {{ form.ciu_fchancm }}
-                    {% if form.ciu_fchancm.errors %}<div class="form-error">{{ form.ciu_fchancm.errors }}</div>{% endif %}
+                    <label for="{{ form.primer_nombre.id_for_label }}">Primer Nombre <span style="color:red;">*</span></label>
+                    {{ form.primer_nombre }}
+                    {% if form.primer_nombre.errors %}<div class="form-error">{{ form.primer_nombre.errors }}</div>{% endif %}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.ciu_genro.id_for_label }}">Género</label>
-                    {{ form.ciu_genro }}
-                    {% if form.ciu_genro.errors %}<div class="form-error">{{ form.ciu_genro.errors }}</div>{% endif %}
+                    <label for="{{ form.segundo_nombre.id_for_label }}">Segundo Nombre (Opcional)</label>
+                    {{ form.segundo_nombre }}
+                    {% if form.segundo_nombre.errors %}<div class="form-error">{{ form.segundo_nombre.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.primer_apellido.id_for_label }}">Primer Apellido <span style="color:red;">*</span></label>
+                    {{ form.primer_apellido }}
+                    {% if form.primer_apellido.errors %}<div class="form-error">{{ form.primer_apellido.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.segundo_apellido.id_for_label }}">Segundo Apellido <span style="color:red;">*</span></label>
+                    {{ form.segundo_apellido }}
+                    {% if form.segundo_apellido.errors %}<div class="form-error">{{ form.segundo_apellido.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.fecha_nacimiento.id_for_label }}">Fecha de Nacimiento</label>
+                    {{ form.fecha_nacimiento }}
+                    {% if form.fecha_nacimiento.errors %}<div class="form-error">{{ form.fecha_nacimiento.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.genero.id_for_label }}">Género</label>
+                    {{ form.genero }}
+                    {% if form.genero.errors %}<div class="form-error">{{ form.genero.errors }}</div>{% endif %}
                 </div>
             </div>
         </fieldset>
@@ -71,33 +83,87 @@
             </legend>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.ciu_email.id_for_label }}">Correo Electrónico</label>
-                    {{ form.ciu_email }}
-                    {% if form.ciu_email.errors %}<div class="form-error">{{ form.ciu_email.errors }}</div>{% endif %}
+                    <label for="{{ form.correo.id_for_label }}">Correo Electrónico</label>
+                    {{ form.correo }}
+                    {% if form.correo.errors %}<div class="form-error">{{ form.correo.errors }}</div>{% endif %}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.ciu_tlfno.id_for_label }}">Teléfono</label>
-                    {{ form.ciu_tlfno }}
-                    {% if form.ciu_tlfno.errors %}<div class="form-error">{{ form.ciu_tlfno.errors }}</div>{% endif %}
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.ciu_dircion.id_for_label }}">Dirección</label>
-                    {{ form.ciu_dircion }}
-                    {% if form.ciu_dircion.errors %}<div class="form-error">{{ form.ciu_dircion.errors }}</div>{% endif %}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.ciu_barrio.id_for_label }}">Barrio</label>
-                    {{ form.ciu_barrio }}
-                    {% if form.ciu_barrio.errors %}<div class="form-error">{{ form.ciu_barrio.errors }}</div>{% endif %}
+                    <label for="{{ form.telefono.id_for_label }}">Teléfono</label>
+                    {{ form.telefono }}
+                    {% if form.telefono.errors %}<div class="form-error">{{ form.telefono.errors }}</div>{% endif %}
                 </div>
             </div>
             <div class="form-group">
-                <label for="{{ form.ciu_zrural.id_for_label }}">Zona Rural (si aplica)</label>
-                {{ form.ciu_zrural }}
-                {% if form.ciu_zrural.errors %}<div class="form-error">{{ form.ciu_zrural.errors }}</div>{% endif %}
+                <label for="{{ form.barrio.id_for_label }}">Barrio</label>
+                {{ form.barrio }}
+                {% if form.barrio.errors %}<div class="form-error">{{ form.barrio.errors }}</div>{% endif %}
             </div>
+
+            {# ── CONSTRUCTOR DE DIRECCIÓN ─────────────────────────────── #}
+            <div class="form-group span-full" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+                <label style="font-size: 16px; color: var(--primary-color); display: block; margin-bottom: 6px;">Ubicación de Residencia</label>
+                {% if ciudadano.direccion %}
+                <p style="font-size: 13px; color: #475569; margin-bottom: 10px;">
+                    Dirección actual: <strong>{{ ciudadano.direccion }}</strong>{% if ciudadano.zona_rural %} / Rural: <strong>{{ ciudadano.zona_rural }}</strong>{% endif %}
+                </p>
+                {% endif %}
+
+                <div style="margin-bottom: 15px;">
+                    <label style="margin-right: 15px; cursor: pointer;">
+                        <input type="radio" name="tipo_zona_edit" value="Urbana" checked onchange="toggleZonaEdit()"> Cabecera Municipal (Urbana)
+                    </label>
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="tipo_zona_edit" value="Rural" onchange="toggleZonaEdit()"> Vereda / Corregimiento (Rural)
+                    </label>
+                </div>
+
+                <div id="edit_constructor_urbano">
+                    <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas para actualizar la dirección urbana.</p>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                        <select id="edit_dir_tipo" style="width: auto; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="Calle">Calle</option>
+                            <option value="Carrera">Carrera</option>
+                            <option value="Transversal">Transversal</option>
+                            <option value="Diagonal">Diagonal</option>
+                            <option value="Avenida">Avenida</option>
+                            <option value="Vía">Vía</option>
+                            <option value="Manzana">Manzana</option>
+                            <option value="Lote">Lote</option>
+                        </select>
+                        <input type="text" id="edit_dir_num1" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="N°">
+                        <input type="text" id="edit_dir_letra1" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Letra">
+                        <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
+                        <input type="text" id="edit_dir_num2" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="N°">
+                        <input type="text" id="edit_dir_letra2" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Letra">
+                        <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
+                        <input type="text" id="edit_dir_num3" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="N°">
+                        <input type="text" id="edit_dir_comp" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Complemento (Apto, Piso, Casa...)">
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                        <p style="margin: 0; font-size: 14px; color: #64748b;">Nueva dirección: <strong id="edit_dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                    </div>
+                    {{ form.direccion }}
+                </div>
+
+                <div id="edit_constructor_rural" style="display: none;">
+                    <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Selecciona el tipo y escribe el nombre de la vereda o corregimiento.</p>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                        <select id="edit_rur_tipo" style="width: auto; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="Vereda">Vereda</option>
+                            <option value="Corregimiento">Corregimiento</option>
+                        </select>
+                        <input type="text" id="edit_rur_nombre" style="flex-grow: 1; min-width: 150px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Nombre (Ej: San Antonio)">
+                        <input type="text" id="edit_rur_finca" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Finca / Lote (Opcional)">
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                        <p style="margin: 0; font-size: 14px; color: #64748b;">Ubicación rural: <strong id="edit_rur_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
+                    </div>
+                    {{ form.zona_rural }}
+                </div>
+
+                {% if form.direccion.errors %}<div class="form-error">{{ form.direccion.errors }}</div>{% endif %}
+            </div>
+            {# ── FIN CONSTRUCTOR ──────────────────────────────────────── #}
         </fieldset>
 
         <fieldset style="margin-bottom: 20px;">
@@ -106,33 +172,33 @@
             </legend>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.ciu_etnia.id_for_label }}">Etnia</label>
-                    {{ form.ciu_etnia }}
+                    <label for="{{ form.etnia.id_for_label }}">Etnia</label>
+                    {{ form.etnia }}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.ciu_nvleduc.id_for_label }}">Nivel Educativo</label>
-                    {{ form.ciu_nvleduc }}
+                    <label for="{{ form.nivel_educativo.id_for_label }}">Nivel Educativo</label>
+                    {{ form.nivel_educativo }}
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.ciu_ocpcion.id_for_label }}">Ocupación</label>
-                    {{ form.ciu_ocpcion }}
+                    <label for="{{ form.ocupacion.id_for_label }}">Ocupación</label>
+                    {{ form.ocupacion }}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.ciu_estrato.id_for_label }}">Estrato</label>
-                    {{ form.ciu_estrato }}
-                    {% if form.ciu_estrato.errors %}<div class="form-error">{{ form.ciu_estrato.errors }}</div>{% endif %}
+                    <label for="{{ form.estrato.id_for_label }}">Estrato</label>
+                    {{ form.estrato }}
+                    {% if form.estrato.errors %}<div class="form-error">{{ form.estrato.errors }}</div>{% endif %}
                 </div>
             </div>
-            <div class="form-group">
-                <label>
-                    {{ form.ciu_discapacidad }} Tiene discapacidad
-                </label>
+            <div class="form-group" style="display: flex; align-items: center; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                {{ form.tiene_discapacidad }}
+                <label for="{{ form.tiene_discapacidad.id_for_label }}" style="margin-bottom: 0; margin-left: 10px; cursor: pointer;">{{ form.tiene_discapacidad.label }}</label>
             </div>
-            <div class="form-group" id="grupo_discapacidad" style="display: none;">
-                <label for="{{ form.ciu_desc_discapacidad.id_for_label }}">Descripción de la discapacidad</label>
-                {{ form.ciu_desc_discapacidad }}
+            <div class="form-group" id="grupo_discapacidad" style="display: none; margin-top: 10px;">
+                <label for="{{ form.descripcion_discapacidad.id_for_label }}">Descripción de la discapacidad <span style="color:red;">*</span></label>
+                {{ form.descripcion_discapacidad }}
+                {% if form.descripcion_discapacidad.errors %}<div class="form-error">{{ form.descripcion_discapacidad.errors }}</div>{% endif %}
             </div>
         </fieldset>
 
@@ -141,8 +207,8 @@
                 Estado
             </legend>
             <div class="form-group">
-                <label for="{{ form.ciu_estdo.id_for_label }}">Estado del ciudadano</label>
-                {{ form.ciu_estdo }}
+                <label for="{{ form.estado.id_for_label }}">Estado del ciudadano</label>
+                {{ form.estado }}
             </div>
         </fieldset>
 
@@ -164,17 +230,15 @@
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('form-editar-ciudadano');
 
-    const numdocInput = document.getElementById('{{ form.ciu_numdoc.id_for_label }}');
-    const nmbresInput = document.getElementById('{{ form.ciu_nmbres.id_for_label }}');
-    const aplldosInput = document.getElementById('{{ form.ciu_aplldos.id_for_label }}');
-    const emailInput = document.getElementById('{{ form.ciu_email.id_for_label }}');
-    const tlfnoInput = document.getElementById('{{ form.ciu_tlfno.id_for_label }}');
-    const dircionInput = document.getElementById('{{ form.ciu_dircion.id_for_label }}');
-    const estratoInput = document.getElementById('{{ form.ciu_estrato.id_for_label }}');
-    const discapacidadCheck = document.getElementById('{{ form.ciu_discapacidad.id_for_label }}');
+    const numdocInput = document.getElementById('{{ form.numero_documento.id_for_label }}');
+    const primerNombreInput = document.getElementById('{{ form.primer_nombre.id_for_label }}');
+    const primerApellidoInput = document.getElementById('{{ form.primer_apellido.id_for_label }}');
+    const emailInput = document.getElementById('{{ form.correo.id_for_label }}');
+    const tlfnoInput = document.getElementById('{{ form.telefono.id_for_label }}');
+    const estratoInput = document.getElementById('{{ form.estrato.id_for_label }}');
+    const discapacidadCheck = document.getElementById('id_check_discapacidad');
     const grupoDiscapacidad = document.getElementById('grupo_discapacidad');
 
-    // Toggle campo discapacidad
     function toggleDiscapacidad() {
         if (discapacidadCheck && grupoDiscapacidad) {
             grupoDiscapacidad.style.display = discapacidadCheck.checked ? 'block' : 'none';
@@ -185,7 +249,6 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleDiscapacidad();
     }
 
-    // Validaciones en tiempo real
     if (numdocInput) {
         numdocInput.addEventListener('input', function () {
             this.value = this.value.replace(/[^0-9]/g, '');
@@ -196,23 +259,23 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (nmbresInput) {
-        nmbresInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombres');
+    if (primerNombreInput) {
+        primerNombreInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Primer nombre');
         });
-        nmbresInput.addEventListener('input', function () {
+        primerNombreInput.addEventListener('input', function () {
             if (this.classList.contains('input-error'))
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombres');
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Primer nombre');
         });
     }
 
-    if (aplldosInput) {
-        aplldosInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Apellidos');
+    if (primerApellidoInput) {
+        primerApellidoInput.addEventListener('blur', function () {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Primer apellido');
         });
-        aplldosInput.addEventListener('input', function () {
+        primerApellidoInput.addEventListener('input', function () {
             if (this.classList.contains('input-error'))
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Apellidos');
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Primer apellido');
         });
     }
 
@@ -236,12 +299,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (dircionInput) {
-        dircionInput.addEventListener('blur', function () {
-            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarDireccion, 'Dirección');
-        });
-    }
-
     if (estratoInput) {
         estratoInput.addEventListener('input', function () {
             this.value = this.value.replace(/[^0-9]/g, '');
@@ -258,13 +315,73 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', function (e) {
             let ok = true;
             if (numdocInput && !ValidacionPVD.validarYMostrar(numdocInput, ValidacionPVD.validarDocumento, 'Número de documento').valido) ok = false;
-            if (nmbresInput && !ValidacionPVD.validarYMostrar(nmbresInput, ValidacionPVD.validarNombre, 'Nombres').valido) ok = false;
-            if (aplldosInput && !ValidacionPVD.validarYMostrar(aplldosInput, ValidacionPVD.validarNombre, 'Apellidos').valido) ok = false;
+            if (primerNombreInput && !ValidacionPVD.validarYMostrar(primerNombreInput, ValidacionPVD.validarNombre, 'Primer nombre').valido) ok = false;
+            if (primerApellidoInput && !ValidacionPVD.validarYMostrar(primerApellidoInput, ValidacionPVD.validarNombre, 'Primer apellido').valido) ok = false;
             if (emailInput && emailInput.value && !ValidacionPVD.validarYMostrar(emailInput, ValidacionPVD.validarEmail, 'Correo electrónico').valido) ok = false;
             if (tlfnoInput && tlfnoInput.value && !ValidacionPVD.validarYMostrar(tlfnoInput, ValidacionPVD.validarTelefono, 'Teléfono').valido) ok = false;
             if (!ok) e.preventDefault();
         });
     }
+
+    // ── CONSTRUCTOR DE DIRECCIÓN ────────────────────────────────────────
+    const dirHidden = document.getElementById('id_direccion');
+    const zonaRuralHidden = document.getElementById('id_zona_rural');
+
+    function updateDireccionEdit() {
+        const tipo = document.getElementById('edit_dir_tipo').value || '';
+        const num1 = document.getElementById('edit_dir_num1').value || '';
+        const letra1 = document.getElementById('edit_dir_letra1').value || '';
+        const num2 = document.getElementById('edit_dir_num2').value || '';
+        const letra2 = document.getElementById('edit_dir_letra2').value || '';
+        const num3 = document.getElementById('edit_dir_num3').value || '';
+        const comp = document.getElementById('edit_dir_comp').value || '';
+        let dir = '';
+        if (num1) {
+            dir = `${tipo} ${num1}${letra1 ? ' ' + letra1 : ''}`;
+            if (num2) dir += ` # ${num2}${letra2 ? ' ' + letra2 : ''}`;
+            if (num3) dir += ` - ${num3}`;
+            if (comp) dir += ` ${comp}`;
+        }
+        dir = dir.replace(/\s+/g, ' ').trim();
+        if (dirHidden) dirHidden.value = dir;
+        document.getElementById('edit_dir_preview').textContent = dir;
+    }
+
+    function updateDireccionRuralEdit() {
+        const tipo = document.getElementById('edit_rur_tipo').value || '';
+        const nombre = document.getElementById('edit_rur_nombre').value || '';
+        const finca = document.getElementById('edit_rur_finca').value || '';
+        let dir = '';
+        if (nombre) {
+            dir = `${tipo} ${nombre}`;
+            if (finca) dir += ` - Finca/Lote: ${finca}`;
+        }
+        dir = dir.replace(/\s+/g, ' ').trim();
+        if (zonaRuralHidden) zonaRuralHidden.value = dir;
+        document.getElementById('edit_rur_preview').textContent = dir;
+    }
+
+    ['edit_dir_tipo','edit_dir_num1','edit_dir_letra1','edit_dir_num2','edit_dir_letra2','edit_dir_num3','edit_dir_comp'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateDireccionEdit);
+            if (el.tagName === 'SELECT') el.addEventListener('change', updateDireccionEdit);
+        }
+    });
+
+    ['edit_rur_tipo','edit_rur_nombre','edit_rur_finca'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateDireccionRuralEdit);
+            if (el.tagName === 'SELECT') el.addEventListener('change', updateDireccionRuralEdit);
+        }
+    });
+
+    window.toggleZonaEdit = function () {
+        const zona = document.querySelector('input[name="tipo_zona_edit"]:checked').value;
+        document.getElementById('edit_constructor_urbano').style.display = zona === 'Urbana' ? 'block' : 'none';
+        document.getElementById('edit_constructor_rural').style.display = zona === 'Rural' ? 'block' : 'none';
+    };
 });
 </script>
 {% endblock %}

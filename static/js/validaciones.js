@@ -75,12 +75,8 @@ const ValidacionPVD = {
             return { valido: false, mensaje: 'El teléfono solo debe contener números' };
         }
         
-        if (valor.length < 7) {
-            return { valido: false, mensaje: 'El teléfono debe tener al menos 7 dígitos' };
-        }
-        
-        if (valor.length > 15) {
-            return { valido: false, mensaje: 'El teléfono no puede tener más de 15 dígitos' };
+        if (valor.length !== 10) {
+            return { valido: false, mensaje: 'El teléfono debe tener exactamente 10 dígitos' };
         }
         
         return { valido: true, mensaje: '' };

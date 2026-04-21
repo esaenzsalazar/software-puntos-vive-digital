@@ -1,137 +1,112 @@
 /**
  * Inicializador de Validación para Formularios PVD
  * Contrato CD-224-2026 - Alcaldía de Bugalagrande
- * 
- * Este archivo agrega validaciones automáticas a los formularios comunes
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     inicializarValidacionCiudadano();
     inicializarValidacionAtencion();
-    inicializarValidacionRecurso();
-    inicializarValidacionSala();
+    inicializarValidacionPVD();
 });
 
-/**
- * Validación para formulario de Ciudadano
- */
 function inicializarValidacionCiudadano() {
-    const formCiudadano = document.querySelector('form');
-    if (!formCiudadano) return;
-
-    // Validar número de documento
-    const numdocInput = document.querySelector('[name="ciu_numdoc"]');
+    const numdocInput = document.querySelector('[name="numero_documento"]');
     if (numdocInput) {
         numdocInput.addEventListener('input', function() {
-            // Solo permitir números
             this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 0) {
+            if (this.value.length > 0)
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarDocumento, 'Número de documento');
-            }
         });
         numdocInput.addEventListener('blur', function() {
-            if (this.value) {
+            if (this.value)
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarDocumento, 'Número de documento');
-            }
         });
     }
 
-    // Validar nombres
-    const nombresInput = document.querySelector('[name="ciu_nmbres"]');
-    if (nombresInput) {
-        nombresInput.addEventListener('blur', function() {
-            if (this.value) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombres');
-            }
+    const primerNombreInput = document.querySelector('[name="primer_nombre"]');
+    if (primerNombreInput) {
+        primerNombreInput.addEventListener('blur', function() {
+            if (this.value)
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Primer nombre');
         });
     }
 
-    // Validar apellidos
-    const apellidosInput = document.querySelector('[name="ciu_aplldos"]');
-    if (apellidosInput) {
-        apellidosInput.addEventListener('blur', function() {
-            if (this.value) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Apellidos');
-            }
+    const primerApellidoInput = document.querySelector('[name="primer_apellido"]');
+    if (primerApellidoInput) {
+        primerApellidoInput.addEventListener('blur', function() {
+            if (this.value)
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Primer apellido');
         });
     }
 
-    // Validar teléfono
-    const tlfnoInput = document.querySelector('[name="ciu_tlfno"]');
+    const tlfnoInput = document.querySelector('[name="telefono"]');
     if (tlfnoInput) {
         tlfnoInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 0) {
+            this.value = this.value.replace(/[^0-9]/g, '').substring(0, 10);
+            if (this.value.length > 0)
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
-            }
         });
         tlfnoInput.addEventListener('blur', function() {
-            if (this.value) {
+            if (this.value)
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
-            }
         });
     }
 
-    // Validar email
-    const emailInput = document.querySelector('[name="ciu_email"]');
+    const emailInput = document.querySelector('[name="correo"]');
     if (emailInput) {
         emailInput.addEventListener('blur', function() {
-            if (this.value) {
+            if (this.value)
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
-            }
+        });
+        emailInput.addEventListener('input', function() {
+            if (this.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
         });
     }
 }
 
-/**
- * Validación para formulario de Atención
- */
 function inicializarValidacionAtencion() {
-    const obsInput = document.querySelector('[name="atn_obs"]');
+    const obsInput = document.querySelector('[name="observaciones"]');
     if (obsInput) {
         obsInput.addEventListener('blur', function() {
-            if (this.value && this.value.length > 0) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarLongitudMaxima.bind(null, 512, 'Observaciones'), 'Observaciones');
+            if (this.value && this.value.length > 512) {
+                ValidacionPVD.mostrarError(this, 'Las observaciones no pueden superar los 512 caracteres');
+            } else {
+                ValidacionPVD.ocultarError(this);
             }
         });
     }
 }
 
-/**
- * Validación para formulario de Recurso
- */
-function inicializarValidacionRecurso() {
-    const recCdgoInput = document.querySelector('[name="rec_cdgo"]');
-    if (recCdgoInput) {
-        recCdgoInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 0) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNumerico, 'Código del recurso');
-            }
-        });
-    }
-}
+function inicializarValidacionPVD() {
+    // Solo activo si estamos en el form de PVD (tiene id_nombre y no es el form de ciudadano)
+    const nombreInput = document.querySelector('[name="nombre"]');
+    const pvdTlfno = document.querySelector('[name="telefono"]');
+    const pvdCorreo = document.querySelector('[name="correo"]');
 
-/**
- * Validación para formulario de Sala
- */
-function inicializarValidacionSala() {
-    const salaNombreInput = document.querySelector('[name="sala_nombre"]');
-    if (salaNombreInput) {
-        salaNombreInput.addEventListener('blur', function() {
-            if (this.value) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombre de la sala');
-            }
+    // Identificar si es el form de PVD por presencia del hidden #id_direccion sin barrio select
+    const esPvdForm = document.getElementById('id_direccion') &&
+                      document.querySelector('[name="descripcion"]') &&
+                      !document.querySelector('[name="numero_documento"]');
+
+    if (!esPvdForm) return;
+
+    if (nombreInput) {
+        nombreInput.addEventListener('blur', function() {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre del PVD');
         });
     }
 
-    const capacidadInput = document.querySelector('[name="sala_capacidad"]');
-    if (capacidadInput) {
-        capacidadInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 0) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNumerico, 'Capacidad');
-            }
+    if (pvdTlfno) {
+        pvdTlfno.addEventListener('blur', function() {
+            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
+        });
+    }
+
+    if (pvdCorreo) {
+        pvdCorreo.addEventListener('blur', function() {
+            if (this.value)
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
         });
     }
 }

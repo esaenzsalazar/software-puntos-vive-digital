@@ -45,22 +45,22 @@
                     {% for ciudadano in ciudadanos %}
                         <tr>
                             <td>
-                                <strong>{{ ciudadano.ciu_numdoc }}</strong><br>
-                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.ciu_tpodoc }}</span>
+                                <strong>{{ ciudadano.numero_documento }}</strong><br>
+                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.tipo_documento }}</span>
                             </td>
                             <td>
-                                <strong class="text-accent" style="font-size: 15px;">{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</strong><br>
-                                <span style="font-size: 13px; color: #64748b;">{{ ciudadano.ciu_ocpcion }}</span>
+                                <strong class="text-accent" style="font-size: 15px;">{{ ciudadano.get_nombre_completo }}</strong><br>
+                                <span style="font-size: 13px; color: #64748b;">{{ ciudadano.ocupacion }}</span>
                             </td>
                             <td>
-                                <span style="font-size: 14px;">📞 {{ ciudadano.ciu_tlfno }}</span>
+                                <span style="font-size: 14px;">📞 {{ ciudadano.telefono }}</span>
                             </td>
                             <td>
-                                <strong>{{ ciudadano.ciu_barrio|default:"No registrado" }}</strong><br>
-                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.ciu_dircion|default:"Sin dirección" }}</span>
+                                <strong>{{ ciudadano.barrio|default:"No registrado" }}</strong><br>
+                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.direccion|default:"Sin dirección" }}</span>
                             </td>
                             <td>
-                                {% if ciudadano.ciu_estdo == 'A' %}
+                                {% if ciudadano.estado == 'A' %}
                                     <span class="badge badge-success">Activo</span>
                                 {% else %}
                                     <span class="badge badge-danger">Inactivo</span>
@@ -68,8 +68,8 @@
                             </td>
                             <td style="text-align: right;">
                                 <div class="cell-actions">
-                                    <a class="btn btn--sm" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.ciu_cdgo %}">Editar</a>
-                                    <a class="btn btn-secondary btn--sm" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.ciu_cdgo %}">Historial</a>
+                                    <a class="btn btn--sm" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.id %}">Editar</a>
+                                    <a class="btn btn-secondary btn--sm" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.id %}">Historial</a>
                                 </div>
                             </td>
                         </tr>

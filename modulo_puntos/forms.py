@@ -14,6 +14,7 @@ from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso
 # ==============================================================================
 
 BARRIO_CHOICES = [
+    ('', '— Seleccione un barrio —'),
     ('Ninguno / Área Rural', 'Ninguno / Área Rural'),
     ('Centro', 'Centro'), ('Obrero', 'Obrero'), ('Municipal', 'Municipal'),
     ('La Planta', 'La Planta'), ('Gualcoche', 'Gualcoche'), ('Los Mármoles', 'Los Mármoles'),
@@ -69,11 +70,11 @@ class CiudadanoForm(forms.ModelForm):
     Formulario para registrar y editar ciudadanos.
     Incluye validaciones para documento, email y teléfono.
     """
-    ciu_email = forms.EmailField(
+    correo = forms.EmailField(
         label='Correo Electrónico',
         required=False,
         widget=forms.EmailInput(attrs={
-            'class': 'form-control', 
+            'class': 'form-control',
             'placeholder': 'correo@ejemplo.com'
         })
     )
@@ -81,136 +82,150 @@ class CiudadanoForm(forms.ModelForm):
     class Meta:
         model = Ciudadano
         fields = [
-            'ciu_tpodoc', 'ciu_numdoc', 'ciu_nmbres', 'ciu_aplldos',
-            'ciu_fchancm', 'ciu_email', 'ciu_tlfno', 'ciu_genro',
-            'ciu_dircion', 'ciu_barrio', 'ciu_zrural',
-            'ciu_etnia', 'ciu_nvleduc', 'ciu_ocpcion', 'ciu_estrato',
-            'ciu_discapacidad', 'ciu_desc_discapacidad', 'ciu_estdo'
+            'tipo_documento', 'numero_documento',
+            'primer_nombre', 'segundo_nombre',
+            'primer_apellido', 'segundo_apellido',
+            'fecha_nacimiento', 'correo', 'telefono', 'genero',
+            'direccion', 'barrio', 'zona_rural',
+            'etnia', 'nivel_educativo', 'ocupacion', 'estrato',
+            'tiene_discapacidad', 'descripcion_discapacidad', 'estado'
         ]
         labels = {
-            'ciu_tpodoc': 'Tipo de Documento', 
-            'ciu_numdoc': 'Número de Documento',
-            'ciu_nmbres': 'Nombres Completos', 
-            'ciu_aplldos': 'Apellidos Completos',
-            'ciu_fchancm': 'Fecha de Nacimiento', 
-            'ciu_genro': 'Género',
-            'ciu_dircion': 'Dirección de Residencia', 
-            'ciu_barrio': 'Barrio (Cabecera Municipal)',
-            'ciu_zrural': 'Vereda / Corregimiento (Opcional)',
-            'ciu_etnia': 'Pertenencia Étnica', 
-            'ciu_nvleduc': 'Nivel Educativo',
-            'ciu_ocpcion': 'Ocupación Actual', 
-            'ciu_estrato': 'Estrato Socioeconómico',
-            'ciu_discapacidad': '¿Tiene alguna discapacidad?',
-            'ciu_desc_discapacidad': '¿Cuál discapacidad? (Descríbala)',
-            'ciu_estdo': 'Estado en el Sistema', 
-            'ciu_tlfno': 'Teléfono o Celular',
+            'tipo_documento': 'Tipo de Documento',
+            'numero_documento': 'Número de Documento',
+            'primer_nombre': 'Primer Nombre *',
+            'segundo_nombre': 'Segundo Nombre (Opcional)',
+            'primer_apellido': 'Primer Apellido *',
+            'segundo_apellido': 'Segundo Apellido *',
+            'fecha_nacimiento': 'Fecha de Nacimiento',
+            'genero': 'Género',
+            'direccion': 'Dirección de Residencia',
+            'barrio': 'Barrio (Cabecera Municipal)',
+            'zona_rural': 'Vereda / Corregimiento (Opcional)',
+            'etnia': 'Pertenencia Étnica',
+            'nivel_educativo': 'Nivel Educativo',
+            'ocupacion': 'Ocupación Actual',
+            'estrato': 'Estrato Socioeconómico',
+            'tiene_discapacidad': '¿Tiene alguna discapacidad?',
+            'descripcion_discapacidad': '¿Cuál discapacidad? (Descríbala)',
+            'estado': 'Estado en el Sistema',
+            'telefono': 'Teléfono o Celular',
         }
         widgets = {
-            'ciu_tpodoc': forms.Select(
+            'tipo_documento': forms.Select(
                 choices=[
-                    ('CC', 'Cédula de Ciudadanía'), 
-                    ('TI', 'Tarjeta de Identidad'), 
-                    ('CE', 'Cédula de Extranjería'), 
-                    ('RC', 'Registro Civil'), 
-                    ('PA', 'Pasaporte'), 
-                    ('PEP', 'Permiso Especial de Permanencia'), 
+                    ('CC', 'Cédula de Ciudadanía'),
+                    ('TI', 'Tarjeta de Identidad'),
+                    ('CE', 'Cédula de Extranjería'),
+                    ('RC', 'Registro Civil'),
+                    ('PA', 'Pasaporte'),
+                    ('PEP', 'Permiso Especial de Permanencia'),
                     ('PPT', 'Permiso por Protección Temporal')
-                ], 
+                ],
                 attrs={'class': 'form-control'}
             ),
-            'ciu_numdoc': forms.TextInput(
+            'numero_documento': forms.TextInput(
                 attrs={
-                    'class': 'form-control', 
-                    'placeholder': 'Número de documento', 
+                    'class': 'form-control',
+                    'placeholder': 'Número de documento',
                     'oninput': "this.value = this.value.replace(/[^0-9]/g, '')"
                 }
             ),
-            'ciu_nmbres': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Nombres completos'}
+            'primer_nombre': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej: Nicolás'}
             ),
-            'ciu_aplldos': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Apellidos completos'}
+            'segundo_nombre': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej: Andrés (opcional)'}
             ),
-            'ciu_fchancm': forms.DateInput(
-                format='%Y-%m-%d', 
+            'primer_apellido': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej: García'}
+            ),
+            'segundo_apellido': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej: López'}
+            ),
+            'fecha_nacimiento': forms.DateInput(
+                format='%Y-%m-%d',
                 attrs={'class': 'form-control', 'type': 'date'}
             ),
-            'ciu_tlfno': forms.TextInput(
+            'telefono': forms.TextInput(
                 attrs={
-                    'class': 'form-control', 
-                    'placeholder': 'Ej. 3001234567', 
-                    'oninput': "this.value = this.value.replace(/[^0-9]/g, '')", 
-                    'pattern': "[0-9]+"
+                    'class': 'form-control',
+                    'placeholder': 'Ej. 3001234567',
+                    'oninput': "this.value = this.value.replace(/[^0-9]/g, '').substring(0,10)",
+                    'maxlength': '10',
+                    'pattern': "[0-9]{10}"
                 }
             ),
-            'ciu_genro': forms.Select(
-                choices=[('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')], 
+            'genero': forms.Select(
+                choices=[('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')],
                 attrs={'class': 'form-control'}
             ),
-            'ciu_dircion': forms.HiddenInput(attrs={'id': 'id_ciu_dircion'}),
-            'ciu_barrio': forms.Select(choices=BARRIO_CHOICES, attrs={'class': 'form-control'}),
-            'ciu_zrural': forms.HiddenInput(attrs={'id': 'id_ciu_zrural'}),
-            'ciu_etnia': forms.Select(choices=ETNIA_CHOICES, attrs={'class': 'form-control'}),
-            'ciu_nvleduc': forms.Select(choices=EDUCACION_CHOICES, attrs={'class': 'form-control'}),
-            'ciu_ocpcion': forms.Select(choices=OCUPACION_CHOICES, attrs={'class': 'form-control'}),
-            'ciu_estrato': forms.NumberInput(
+            'direccion': forms.HiddenInput(attrs={'id': 'id_direccion'}),
+            'barrio': forms.Select(choices=BARRIO_CHOICES, attrs={'class': 'form-control'}),
+            'zona_rural': forms.HiddenInput(attrs={'id': 'id_zona_rural'}),
+            'etnia': forms.Select(choices=ETNIA_CHOICES, attrs={'class': 'form-control'}),
+            'nivel_educativo': forms.Select(choices=EDUCACION_CHOICES, attrs={'class': 'form-control'}),
+            'ocupacion': forms.Select(choices=OCUPACION_CHOICES, attrs={'class': 'form-control'}),
+            'estrato': forms.NumberInput(
                 attrs={'class': 'form-control', 'min': '1', 'max': '3'}
             ),
-            'ciu_estdo': forms.Select(
-                choices=[('A', 'Activo'), ('I', 'Inactivo')], 
+            'estado': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}
             ),
-            'ciu_discapacidad': forms.CheckboxInput(
+            'tiene_discapacidad': forms.CheckboxInput(
                 attrs={'class': 'form-check-input', 'id': 'id_check_discapacidad'}
             ),
-            'ciu_desc_discapacidad': forms.TextInput(
+            'descripcion_discapacidad': forms.TextInput(
                 attrs={
-                    'class': 'form-control', 
-                    'id': 'id_desc_discapacidad', 
+                    'class': 'form-control',
+                    'id': 'id_desc_discapacidad',
                     'placeholder': 'Ej: Visual, Auditiva, Motriz, Cognitiva...'
                 }
             ),
         }
 
     def __init__(self, *args, **kwargs):
-        """Inicializar valores por defecto."""
         super().__init__(*args, **kwargs)
-        self.fields['ciu_estrato'].initial = 1
-        self.fields['ciu_estdo'].initial = 'A'
-        self.fields['ciu_discapacidad'].required = False
+        self.fields['estrato'].initial = 1
+        self.fields['estado'].initial = 'A'
+        self.fields['tiene_discapacidad'].required = False
+        self.fields['primer_nombre'].required = True
+        self.fields['segundo_nombre'].required = False
+        self.fields['primer_apellido'].required = True
+        self.fields['segundo_apellido'].required = True
 
-    def clean_ciu_numdoc(self):
+    def clean_numero_documento(self):
         """Valida que el número de documento no esté duplicado."""
-        numdoc = self.cleaned_data.get('ciu_numdoc')
+        numdoc = self.cleaned_data.get('numero_documento')
         if numdoc:
-            qs = Ciudadano.objects.filter(ciu_numdoc=numdoc)
+            qs = Ciudadano.objects.filter(numero_documento=numdoc)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise ValidationError('Ya existe un ciudadano registrado con este número de documento.')
         return numdoc.strip() if numdoc else numdoc
 
-    def clean_ciu_email(self):
+    def clean_correo(self):
         """Valida formato de email si se proporciona."""
-        email = self.cleaned_data.get('ciu_email')
+        email = self.cleaned_data.get('correo')
         if email:
-            qs = Ciudadano.objects.filter(ciu_email=email)
+            qs = Ciudadano.objects.filter(correo=email)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise ValidationError('Este correo electrónico ya está registrado.')
         return email
 
-    def clean_ciu_tlfno(self):
+    def clean_telefono(self):
         """Valida formato de teléfono."""
-        tlfno = self.cleaned_data.get('ciu_tlfno')
+        tlfno = self.cleaned_data.get('telefono')
         if tlfno:
             limpio = tlfno.replace(' ', '').replace('-', '')
             if not limpio.isdigit():
                 raise ValidationError('El teléfono solo debe contener números.')
-            if len(limpio) < 7:
-                raise ValidationError('El teléfono debe tener al menos 7 dígitos.')
+            if len(limpio) != 10:
+                raise ValidationError('El teléfono debe tener exactamente 10 dígitos.')
         return tlfno
 
 
@@ -222,44 +237,44 @@ class AtencionForm(forms.ModelForm):
     class Meta:
         model = Atencion
         fields = [
-            'ciu_cdgo', 'opr_cdgo', 'prs_cdgo', 
-            'atn_fecha', 'atn_hrini', 'atn_hrfin', 
-            'atn_estdo', 'atn_obs'
+            'ciudadano', 'operador', 'prestamo',
+            'fecha', 'hora_inicio', 'hora_fin',
+            'estado', 'observaciones'
         ]
         labels = {
-            'ciu_cdgo': 'Ciudadano Atendido', 
-            'opr_cdgo': 'Operador a Cargo',
-            'prs_cdgo': 'Préstamo Vinculado (Opcional)', 
-            'atn_fecha': 'Fecha de Atención',
-            'atn_hrini': 'Hora de Inicio', 
-            'atn_hrfin': 'Hora de Finalización',
-            'atn_estdo': 'Estado de la Atención', 
-            'atn_obs': 'Observaciones / Notas',
+            'ciudadano': 'Ciudadano Atendido',
+            'operador': 'Operador a Cargo',
+            'prestamo': 'Préstamo Vinculado (Opcional)',
+            'fecha': 'Fecha de Atención',
+            'hora_inicio': 'Hora de Inicio',
+            'hora_fin': 'Hora de Finalización',
+            'estado': 'Estado de la Atención',
+            'observaciones': 'Observaciones / Notas',
         }
         widgets = {
-            'ciu_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'opr_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'prs_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'atn_fecha': forms.DateInput(
-                format='%Y-%m-%d', 
+            'ciudadano': forms.Select(attrs={'class': 'form-control'}),
+            'operador': forms.Select(attrs={'class': 'form-control'}),
+            'prestamo': forms.Select(attrs={'class': 'form-control'}),
+            'fecha': forms.DateInput(
+                format='%Y-%m-%d',
                 attrs={'class': 'form-control', 'type': 'date'}
             ),
-            'atn_hrini': forms.TimeInput(
-                format='%H:%M', 
+            'hora_inicio': forms.TimeInput(
+                format='%H:%M',
                 attrs={'class': 'form-control', 'type': 'time'}
             ),
-            'atn_hrfin': forms.TimeInput(
-                format='%H:%M', 
+            'hora_fin': forms.TimeInput(
+                format='%H:%M',
                 attrs={'class': 'form-control', 'type': 'time'}
             ),
-            'atn_estdo': forms.Select(
-                choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')], 
+            'estado': forms.Select(
+                choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')],
                 attrs={'class': 'form-control'}
             ),
-            'atn_obs': forms.Textarea(
+            'observaciones': forms.Textarea(
                 attrs={
-                    'class': 'form-control', 
-                    'rows': 3, 
+                    'class': 'form-control',
+                    'rows': 3,
                     'placeholder': 'Describe brevemente la atención realizada...'
                 }
             ),
@@ -269,33 +284,33 @@ class AtencionForm(forms.ModelForm):
         """Inicializar campos con valores por defecto y bloquear operador si es necesario."""
         super().__init__(*args, **kwargs)
         # Hacer campos opcionales
-        self.fields['ciu_cdgo'].required = False
-        self.fields['opr_cdgo'].required = False
-        self.fields['prs_cdgo'].required = False
-        
+        self.fields['ciudadano'].required = False
+        self.fields['operador'].required = False
+        self.fields['prestamo'].required = False
+
         # Etiquetas vacías para selects
-        self.fields['ciu_cdgo'].empty_label = '--- Seleccione un ciudadano ---'
-        self.fields['opr_cdgo'].empty_label = '--- Seleccione un operador ---'
-        self.fields['prs_cdgo'].empty_label = '--- Sin préstamo vinculado ---'
-        
+        self.fields['ciudadano'].empty_label = '--- Seleccione un ciudadano ---'
+        self.fields['operador'].empty_label = '--- Seleccione un operador ---'
+        self.fields['prestamo'].empty_label = '--- Sin préstamo vinculado ---'
+
         # Campo hora final opcional
-        self.fields['atn_hrfin'].required = False
-        self.fields['atn_estdo'].initial = 'P'
+        self.fields['hora_fin'].required = False
+        self.fields['estado'].initial = 'P'
 
         # BLOQUEAR OPERADOR SI SE ASIGNÓ AUTOMÁTICAMENTE
-        if 'initial' in kwargs and 'opr_cdgo' in kwargs['initial']:
-            self.fields['opr_cdgo'].widget.attrs['readonly'] = True
-            self.fields['opr_cdgo'].widget.attrs['style'] = 'pointer-events: none; background-color: #e2e8f0;'
+        if 'initial' in kwargs and 'operador' in kwargs['initial']:
+            self.fields['operador'].widget.attrs['readonly'] = True
+            self.fields['operador'].widget.attrs['style'] = 'pointer-events: none; background-color: #e2e8f0;'
 
     def clean(self):
         """Validar que la hora final no sea menor que la hora inicial."""
         cleaned_data = super().clean()
-        hr_ini = cleaned_data.get('atn_hrini')
-        hr_fin = cleaned_data.get('atn_hrfin')
-        
+        hr_ini = cleaned_data.get('hora_inicio')
+        hr_fin = cleaned_data.get('hora_fin')
+
         if hr_ini and hr_fin and hr_fin < hr_ini:
-            self.add_error('atn_hrfin', 'La hora final no puede ser menor que la hora inicial.')
-        
+            self.add_error('hora_fin', 'La hora final no puede ser menor que la hora inicial.')
+
         return cleaned_data
 
 
@@ -304,41 +319,41 @@ class SatisfaccionForm(forms.ModelForm):
     Formulario para registrar encuestas de satisfacción.
     Incluye validación de calificación (1-5).
     """
-    sat_fecha = forms.DateTimeField(
+    fecha = forms.DateTimeField(
         label='Fecha y Hora del Reporte',
         input_formats=['%Y-%m-%dT%H:%M'],
         widget=forms.DateTimeInput(
             attrs={'class': 'form-control', 'type': 'datetime-local'}
         )
     )
-    
+
     class Meta:
         model = Satisfaccion
-        fields = ['atn_cdgo', 'sat_calif', 'sat_cmntrio', 'sat_fecha']
+        fields = ['atencion', 'calificacion', 'comentario', 'fecha']
         labels = {
-            'atn_cdgo': 'Atención Evaluada', 
-            'sat_calif': 'Calificación (1 a 5)',
-            'sat_cmntrio': 'Comentarios del Ciudadano',
+            'atencion': 'Atención Evaluada',
+            'calificacion': 'Calificación (1 a 5)',
+            'comentario': 'Comentarios del Ciudadano',
         }
         widgets = {
-            'atn_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'sat_calif': forms.NumberInput(
+            'atencion': forms.Select(attrs={'class': 'form-control'}),
+            'calificacion': forms.NumberInput(
                 attrs={'class': 'form-control', 'min': '1', 'max': '5'}
             ),
-            'sat_cmntrio': forms.Textarea(
+            'comentario': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 3}
             ),
         }
-    
+
     def __init__(self, *args, **kwargs):
         """Inicializar campo de atención como opcional."""
         super().__init__(*args, **kwargs)
-        self.fields['atn_cdgo'].required = False
-        self.fields['atn_cdgo'].empty_label = '--- Seleccione una atención ---'
+        self.fields['atencion'].required = False
+        self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
 
-    def clean_sat_calif(self):
+    def clean_calificacion(self):
         """Valida que la calificación esté entre 1 y 5."""
-        calif = self.cleaned_data.get('sat_calif')
+        calif = self.cleaned_data.get('calificacion')
         if calif is not None and (calif < 1 or calif > 5):
             raise ValidationError('La calificación debe estar entre 1 y 5 estrellas.')
         return calif
@@ -351,77 +366,77 @@ class ServicioForm(forms.ModelForm):
     class Meta:
         model = Servicio
         fields = [
-            'atn_cdgo', 'srv_nombre', 'srv_descr', 
-            'srv_tipo', 'srv_reqeqp', 'srv_estdo'
+            'atencion', 'nombre', 'descripcion',
+            'tipo', 'requiere_equipo', 'estado'
         ]
         labels = {
-            'atn_cdgo': 'Atención Vinculada', 
-            'srv_nombre': 'Nombre del Servicio',
-            'srv_descr': 'Descripción Detallada', 
-            'srv_tipo': 'Categoría',
-            'srv_reqeqp': '¿Requiere equipo?', 
-            'srv_estdo': 'Estado'
+            'atencion': 'Atención Vinculada',
+            'nombre': 'Nombre del Servicio',
+            'descripcion': 'Descripción Detallada',
+            'tipo': 'Categoría',
+            'requiere_equipo': '¿Requiere equipo?',
+            'estado': 'Estado'
         }
         widgets = {
-            'atn_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'srv_nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'srv_descr': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'srv_tipo': forms.Select(
-                choices=TIPO_SERVICIO_CHOICES, 
+            'atencion': forms.Select(attrs={'class': 'form-control'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'tipo': forms.Select(
+                choices=TIPO_SERVICIO_CHOICES,
                 attrs={'class': 'form-control'}
             ),
-            'srv_reqeqp': forms.Select(
-                choices=[('S', 'Sí'), ('N', 'No')], 
+            'requiere_equipo': forms.Select(
+                choices=[('S', 'Sí'), ('N', 'No')],
                 attrs={'class': 'form-control'}
             ),
-            'srv_estdo': forms.Select(
-                choices=[('A', 'Activo'), ('I', 'Inactivo')], 
+            'estado': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}
             ),
         }
-    
+
     def __init__(self, *args, **kwargs):
         """Inicializar campos con valores por defecto."""
         super().__init__(*args, **kwargs)
-        self.fields['atn_cdgo'].required = False
-        self.fields['atn_cdgo'].empty_label = '--- Seleccione una atención ---'
-        self.fields['srv_reqeqp'].initial = 'N'
-        self.fields['srv_estdo'].initial = 'A'
+        self.fields['atencion'].required = False
+        self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
+        self.fields['requiere_equipo'].initial = 'N'
+        self.fields['estado'].initial = 'A'
 
 
 class PrestamoRecursoForm(forms.ModelForm):
     """
     Formulario para registrar préstamos de recursos.
     """
-    prs_fchent = forms.DateTimeField(
-        label='Entrega', 
-        input_formats=['%Y-%m-%dT%H:%M'], 
+    fecha_entrega = forms.DateTimeField(
+        label='Entrega',
+        input_formats=['%Y-%m-%dT%H:%M'],
         widget=forms.DateTimeInput(
             attrs={'class': 'form-control', 'type': 'datetime-local'}
         )
     )
-    prs_fchdev = forms.DateTimeField(
-        label='Devolución', 
-        required=False, 
-        input_formats=['%Y-%m-%dT%H:%M'], 
+    fecha_devolucion = forms.DateTimeField(
+        label='Devolución',
+        required=False,
+        input_formats=['%Y-%m-%dT%H:%M'],
         widget=forms.DateTimeInput(
             attrs={'class': 'form-control', 'type': 'datetime-local'}
         )
     )
-    
+
     class Meta:
         model = PrestamoRecurso
-        fields = ['rec_cdgo', 'prs_fchent', 'prs_fchdev', 'prs_obs']
+        fields = ['recurso', 'fecha_entrega', 'fecha_devolucion', 'observaciones']
         widgets = {
-            'rec_cdgo': forms.Select(attrs={'class': 'form-control'}), 
-            'prs_obs': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+            'recurso': forms.Select(attrs={'class': 'form-control'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
         }
-    
+
     def __init__(self, *args, **kwargs):
         """Inicializar campo de recurso como opcional."""
         super().__init__(*args, **kwargs)
-        self.fields['rec_cdgo'].required = False
-        self.fields['rec_cdgo'].empty_label = '--- Seleccione un recurso ---'
+        self.fields['recurso'].required = False
+        self.fields['recurso'].empty_label = '--- Seleccione un recurso ---'
 
 
 class RecursoForm(forms.ModelForm):
@@ -430,23 +445,22 @@ class RecursoForm(forms.ModelForm):
     """
     class Meta:
         model = Recurso
-        fields = ['rec_cdgo', 'rec_tipo', 'rec_estdo']
+        fields = ['tipo', 'estado']
         widgets = {
-            'rec_cdgo': forms.NumberInput(attrs={'class': 'form-control'}),
-            'rec_tipo': forms.Select(
-                choices=TIPO_RECURSO_CHOICES, 
+            'tipo': forms.Select(
+                choices=TIPO_RECURSO_CHOICES,
                 attrs={'class': 'form-control'}
             ),
-            'rec_estdo': forms.Select(
-                choices=[('A', 'Activo'), ('I', 'Inactivo')], 
+            'estado': forms.Select(
+                choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}
             ),
         }
-    
+
     def __init__(self, *args, **kwargs):
         """Inicializar estado como activo por defecto."""
         super().__init__(*args, **kwargs)
-        self.fields['rec_estdo'].initial = 'A'
+        self.fields['estado'].initial = 'A'
 
 
 # ==============================================================================
@@ -458,19 +472,19 @@ class LoginForm(AuthenticationForm):
     Formulario de inicio de sesión personalizado.
     """
     username = forms.CharField(
-        label='Usuario', 
+        label='Usuario',
         widget=forms.TextInput(
             attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'placeholder': 'Ingrese su usuario'
             }
         )
     )
     password = forms.CharField(
-        label='Contraseña', 
+        label='Contraseña',
         widget=forms.PasswordInput(
             attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'placeholder': 'Ingrese su contraseña'
             }
         )
@@ -482,23 +496,23 @@ class PerfilUsuarioForm(forms.ModelForm):
     Formulario para editar perfil de usuario y cambiar contraseña.
     """
     password1 = forms.CharField(
-        label='Nueva contraseña', 
-        required=False, 
+        label='Nueva contraseña',
+        required=False,
         widget=forms.PasswordInput(
             attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'placeholder': 'Déjalo vacío si no deseas cambiarla'
             }
         )
     )
     password2 = forms.CharField(
-        label='Confirmar nueva contraseña', 
-        required=False, 
+        label='Confirmar nueva contraseña',
+        required=False,
         widget=forms.PasswordInput(
             attrs={'class': 'form-control'}
         )
     )
-    
+
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name', 'email']
@@ -508,21 +522,21 @@ class PerfilUsuarioForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
-    
+
     def clean(self):
         """Validar que las contraseñas coincidan."""
         cleaned_data = super().clean()
         password1 = cleaned_data.get('password1')
         password2 = cleaned_data.get('password2')
-        
+
         if password1 or password2:
-            if not password1: 
+            if not password1:
                 self.add_error('password1', 'Requerido')
-            if not password2: 
+            if not password2:
                 self.add_error('password2', 'Requerido')
             if password1 and password2 and password1 != password2:
                 self.add_error('password2', 'No coinciden')
-        
+
         return cleaned_data
 
 
@@ -578,7 +592,7 @@ class CrearUsuarioForm(UserCreationForm):
             }
         )
     )
-    
+
     email = forms.EmailField(
         label='Correo electrónico',
         required=False,
@@ -589,7 +603,7 @@ class CrearUsuarioForm(UserCreationForm):
             }
         )
     )
-    
+
     # Campo para mostrar el username generado
     username_generado = forms.CharField(
         label='Username Generado (automático)',
@@ -604,7 +618,7 @@ class CrearUsuarioForm(UserCreationForm):
             }
         )
     )
-    
+
     # Campo para mostrar/ocultar password generado
     password_generado = forms.CharField(
         label='Contraseña Generada (automático - puede modificarla)',
@@ -625,7 +639,7 @@ class CrearUsuarioForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         """Aplicar clases CSS a todos los campos y configurar lógica."""
         super().__init__(*args, **kwargs)
-        
+
         # Aplicar clases a los campos de password
         self.fields['password1'].widget.attrs.update({
             'class': 'form-control',
@@ -635,23 +649,23 @@ class CrearUsuarioForm(UserCreationForm):
             'class': 'form-control',
             'id': 'id_password2'
         })
-        
+
         # Hacer los campos password1 y password2 opcionales en el formulario
         # porque usaremos password_generado como valor por defecto
         self.fields['password1'].required = False
         self.fields['password2'].required = False
-        
+
     def clean(self):
         """Validar que los campos requeridos estén presentes y que las contraseñas coincidan."""
         cleaned_data = super().clean()
         primer_nombre = cleaned_data.get('primer_nombre')
         primer_apellido = cleaned_data.get('primer_apellido')
-        
+
         if not primer_nombre:
             self.add_error('primer_nombre', 'El primer nombre es requerido')
         if not primer_apellido:
             self.add_error('primer_apellido', 'El primer apellido es requerido')
-        
+
         # Si se proporcionó password_generado, usarlo
         password_generado = cleaned_data.get('password_generado')
         if password_generado:
@@ -668,38 +682,38 @@ class CrearUsuarioForm(UserCreationForm):
                     self.add_error('password2', 'La confirmación es requerida')
                 if password1 and password2 and password1 != password2:
                     self.add_error('password2', 'Las contraseñas no coinciden')
-        
+
         return cleaned_data
-    
+
     def save(self, commit=True):
         """Guardar usuario con el username y password generados."""
         # Generar username si no existe
         username_generado = self.cleaned_data.get('username_generado')
         if username_generado:
             self.instance.username = username_generado
-        
+
         # Establecer nombre completo
         primer_nombre = self.cleaned_data.get('primer_nombre', '')
         segundo_nombre = self.cleaned_data.get('segundo_nombre', '')
         primer_apellido = self.cleaned_data.get('primer_apellido', '')
         segundo_apellido = self.cleaned_data.get('segundo_apellido', '')
-        
+
         nombre_completo = f"{primer_nombre} {segundo_nombre}".strip()
         apellido_completo = f"{primer_apellido} {segundo_apellido}".strip()
-        
+
         self.instance.first_name = nombre_completo
         self.instance.last_name = apellido_completo
-        
+
         # Establecer email si existe
         email = self.cleaned_data.get('email')
         if email:
             self.instance.email = email
-        
+
         # Establecer contraseña
         password = self.cleaned_data.get('password1')
         if password:
             self.instance.set_password(password)
-        
+
         return super().save(commit=commit)
 
 
@@ -710,40 +724,45 @@ class PuntoViveDigitalForm(forms.ModelForm):
     class Meta:
         model = PuntoViveDigital
         fields = [
-            'pvd_nombre', 'pvd_dircion', 'pvd_barrio',
-            'pvd_telefono', 'pvd_correo', 'pvd_estdo',
-            'pvd_descripcion'
+            'nombre', 'direccion', 'barrio',
+            'telefono', 'correo', 'estado',
+            'descripcion'
         ]
         labels = {
-            'pvd_nombre': 'Nombre del Punto Vive Digital',
-            'pvd_dircion': 'Dirección',
-            'pvd_barrio': 'Barrio / Vereda',
-            'pvd_telefono': 'Teléfono',
-            'pvd_correo': 'Correo electrónico',
-            'pvd_estdo': 'Estado',
-            'pvd_descripcion': 'Descripción / Notas',
+            'nombre': 'Nombre del Punto Vive Digital',
+            'direccion': 'Dirección',
+            'barrio': 'Barrio / Vereda',
+            'telefono': 'Teléfono',
+            'correo': 'Correo electrónico',
+            'estado': 'Estado',
+            'descripcion': 'Descripción / Notas',
         }
         widgets = {
-            'pvd_nombre': forms.TextInput(
+            'nombre': forms.TextInput(
                 attrs={
                     'class': 'form-control',
                     'placeholder': 'Ej: PVD Centro, PVD La María'
                 }
             ),
-            'pvd_dircion': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}
+            'direccion': forms.HiddenInput(attrs={'id': 'id_direccion'}),
+            'barrio': forms.Select(
+                choices=BARRIO_CHOICES,
+                attrs={'class': 'form-control'}
             ),
-            'pvd_barrio': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Barrio o vereda'}
+            'telefono': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ej: 3101234567',
+                    'oninput': "this.value = this.value.replace(/[^0-9]/g, '').substring(0,10)",
+                    'maxlength': '10',
+                    'pattern': '[0-9]{10}'
+                }
             ),
-            'pvd_telefono': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Teléfono del PVD'}
-            ),
-            'pvd_correo': forms.EmailInput(
+            'correo': forms.EmailInput(
                 attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}
             ),
-            'pvd_estdo': forms.Select(attrs={'class': 'form-control'}),
-            'pvd_descripcion': forms.Textarea(
+            'estado': forms.Select(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(
                 attrs={
                     'class': 'form-control',
                     'rows': 3,
@@ -751,6 +770,29 @@ class PuntoViveDigitalForm(forms.ModelForm):
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['telefono'].required = True
+
+    def clean_telefono(self):
+        tlfno = self.cleaned_data.get('telefono')
+        if not tlfno:
+            raise ValidationError('El teléfono es requerido.')
+        limpio = tlfno.replace(' ', '').replace('-', '')
+        if not limpio.isdigit():
+            raise ValidationError('El teléfono solo debe contener números.')
+        if len(limpio) != 10:
+            raise ValidationError('El teléfono debe tener exactamente 10 dígitos.')
+        return limpio
+
+    def clean_correo(self):
+        import re
+        correo = self.cleaned_data.get('correo')
+        if correo:
+            if not re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', correo):
+                raise ValidationError('El formato del correo electrónico no es válido.')
+        return correo
 
 
 # ==============================================================================
@@ -764,35 +806,35 @@ class SalaForm(forms.ModelForm):
     class Meta:
         model = Sala
         fields = [
-            'pvd_cdgo', 'sala_nombre', 'sala_descr',
-            'sala_capacidad', 'sala_estdo'
+            'punto_vive_digital', 'nombre', 'descripcion',
+            'capacidad', 'estado'
         ]
         labels = {
-            'pvd_cdgo': 'Punto Vive Digital',
-            'sala_nombre': 'Nombre de la Sala',
-            'sala_descr': 'Descripción',
-            'sala_capacidad': 'Capacidad (personas)',
-            'sala_estdo': 'Estado',
+            'punto_vive_digital': 'Punto Vive Digital',
+            'nombre': 'Nombre de la Sala',
+            'descripcion': 'Descripción',
+            'capacidad': 'Capacidad (personas)',
+            'estado': 'Estado',
         }
         widgets = {
-            'pvd_cdgo': forms.Select(attrs={'class': 'form-control'}),
-            'sala_nombre': forms.TextInput(
+            'punto_vive_digital': forms.Select(attrs={'class': 'form-control'}),
+            'nombre': forms.TextInput(
                 attrs={
                     'class': 'form-control',
                     'placeholder': 'Ej: Sala de Capacitación, Sala de Navegación'
                 }
             ),
-            'sala_descr': forms.Textarea(
+            'descripcion': forms.Textarea(
                 attrs={
                     'class': 'form-control',
                     'rows': 3,
                     'placeholder': 'Descripción de la sala y su propósito'
                 }
             ),
-            'sala_capacidad': forms.NumberInput(
+            'capacidad': forms.NumberInput(
                 attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Número de personas'}
             ),
-            'sala_estdo': forms.Select(
+            'estado': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo'), ('M', 'En mantenimiento')],
                 attrs={'class': 'form-control'}
             ),
@@ -801,19 +843,19 @@ class SalaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """Inicializar campo de PVD como opcional si se pasa por contexto."""
         super().__init__(*args, **kwargs)
-        self.fields['pvd_cdgo'].empty_label = '--- Seleccione un PVD ---'
-        self.fields['sala_estdo'].initial = 'A'
+        self.fields['punto_vive_digital'].empty_label = '--- Seleccione un PVD ---'
+        self.fields['estado'].initial = 'A'
 
-    def clean_sala_nombre(self):
+    def clean_nombre(self):
         """Valida que no haya otra sala con el mismo nombre en el mismo PVD."""
-        sala_nombre = self.cleaned_data.get('sala_nombre')
-        pvd = self.cleaned_data.get('pvd_cdgo')
-        
-        if sala_nombre and pvd:
-            qs = Sala.objects.filter(sala_nombre=sala_nombre, pvd_cdgo=pvd)
+        nombre = self.cleaned_data.get('nombre')
+        pvd = self.cleaned_data.get('punto_vive_digital')
+
+        if nombre and pvd:
+            qs = Sala.objects.filter(nombre=nombre, punto_vive_digital=pvd)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise ValidationError('Ya existe una sala con este nombre en este PVD.')
-        
-        return sala_nombre
+
+        return nombre

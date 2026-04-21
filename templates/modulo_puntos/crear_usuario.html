@@ -103,7 +103,7 @@
                 <select name="pvd_asignado" id="pvd_asignado" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
                     <option value="">-- Selecciona un PVD (opcional) --</option>
                     {% for pvd in pvds %}
-                    <option value="{{ pvd.pvd_cdgo }}">{{ pvd.pvd_nombre }} - {{ pvd.pvd_barrio|default:"Sin barrio" }}</option>
+                    <option value="{{ pvd.id }}">{{ pvd.nombre }} - {{ pvd.barrio|default:"Sin barrio" }}</option>
                     {% endfor %}
                 </select>
                 <span class="help-text">El Punto Vive Digital donde este usuario trabajará como administrador. Puedes asignarlo después si lo prefieres.</span>

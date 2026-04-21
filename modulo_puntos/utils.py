@@ -35,7 +35,7 @@ def registrar_auditoria(request, accion, modelo_afectado=None, objeto_id=None, d
             modelo_afectado=modelo_afectado,
             objeto_id=str(objeto_id) if objeto_id else None,
             descripcion=descripcion or '',
-            ip_address=ip_address,
+            direccion_ip=ip_address,
         )
     except Exception:
         # No interrumpir el flujo si falla la auditoría
@@ -237,11 +237,8 @@ def validar_formato_telefono(telefono):
     if not telefono.isdigit():
         return False, 'El teléfono solo debe contener números'
     
-    if len(telefono) < 7:
-        return False, 'El teléfono debe tener al menos 7 dígitos'
-    
-    if len(telefono) > 15:
-        return False, 'El teléfono no puede tener más de 15 dígitos'
+    if len(telefono) < 10:
+        return False, 'El teléfono debe tener al menos 10 dígitos'
     
     return True, ''
 

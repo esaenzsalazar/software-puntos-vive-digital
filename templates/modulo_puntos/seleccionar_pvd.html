@@ -20,15 +20,15 @@
     {% if pvds %}
     <div class="pvd-list">
         {% for pvd in pvds %}
-        <div class="pvd-item-card" onclick="window.location.href='{% url 'modulo_puntos:seleccionar_pvd' pvd.pvd_cdgo %}'" style="cursor: pointer;">
+        <div class="pvd-item-card" onclick="window.location.href='{% url 'modulo_puntos:seleccionar_pvd' pvd.id %}'" style="cursor: pointer;">
             <div class="pvd-item__content">
                 <div class="pvd-item__icon">🏢</div>
                 <div class="pvd-item__info">
-                    <h3>{{ pvd.pvd_nombre }}</h3>
-                    {% if pvd.pvd_barrio or pvd.pvd_dircion %}
+                    <h3>{{ pvd.nombre }}</h3>
+                    {% if pvd.barrio or pvd.direccion %}
                     <p class="pvd-item__location">
-                        {% if pvd.pvd_barrio %}📍 {{ pvd.pvd_barrio }}{% endif %}
-                        {% if pvd.pvd_dircion %} • {{ pvd.pvd_dircion }}{% endif %}
+                        {% if pvd.barrio %}📍 {{ pvd.barrio }}{% endif %}
+                        {% if pvd.direccion %} • {{ pvd.direccion }}{% endif %}
                     </p>
                     {% endif %}
                     <div class="pvd-item__stats">

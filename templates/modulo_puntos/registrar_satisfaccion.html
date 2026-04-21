@@ -18,8 +18,10 @@
         {% csrf_token %}
         <div class="grid form-grid-2">
             {% for field in form %}
-                <div {% if field.name == 'atn_cdgo' or field.name == 'sat_cmntrio' %}class="span-full"{% endif %}>
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                <div {% if field.name == 'atencion' or field.name == 'comentario' %}class="span-full"{% endif %}>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
+                    </label>
                     {{ field }}
                     {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                 </div>
@@ -37,9 +39,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form[method="POST"]');
-    const califInput = document.getElementById('id_sat_calif');
-    const fechaInput = document.getElementById('id_sat_fecha');
-    const comentInput = document.getElementById('id_sat_cmntrio');
+    const califInput = document.getElementById('id_calificacion');
+    const fechaInput = document.getElementById('id_fecha');
+    const comentInput = document.getElementById('id_comentario');
 
     function wrap(input) {
         if (!input) return;

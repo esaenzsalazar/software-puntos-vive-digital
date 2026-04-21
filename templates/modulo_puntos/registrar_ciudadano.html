@@ -21,16 +21,16 @@
         
         <div class="grid form-grid-2">
             {% for field in form %}
-                
-                {% if field.name == 'ciu_fchancm' %}
+
+                {% if field.name == 'fecha_nacimiento' %}
                     <div>
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}</label>
                         {{ field }}
                         <span id="edad_calculada" style="color: var(--primary-color); font-weight: bold; font-size: 14px; margin-top: 5px; display: block;"></span>
                         {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
 
-                {% elif field.name == 'ciu_dircion' %}
+                {% elif field.name == 'direccion' %}
                     <div class="span-full" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
                         <label style="font-size: 16px; color: var(--primary-color); display: block; margin-bottom: 10px;">Ubicación de Residencia</label>
                         
@@ -98,38 +98,39 @@
                         </div>
                     </div>
 
-                {% elif field.name == 'ciu_zrural' %}
+                {% elif field.name == 'zona_rural' %}
                     {{ field }}
 
-                {% elif field.name == 'ciu_barrio' %}
+                {% elif field.name == 'barrio' %}
                     <div id="contenedor_barrio">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}</label>
                         {{ field }}
                         {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
 
-                {% elif field.name == 'ciu_discapacidad' %}
+                {% elif field.name == 'tiene_discapacidad' %}
                     <div class="span-full" style="display: flex; align-items: center; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
                         {{ field }}
                         <label for="{{ field.id_for_label }}" style="margin-bottom: 0; margin-left: 10px; cursor: pointer; font-size: 16px;">{{ field.label }}</label>
                     </div>
 
-                {% elif field.name == 'ciu_desc_discapacidad' %}
+                {% elif field.name == 'descripcion_discapacidad' %}
                     <div id="div_desc_discapacidad" class="span-full" style="display: none;">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        <label for="{{ field.id_for_label }}">{{ field.label }} <span style="color:red;">*</span></label>
                         {{ field }}
+                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
 
-                {% elif field.name == 'ciu_email' or field.name == 'ciu_estdo' %}
+                {% elif field.name == 'correo' or field.name == 'estado' %}
                     <div class="span-full">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}</label>
                         {{ field }}
                         {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
 
                 {% else %}
                     <div>
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}</label>
                         {{ field }}
                         {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
@@ -173,7 +174,7 @@
         // ----------------------------------------------------
         // LÓGICA DE EDAD AUTOMÁTICA
         // ----------------------------------------------------
-        const fechaNacimientoInput = document.getElementById('id_ciu_fchancm');
+        const fechaNacimientoInput = document.getElementById('id_fecha_nacimiento');
         const edadSpan = document.getElementById('edad_calculada');
 
         function calcularEdad() {
@@ -205,21 +206,21 @@
             const constructorUrbano = document.getElementById('constructor_urbano');
             const constructorRural = document.getElementById('constructor_rural');
             const contenedorBarrio = document.getElementById('contenedor_barrio');
-            const barrioSelect = document.getElementById('id_ciu_barrio');
+            const barrioSelect = document.getElementById('id_barrio');
 
             if (zonaSeleccionada === 'Urbana') {
                 constructorUrbano.style.display = 'block';
                 constructorRural.style.display = 'none';
                 contenedorBarrio.style.display = 'block'; 
                 
-                document.getElementById('id_ciu_zrural').value = '';
+                document.getElementById('id_zona_rural').value = '';
                 
             } else {
                 constructorUrbano.style.display = 'none';
                 constructorRural.style.display = 'block';
                 contenedorBarrio.style.display = 'none'; 
                 
-                document.getElementById('id_ciu_dircion').value = '';
+                document.getElementById('id_direccion').value = '';
                 barrioSelect.value = 'Ninguno / Área Rural'; 
                 updateDireccionRural();
             }
@@ -246,7 +247,7 @@
             }
             
             dir = dir.replace(/\s+/g, ' ').trim();
-            document.getElementById('id_ciu_dircion').value = dir;
+            document.getElementById('id_direccion').value = dir;
             document.getElementById('dir_preview').textContent = dir;
         }
 
@@ -274,7 +275,7 @@
             }
             
             dir = dir.replace(/\s+/g, ' ').trim();
-            document.getElementById('id_ciu_zrural').value = dir;
+            document.getElementById('id_zona_rural').value = dir;
             document.getElementById('rur_preview').textContent = dir;
         }
 

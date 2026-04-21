@@ -1,5 +1,4 @@
 {% extends 'modulo_puntos/base.html' %}
-{% load static %}
 
 {% block title %}{{ titulo }}{% endblock %}
 
@@ -10,142 +9,137 @@
         <h1 class="page-title">{{ titulo }}</h1>
     </div>
 
-    <form method="POST" novalidate id="form-pvd">
+    <form method="POST" id="form-pvd" novalidate>
         {% csrf_token %}
-        
+
         <fieldset style="margin-bottom: 20px;">
             <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
-                Información del Punto Vive Digital
+                Información del PVD
             </legend>
-            
+
             <div class="form-group">
-                <label for="{{ form.pvd_nombre.id_for_label }}">Nombre del PVD *</label>
-                {{ form.pvd_nombre }}
-                {% if form.pvd_nombre.errors %}
-                    <div class="form-error">{{ form.pvd_nombre.errors }}</div>
-                {% endif %}
+                <label for="{{ form.nombre.id_for_label }}">Nombre del PVD <span style="color:red;">*</span></label>
+                {{ form.nombre }}
+                {% if form.nombre.errors %}<div class="form-error">{{ form.nombre.errors }}</div>{% endif %}
             </div>
 
-            <div class="form-row">
-                <div class="form-group" style="flex: 2;">
-                    <label>Dirección del PVD</label>
-                    
-                    <!-- Selector de tipo de zona -->
-                    <div style="margin-bottom: 15px;">
-                        <label style="margin-right: 15px; cursor: pointer;">
-                            <input type="radio" name="tipo_zona" value="Urbana" checked onchange="toggleZonaPVD()"> Cabecera Municipal (Urbana)
-                        </label>
-                        <label style="cursor: pointer;">
-                            <input type="radio" name="tipo_zona" value="Rural" onchange="toggleZonaPVD()"> Vereda / Corregimiento (Rural)
-                        </label>
+            {# ── CONSTRUCTOR DE DIRECCIÓN ─────────────────────────────── #}
+            <div class="form-group span-full" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+                <label style="font-size: 16px; color: var(--primary-color); display: block; margin-bottom: 10px;">Ubicación del PVD</label>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="margin-right: 15px; cursor: pointer;">
+                        <input type="radio" name="tipo_zona_pvd" value="Urbana" checked onchange="toggleZonaPVD()"> Cabecera Municipal (Urbana)
+                    </label>
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="tipo_zona_pvd" value="Rural" onchange="toggleZonaPVD()"> Vereda / Corregimiento (Rural)
+                    </label>
+                </div>
+
+                <div id="pvd_constructor_urbano">
+                    <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas y el sistema armará la dirección automáticamente.</p>
+
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                        <select id="pvd_dir_tipo" style="width: auto; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="Calle">Calle</option>
+                            <option value="Carrera">Carrera</option>
+                            <option value="Transversal">Transversal</option>
+                            <option value="Diagonal">Diagonal</option>
+                            <option value="Avenida">Avenida</option>
+                            <option value="Vía">Vía</option>
+                            <option value="Manzana">Manzana</option>
+                            <option value="Lote">Lote</option>
+                        </select>
+                        <input type="text" id="pvd_dir_num1" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="N°">
+                        <input type="text" id="pvd_dir_letra1" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Letra">
+                        <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
+                        <input type="text" id="pvd_dir_num2" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="N°">
+                        <input type="text" id="pvd_dir_letra2" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Letra">
+                        <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
+                        <input type="text" id="pvd_dir_num3" style="width: 70px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="N°">
+                        <input type="text" id="pvd_dir_comp" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Complemento (Apto, Piso, Casa...)">
                     </div>
 
-                    <!-- Constructor Urbano -->
-                    <div id="pvd_constructor_urbano">
-                        <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Llena las casillas y el sistema armará la dirección urbana automáticamente.</p>
-
-                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
-                            <select id="pvd_dir_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
-                                <option value="Calle">Calle</option>
-                                <option value="Carrera">Carrera</option>
-                                <option value="Transversal">Transversal</option>
-                                <option value="Diagonal">Diagonal</option>
-                                <option value="Avenida">Avenida</option>
-                                <option value="Vía">Vía</option>
-                                <option value="Manzana">Manzana</option>
-                                <option value="Lote">Lote</option>
-                            </select>
-
-                            <input type="text" id="pvd_dir_num1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
-                            <input type="text" id="pvd_dir_letra1" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
-
-                            <span style="font-weight: bold; font-size: 20px; color: #475569;">#</span>
-
-                            <input type="text" id="pvd_dir_num2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
-                            <input type="text" id="pvd_dir_letra2" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="Letra">
-
-                            <span style="font-weight: bold; font-size: 24px; color: #475569;">-</span>
-
-                            <input type="text" id="pvd_dir_num3" class="form-control" style="width: 70px; margin:0; padding: 8px;" placeholder="N°">
-
-                            <input type="text" id="pvd_dir_comp" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Complemento (Apto, Piso, Casa...)">
-                        </div>
-
-                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                            <p style="margin: 0; font-size: 14px; color: #64748b;">Dirección urbana a guardar: <strong id="pvd_dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
-                        </div>
-
-                        {{ form.pvd_dircion }}
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                        <p style="margin: 0; font-size: 14px; color: #64748b;">Dirección a guardar: <strong id="pvd_dir_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
                     </div>
 
-                    <!-- Constructor Rural -->
-                    <div id="pvd_constructor_rural" style="display: none;">
-                        <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Selecciona el tipo y escribe el nombre para armar la ubicación.</p>
+                    {{ form.direccion }}
+                </div>
 
-                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
-                            <select id="pvd_rur_tipo" class="form-control" style="width: auto; margin:0; padding: 8px;">
-                                <option value="Vereda">Vereda</option>
-                                <option value="Corregimiento">Corregimiento</option>
-                            </select>
+                <div id="pvd_constructor_rural" style="display: none;">
+                    <p style="font-size: 13px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Selecciona el tipo y escribe el nombre de la ubicación rural.</p>
 
-                            <input type="text" id="pvd_rur_nombre" class="form-control" style="flex-grow: 1; min-width: 150px; margin:0; padding: 8px;" placeholder="Nombre (Ej: San Antonio)">
-                            <input type="text" id="pvd_rur_finca" class="form-control" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px;" placeholder="Finca / Lote (Opcional)">
-                        </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                        <select id="pvd_rur_tipo" style="width: auto; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="Vereda">Vereda</option>
+                            <option value="Corregimiento">Corregimiento</option>
+                        </select>
+                        <input type="text" id="pvd_rur_nombre" style="flex-grow: 1; min-width: 150px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Nombre (Ej: San Antonio)">
+                        <input type="text" id="pvd_rur_comp" style="flex-grow: 1; min-width: 180px; margin:0; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Punto de referencia (Opcional)">
+                    </div>
 
-                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                            <p style="margin: 0; font-size: 14px; color: #64748b;">Ubicación rural a guardar: <strong id="pvd_rur_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
-                        </div>
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                        <p style="margin: 0; font-size: 14px; color: #64748b;">Ubicación a guardar: <strong id="pvd_rur_preview" style="color: var(--primary-color); font-size: 16px;"></strong></p>
                     </div>
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label for="{{ form.pvd_barrio.id_for_label }}">Barrio / Vereda</label>
-                    {{ form.pvd_barrio }}
-                </div>
+
+                <div id="pvd_dir_error" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: none;">La dirección es requerida.</div>
+                {% if form.direccion.errors %}<div class="form-error">{{ form.direccion.errors }}</div>{% endif %}
+            </div>
+            {# ── FIN CONSTRUCTOR ──────────────────────────────────────── #}
+
+            <div class="form-group">
+                <label for="{{ form.barrio.id_for_label }}">Barrio / Vereda</label>
+                {{ form.barrio }}
+                {% if form.barrio.errors %}<div class="form-error">{{ form.barrio.errors }}</div>{% endif %}
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.pvd_telefono.id_for_label }}">Teléfono</label>
-                    {{ form.pvd_telefono }}
+                    <label for="{{ form.telefono.id_for_label }}">Teléfono <span style="color:red;">*</span></label>
+                    {{ form.telefono }}
+                    {% if form.telefono.errors %}<div class="form-error">{{ form.telefono.errors }}</div>{% endif %}
+                    <small class="form-hint">Exactamente 10 dígitos — Ej: 3101234567</small>
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.pvd_correo.id_for_label }}">Correo electrónico</label>
-                    {{ form.pvd_correo }}
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.pvd_estdo.id_for_label }}">Estado</label>
-                    {{ form.pvd_estdo }}
+                    <label for="{{ form.correo.id_for_label }}">Correo electrónico</label>
+                    {{ form.correo }}
+                    {% if form.correo.errors %}<div class="form-error">{{ form.correo.errors }}</div>{% endif %}
+                    <small class="form-hint">Debe contener @ — Ej: pvd@bugalagrande.gov.co</small>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="{{ form.pvd_descripcion.id_for_label }}">Descripción / Notas</label>
-                {{ form.pvd_descripcion }}
+                <label for="{{ form.estado.id_for_label }}">Estado <span style="color:red;">*</span></label>
+                {{ form.estado }}
+                {% if form.estado.errors %}<div class="form-error">{{ form.estado.errors }}</div>{% endif %}
             </div>
-            
-            {% if accion == 'crear' and admins_pvd %}
-            <div class="form-group" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
-                <label for="admin_pvd_asignado" style="font-weight: 600; color: #1e40af;">
-                    <i class="fas fa-user-shield me-1"></i>Asignar Administrador PVD (Opcional)
-                </label>
-                <select name="admin_pvd_asignado" id="admin_pvd_asignado" class="form-control" style="margin-top: 8px;">
-                    <option value="">-- Sin administrador asignado (se puede asignar después) --</option>
+
+            <div class="form-group">
+                <label for="{{ form.descripcion.id_for_label }}">Descripción</label>
+                {{ form.descripcion }}
+                {% if form.descripcion.errors %}<div class="form-error">{{ form.descripcion.errors }}</div>{% endif %}
+            </div>
+        </fieldset>
+
+        {% if accion == 'crear' and admins_pvd %}
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Asignación de Administrador (opcional)
+            </legend>
+            <div class="form-group">
+                <label for="admin_pvd_asignado">Asignar Administrador PVD</label>
+                <select name="admin_pvd_asignado" id="admin_pvd_asignado">
+                    <option value="">— Sin asignar —</option>
                     {% for admin in admins_pvd %}
-                    <option value="{{ admin.id }}">
-                        {{ admin.username }} - {{ admin.get_full_name|default:"Sin nombre completo" }}
-                        {% if admin.pvd_profile.pvd_asignado %}(Ya tiene PVD: {{ admin.pvd_profile.pvd_asignado }}){% else %}(Sin PVD asignado){% endif %}
-                    </option>
+                        <option value="{{ admin.pk }}">{{ admin.username }} ({{ admin.first_name }} {{ admin.last_name }})</option>
                     {% endfor %}
                 </select>
-                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
-                    <i class="fas fa-info-circle"></i> Puedes asignar un administrador ahora o hacerlo más tarde desde la gestión de roles.
-                </small>
+                <small class="form-hint">Solo administradores PVD sin PVD asignado aparecen aquí.</small>
             </div>
-            {% endif %}
         </fieldset>
+        {% endif %}
 
         <div class="actions">
             <button type="submit" class="btn btn-primary">
@@ -157,43 +151,23 @@
 </div>
 
 <style>
-.form-row {
-    display: flex;
-    gap: 16px;
-}
-.form-row .form-group {
-    flex: 1;
-}
-@media (max-width: 768px) {
-    .form-row {
-        flex-direction: column;
-        gap: 0;
-    }
-}
+.form-row { display: flex; gap: 16px; }
+.form-row .form-group { flex: 1; }
+.form-hint { display: block; color: var(--muted, #64748b); font-size: 13px; margin-top: 4px; }
+@media (max-width: 768px) { .form-row { flex-direction: column; gap: 0; } }
 </style>
 
-<script src="{% static 'js/validaciones.js' %}"></script>
+{% block extra_scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('form-pvd');
+    const nombreInput = document.getElementById('{{ form.nombre.id_for_label }}');
+    const tlfnoInput = document.getElementById('{{ form.telefono.id_for_label }}');
+    const correoInput = document.getElementById('{{ form.correo.id_for_label }}');
+    const direccionHidden = document.getElementById('id_direccion');
+    const dirError = document.getElementById('pvd_dir_error');
 
-    // Toggle entre zona urbana y rural
-    window.toggleZonaPVD = function() {
-        const zonaSeleccionada = document.querySelector('input[name="tipo_zona"]:checked').value;
-        const constructorUrbano = document.getElementById('pvd_constructor_urbano');
-        const constructorRural = document.getElementById('pvd_constructor_rural');
-
-        if (zonaSeleccionada === 'Urbana') {
-            constructorUrbano.style.display = 'block';
-            constructorRural.style.display = 'none';
-            document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = '';
-        } else {
-            constructorUrbano.style.display = 'none';
-            constructorRural.style.display = 'block';
-            updateDireccionRuralPVD();
-        }
-    };
-
-    // Constructor de dirección urbana
+    // ── CONSTRUCTOR URBANO ──────────────────────────────────────────────
     function updateDireccionPVD() {
         const tipo = document.getElementById('pvd_dir_tipo').value || '';
         const num1 = document.getElementById('pvd_dir_num1').value || '';
@@ -203,133 +177,115 @@ document.addEventListener("DOMContentLoaded", function() {
         const num3 = document.getElementById('pvd_dir_num3').value || '';
         const comp = document.getElementById('pvd_dir_comp').value || '';
 
-        let dir = "";
+        let dir = '';
         if (num1) {
-            dir = `${tipo} ${num1} ${letra1}`;
-            if (num2) dir += ` # ${num2} ${letra2}`;
+            dir = `${tipo} ${num1}${letra1 ? ' ' + letra1 : ''}`;
+            if (num2) dir += ` # ${num2}${letra2 ? ' ' + letra2 : ''}`;
             if (num3) dir += ` - ${num3}`;
             if (comp) dir += ` ${comp}`;
         }
-
         dir = dir.replace(/\s+/g, ' ').trim();
-        document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = dir;
+        direccionHidden.value = dir;
         document.getElementById('pvd_dir_preview').textContent = dir;
-        
-        // Validar dirección en tiempo real
-        const input = document.getElementById('{{ form.pvd_dircion.id_for_label }}');
-        ValidacionPVD.validarYMostrar(input, ValidacionPVD.validarDireccion, 'Dirección');
     }
 
-    const dirInputs = ['pvd_dir_tipo', 'pvd_dir_num1', 'pvd_dir_letra1', 'pvd_dir_num2', 'pvd_dir_letra2', 'pvd_dir_num3', 'pvd_dir_comp'];
-    dirInputs.forEach(id => {
+    ['pvd_dir_tipo','pvd_dir_num1','pvd_dir_letra1','pvd_dir_num2','pvd_dir_letra2','pvd_dir_num3','pvd_dir_comp'].forEach(id => {
         const el = document.getElementById(id);
-        if(el) {
+        if (el) {
             el.addEventListener('input', updateDireccionPVD);
-            if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccionPVD);
+            if (el.tagName === 'SELECT') el.addEventListener('change', updateDireccionPVD);
         }
     });
 
-    // Constructor de dirección rural
+    // ── CONSTRUCTOR RURAL ───────────────────────────────────────────────
     function updateDireccionRuralPVD() {
         const tipo = document.getElementById('pvd_rur_tipo').value || '';
         const nombre = document.getElementById('pvd_rur_nombre').value || '';
-        const finca = document.getElementById('pvd_rur_finca').value || '';
+        const comp = document.getElementById('pvd_rur_comp').value || '';
 
-        let dir = "";
+        let dir = '';
         if (nombre) {
             dir = `${tipo} ${nombre}`;
-            if (finca) dir += ` - Finca/Lote: ${finca}`;
+            if (comp) dir += ` - ${comp}`;
         }
-
         dir = dir.replace(/\s+/g, ' ').trim();
-        document.getElementById('{{ form.pvd_dircion.id_for_label }}').value = dir;
+        direccionHidden.value = dir;
         document.getElementById('pvd_rur_preview').textContent = dir;
-        
-        // Validar dirección en tiempo real
-        const input = document.getElementById('{{ form.pvd_dircion.id_for_label }}');
-        ValidacionPVD.validarYMostrar(input, ValidacionPVD.validarDireccion, 'Dirección');
     }
 
-    const rurInputs = ['pvd_rur_tipo', 'pvd_rur_nombre', 'pvd_rur_finca'];
-    rurInputs.forEach(id => {
+    ['pvd_rur_tipo','pvd_rur_nombre','pvd_rur_comp'].forEach(id => {
         const el = document.getElementById(id);
-        if(el) {
+        if (el) {
             el.addEventListener('input', updateDireccionRuralPVD);
-            if(el.tagName === 'SELECT') el.addEventListener('change', updateDireccionRuralPVD);
+            if (el.tagName === 'SELECT') el.addEventListener('change', updateDireccionRuralPVD);
         }
     });
 
-    // Validaciones en tiempo real para otros campos del PVD
-    const nombreInput = document.getElementById('{{ form.pvd_nombre.id_for_label }}');
+    // ── TOGGLE ZONA ─────────────────────────────────────────────────────
+    window.toggleZonaPVD = function () {
+        const zona = document.querySelector('input[name="tipo_zona_pvd"]:checked').value;
+        document.getElementById('pvd_constructor_urbano').style.display = zona === 'Urbana' ? 'block' : 'none';
+        document.getElementById('pvd_constructor_rural').style.display = zona === 'Rural' ? 'block' : 'none';
+        direccionHidden.value = '';
+        document.getElementById('pvd_dir_preview').textContent = '';
+        document.getElementById('pvd_rur_preview').textContent = '';
+    };
+
+    // ── VALIDACIONES INLINE ─────────────────────────────────────────────
     if (nombreInput) {
-        nombreInput.addEventListener('blur', function() {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombre del PVD');
-        });
-        nombreInput.addEventListener('input', function() {
-            if (this.classList.contains('input-error')) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarNombre, 'Nombre del PVD');
-            }
+        nombreInput.addEventListener('blur', () => ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre del PVD'));
+        nombreInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre del PVD');
         });
     }
 
-    const telefonoInput = document.getElementById('{{ form.pvd_telefono.id_for_label }}');
-    if (telefonoInput) {
-        telefonoInput.addEventListener('blur', function() {
-            if (this.value) {
+    if (tlfnoInput) {
+        tlfnoInput.addEventListener('blur', () => ValidacionPVD.validarYMostrar(tlfnoInput, ValidacionPVD.validarTelefono, 'Teléfono'));
+        tlfnoInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
-            }
-        });
-        telefonoInput.addEventListener('input', function() {
-            // Solo permitir números
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.classList.contains('input-error')) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
-            }
         });
     }
 
-    const emailInput = document.getElementById('{{ form.pvd_correo.id_for_label }}');
-    if (emailInput) {
-        emailInput.addEventListener('blur', function() {
-            if (this.value) {
+    if (correoInput) {
+        correoInput.addEventListener('blur', function () {
+            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
+            else ValidacionPVD.ocultarError(this);
+        });
+        correoInput.addEventListener('input', function () {
+            if (this.classList.contains('input-error'))
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
-            }
-        });
-        emailInput.addEventListener('input', function() {
-            if (this.classList.contains('input-error')) {
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
-            }
         });
     }
 
-    // Validación al enviar el formulario
-    const formPVD = document.getElementById('form-pvd');
-    if (formPVD) {
-        formPVD.addEventListener('submit', function(e) {
-            let formularioValido = true;
-            
-            // Validar nombre
-            if (nombreInput) {
-                const resultado = ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarNombre, 'Nombre del PVD');
-                if (!resultado.valido) formularioValido = false;
+    // ── VALIDACIÓN AL ENVIAR ────────────────────────────────────────────
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let ok = true;
+
+            if (nombreInput && !ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre del PVD').valido) ok = false;
+
+            if (!direccionHidden.value.trim()) {
+                dirError.style.display = 'block';
+                ok = false;
+            } else {
+                dirError.style.display = 'none';
             }
-            
-            // Validar dirección
-            const direccionInput = document.getElementById('{{ form.pvd_dircion.id_for_label }}');
-            if (direccionInput && direccionInput.value) {
-                const resultado = ValidacionPVD.validarYMostrar(direccionInput, ValidacionPVD.validarDireccion, 'Dirección');
-                if (!resultado.valido) formularioValido = false;
-            }
-            
-            if (!formularioValido) {
-                e.preventDefault();
-                alert('Por favor corrige los errores antes de enviar el formulario');
-            }
+
+            if (tlfnoInput && !ValidacionPVD.validarYMostrar(tlfnoInput, ValidacionPVD.validarTelefono, 'Teléfono').valido) ok = false;
+
+            if (correoInput && correoInput.value && !ValidacionPVD.validarYMostrar(correoInput, ValidacionPVD.validarEmail, 'Correo electrónico').valido) ok = false;
+
+            if (!ok) e.preventDefault();
         });
     }
 
-    // Inicializar
-    toggleZonaPVD();
+    // ── PRECARGAR DIRECCIÓN EXISTENTE (edición) ─────────────────────────
+    if (direccionHidden.value) {
+        document.getElementById('pvd_dir_preview').textContent = direccionHidden.value;
+    }
 });
 </script>
+{% endblock %}
 {% endblock %}

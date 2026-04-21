@@ -83,38 +83,38 @@
                                 {% for ciudadano in ciudadanos_pendientes %}
                                 <tr style="border-bottom: 1px solid #e5e7eb;">
                                     <td style="padding: 12px;">
-                                        <div style="font-size: 13px; color: #6b7280;">{{ ciudadano.ciu_fecha_registro|date:"d/m/Y" }}</div>
-                                        <div style="font-size: 12px; color: #9ca3af;">{{ ciudadano.ciu_fecha_registro|date:"H:i" }}</div>
+                                        <div style="font-size: 13px; color: #6b7280;">{{ ciudadano.fecha_registro|date:"d/m/Y" }}</div>
+                                        <div style="font-size: 12px; color: #9ca3af;">{{ ciudadano.fecha_registro|date:"H:i" }}</div>
                                     </td>
                                     <td style="padding: 12px;">
-                                        <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 12px;">{{ ciudadano.ciu_tpodoc }}</span>
-                                        <div style="margin-top: 4px; font-weight: 500;">{{ ciudadano.ciu_numdoc }}</div>
+                                        <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 12px;">{{ ciudadano.tipo_documento }}</span>
+                                        <div style="margin-top: 4px; font-weight: 500;">{{ ciudadano.numero_documento }}</div>
                                     </td>
                                     <td style="padding: 12px;">
-                                        <div style="font-weight: 600; color: #1e3a5f;">{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</div>
+                                        <div style="font-weight: 600; color: #1e3a5f;">{{ ciudadano.get_nombre_completo }}</div>
                                         <div style="font-size: 12px; color: #6b7280;">
-                                            {% if ciudadano.ciu_fchancm %}
-                                                Edad: {% now "Y" as current_year %}{{ current_year|add:"0"|add:ciudadano.ciu_fchancm|date:"Y"|add:"-1" }} años
+                                            {% if ciudadano.fecha_nacimiento %}
+                                                Edad: {% now "Y" as current_year %}{{ current_year|add:"0"|add:ciudadano.fecha_nacimiento|date:"Y"|add:"-1" }} años
                                             {% endif %}
                                         </div>
                                     </td>
                                     <td style="padding: 12px;">
-                                        {% if ciudadano.ciu_email %}
-                                        <div style="font-size: 13px;">{{ ciudadano.ciu_email }}</div>
+                                        {% if ciudadano.correo %}
+                                        <div style="font-size: 13px;">{{ ciudadano.correo }}</div>
                                         {% else %}
                                         <span style="color: #9ca3af; font-size: 13px;">—</span>
                                         {% endif %}
                                     </td>
                                     <td style="padding: 12px;">
-                                        {% if ciudadano.ciu_tlfno %}
-                                        <div style="font-size: 13px;">{{ ciudadano.ciu_tlfno }}</div>
+                                        {% if ciudadano.telefono %}
+                                        <div style="font-size: 13px;">{{ ciudadano.telefono }}</div>
                                         {% else %}
                                         <span style="color: #9ca3af; font-size: 13px;">—</span>
                                         {% endif %}
                                     </td>
                                     <td style="padding: 12px;">
-                                        {% if ciudadano.ciu_barrio %}
-                                        <span style="font-size: 13px;">{{ ciudadano.ciu_barrio }}</span>
+                                        {% if ciudadano.barrio %}
+                                        <span style="font-size: 13px;">{{ ciudadano.barrio }}</span>
                                         {% else %}
                                         <span style="color: #9ca3af; font-size: 13px;">—</span>
                                         {% endif %}
@@ -122,17 +122,17 @@
                                     <td style="padding: 12px; text-align: center;">
                                         <div style="display: flex; gap: 6px; justify-content: center;">
                                             <!-- Botón Ver Detalle -->
-                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#modalDetalle{{ ciudadano.ciu_cdgo }}" title="Ver detalles completos">
+                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#modalDetalle{{ ciudadano.id }}" title="Ver detalles completos">
                                                 👁️ Ver
                                             </button>
                                             
                                             <!-- Botón Aprobar -->
-                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalAprobar{{ ciudadano.ciu_cdgo }}" title="Aprobar este registro">
+                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalAprobar{{ ciudadano.id }}" title="Aprobar este registro">
                                                 ✓ Aprobar
                                             </button>
                                             
                                             <!-- Botón Rechazar -->
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalRechazar{{ ciudadano.ciu_cdgo }}" title="Rechazar/eliminar este registro">
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalRechazar{{ ciudadano.id }}" title="Rechazar/eliminar este registro">
                                                 ✗ Rechazar
                                             </button>
                                         </div>
@@ -140,7 +140,7 @@
                                 </tr>
 
                                 <!-- Modal Ver Detalle Completo -->
-                                <div class="modal fade" id="modalDetalle{{ ciudadano.ciu_cdgo }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="modalDetalle{{ ciudadano.id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-lg modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white;">
@@ -155,22 +155,22 @@
                                                     </h6>
                                                     <div class="row">
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Nombre:</strong> {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}
+                                                            <strong>Nombre:</strong> {{ ciudadano.get_nombre_completo }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}
+                                                            <strong>Documento:</strong> {{ ciudadano.tipo_documento }} {{ ciudadano.numero_documento }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Fecha Nacimiento:</strong> {{ ciudadano.ciu_fchancm|date:"d/m/Y" }}
+                                                            <strong>Fecha Nacimiento:</strong> {{ ciudadano.fecha_nacimiento|date:"d/m/Y" }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Género:</strong> {{ ciudadano.get_ciu_genro_display }}
+                                                            <strong>Género:</strong> {{ ciudadano.get_genero_display }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Email:</strong> {{ ciudadano.ciu_email|default:"No proporcionado" }}
+                                                            <strong>Email:</strong> {{ ciudadano.correo|default:"No proporcionado" }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Teléfono:</strong> {{ ciudadano.ciu_tlfno|default:"No proporcionado" }}
+                                                            <strong>Teléfono:</strong> {{ ciudadano.telefono|default:"No proporcionado" }}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -182,16 +182,16 @@
                                                     </h6>
                                                     <div class="row">
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Etnia:</strong> {{ ciudadano.ciu_etnia|default:"No especificada" }}
+                                                            <strong>Etnia:</strong> {{ ciudadano.etnia|default:"No especificada" }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Nivel Educativo:</strong> {{ ciudadano.ciu_nvleduc|default:"No especificado" }}
+                                                            <strong>Nivel Educativo:</strong> {{ ciudadano.nivel_educativo|default:"No especificado" }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Ocupación:</strong> {{ ciudadano.ciu_ocpcion|default:"No especificada" }}
+                                                            <strong>Ocupación:</strong> {{ ciudadano.ocupacion|default:"No especificada" }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Estrato:</strong> {{ ciudadano.ciu_estrato }}
+                                                            <strong>Estrato:</strong> {{ ciudadano.estrato }}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -203,13 +203,13 @@
                                                     </h6>
                                                     <div class="row">
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Barrio:</strong> {{ ciudadano.ciu_barrio|default:"No especificado" }}
+                                                            <strong>Barrio:</strong> {{ ciudadano.barrio|default:"No especificado" }}
                                                         </div>
                                                         <div class="col-md-6 mb-2">
-                                                            <strong>Dirección:</strong> {{ ciudadano.ciu_dircion|default:"No especificada" }}
+                                                            <strong>Dirección:</strong> {{ ciudadano.direccion|default:"No especificada" }}
                                                         </div>
                                                         <div class="col-md-12 mb-2">
-                                                            <strong>Zona Rural:</strong> {{ ciudadano.ciu_zrural|default:"No especificada" }}
+                                                            <strong>Zona Rural:</strong> {{ ciudadano.zona_rural|default:"No especificada" }}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -220,10 +220,10 @@
                                                         ♿ Discapacidad
                                                     </h6>
                                                     <div>
-                                                        <strong>Tiene:</strong> {% if ciudadano.ciu_discapacidad %}<span class="badge bg-warning">Sí</span>{% else %}<span class="badge bg-success">No</span>{% endif %}
-                                                        {% if ciudadano.ciu_discapacidad %}
+                                                        <strong>Tiene:</strong> {% if ciudadano.tiene_discapacidad %}<span class="badge bg-warning">Sí</span>{% else %}<span class="badge bg-success">No</span>{% endif %}
+                                                        {% if ciudadano.tiene_discapacidad %}
                                                         <div style="margin-top: 8px;">
-                                                            <strong>Descripción:</strong> {{ ciudadano.ciu_desc_discapacidad|default:"No especificada" }}
+                                                            <strong>Descripción:</strong> {{ ciudadano.descripcion_discapacidad|default:"No especificada" }}
                                                         </div>
                                                         {% endif %}
                                                     </div>
@@ -231,7 +231,7 @@
 
                                                 <!-- Metadata -->
                                                 <div class="alert alert-info mb-0">
-                                                    <strong>📅 Fecha de registro:</strong> {{ ciudadano.ciu_fecha_registro|date:"d/m/Y H:i:s" }}<br>
+                                                    <strong>📅 Fecha de registro:</strong> {{ ciudadano.fecha_registro|date:"d/m/Y H:i:s" }}<br>
                                                     <strong>📌 Estado:</strong> <span class="badge bg-warning">Pendiente de Aprobación</span>
                                                 </div>
                                             </div>
@@ -243,7 +243,7 @@
                                 </div>
 
                                 <!-- Modal Confirmar Aprobación -->
-                                <div class="modal fade" id="modalAprobar{{ ciudadano.ciu_cdgo }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="modalAprobar{{ ciudadano.id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
@@ -258,10 +258,10 @@
                                                 <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
                                                     <p style="margin: 0 0 8px;"><strong>Ciudadano:</strong></p>
                                                     <p style="margin: 0; font-size: 18px; font-weight: 600; color: #166534;">
-                                                        {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}
+                                                        {{ ciudadano.get_nombre_completo }}
                                                     </p>
                                                     <p style="margin: 8px 0 0; font-size: 14px; color: #166534;">
-                                                        <strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}
+                                                        <strong>Documento:</strong> {{ ciudadano.tipo_documento }} {{ ciudadano.numero_documento }}
                                                     </p>
                                                 </div>
                                                 <p style="margin-top: 16px; color: #6b7280; font-size: 14px;">
@@ -270,7 +270,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                <a href="{% url 'modulo_puntos:aprobar_ciudadano' ciudadano.ciu_cdgo %}" class="btn btn-success">
+                                                <a href="{% url 'modulo_puntos:aprobar_ciudadano' ciudadano.id %}" class="btn btn-success">
                                                     ✓ Sí, Aprobar Registro
                                                 </a>
                                             </div>
@@ -279,7 +279,7 @@
                                 </div>
 
                                 <!-- Modal Confirmar Rechazo -->
-                                <div class="modal fade" id="modalRechazar{{ ciudadano.ciu_cdgo }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="modalRechazar{{ ciudadano.id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
@@ -294,10 +294,10 @@
                                                 <div style="background: #fef2f2; padding: 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
                                                     <p style="margin: 0 0 8px;"><strong>Ciudadano:</strong></p>
                                                     <p style="margin: 0; font-size: 18px; font-weight: 600; color: #991b1b;">
-                                                        {{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}
+                                                        {{ ciudadano.get_nombre_completo }}
                                                     </p>
                                                     <p style="margin: 8px 0 0; font-size: 14px; color: #991b1b;">
-                                                        <strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}
+                                                        <strong>Documento:</strong> {{ ciudadano.tipo_documento }} {{ ciudadano.numero_documento }}
                                                     </p>
                                                 </div>
                                                 <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-top: 16px;">
@@ -308,7 +308,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                <a href="{% url 'modulo_puntos:rechazar_ciudadano' ciudadano.ciu_cdgo %}" class="btn btn-danger">
+                                                <a href="{% url 'modulo_puntos:rechazar_ciudadano' ciudadano.id %}" class="btn btn-danger">
                                                     ✗ Sí, Rechazar Registro
                                                 </a>
                                             </div>

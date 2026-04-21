@@ -1,6 +1,6 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}{% if pvd_activo %}Panel - {{ pvd_activo.pvd_nombre }}{% else %}Panel de Control{% endif %}{% endblock %}
+{% block title %}{% if pvd_activo %}Panel - {{ pvd_activo.nombre }}{% else %}Panel de Control{% endif %}{% endblock %}
 
 {% block content %}
 <div class="card">
@@ -9,11 +9,11 @@
             <div>
                 <span class="eyebrow">Panel de Control</span>
                 {% if pvd_activo %}
-                <h1 class="page-title">📊 {{ pvd_activo.pvd_nombre }}</h1>
-                {% if pvd_activo.pvd_barrio or pvd_activo.pvd_dircion %}
+                <h1 class="page-title">📊 {{ pvd_activo.nombre }}</h1>
+                {% if pvd_activo.barrio or pvd_activo.direccion %}
                 <p class="muted">
-                    {% if pvd_activo.pvd_barrio %}📍 {{ pvd_activo.pvd_barrio }}{% endif %}
-                    {% if pvd_activo.pvd_dircion %} | 🏠 {{ pvd_activo.pvd_dircion }}{% endif %}
+                    {% if pvd_activo.barrio %}📍 {{ pvd_activo.barrio }}{% endif %}
+                    {% if pvd_activo.direccion %} | 🏠 {{ pvd_activo.direccion }}{% endif %}
                 </p>
                 {% endif %}
                 {% else %}
@@ -41,7 +41,7 @@
             <strong>Perfil:</strong> <span class="text-accent">{{ rol_usuario }}</span>
             {% if pvd_activo %}
             <span class="user-banner__sep">|</span>
-            <strong>PVD:</strong> <span class="text-accent">{{ pvd_activo.pvd_nombre }}</span>
+            <strong>PVD:</strong> <span class="text-accent">{{ pvd_activo.nombre }}</span>
             {% endif %}
         </p>
     </div>
@@ -146,13 +146,6 @@
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
                 <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
-                {% if total_pendientes > 0 %}
-                <a class="btn btn-warning btn--sm" href="{% url 'modulo_puntos:ciudadanos_pendientes' %}">
-                    Aprobar ({{ total_pendientes }})
-                </a>
-                {% else %}
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:ciudadanos_pendientes' %}">Aprobar Registros</a>
-                {% endif %}
             </div>
         </div>
 

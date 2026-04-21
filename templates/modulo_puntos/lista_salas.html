@@ -21,8 +21,8 @@
         <select id="pvd-filter" class="form-control" style="max-width: 400px;">
             <option value="">-- Todos los PVDs --</option>
             {% for pvd in pvds %}
-                <option value="{{ pvd.pvd_cdgo }}" {% if pvd_seleccionado and pvd.pvd_cdgo == pvd_seleccionado.pvd_cdgo %}selected{% endif %}>
-                    {{ pvd.pvd_nombre }}
+                <option value="{{ pvd.id }}" {% if pvd_seleccionado and pvd.id == pvd_seleccionado.id %}selected{% endif %}>
+                    {{ pvd.nombre }}
                 </option>
             {% endfor %}
         </select>
@@ -61,28 +61,28 @@
             <tbody>
                 {% for sala in salas %}
                 <tr>
-                    <td><strong>{{ sala.sala_nombre }}</strong></td>
+                    <td><strong>{{ sala.nombre }}</strong></td>
                     {% if es_admin_tic %}
-                    <td>{{ sala.pvd_cdgo.pvd_nombre }}</td>
+                    <td>{{ sala.punto_vive_digital.nombre }}</td>
                     {% endif %}
-                    <td>{{ sala.sala_descr|truncatechars:50|default:"—" }}</td>
-                    <td class="text-center">{{ sala.sala_capacidad|default:"—" }}</td>
+                    <td>{{ sala.descripcion|truncatechars:50|default:"—" }}</td>
+                    <td class="text-center">{{ sala.capacidad|default:"—" }}</td>
                     <td>
-                        {% if sala.sala_estdo == 'A' %}
+                        {% if sala.estado == 'A' %}
                             <span class="badge badge--success">Activo</span>
-                        {% elif sala.sala_estdo == 'M' %}
+                        {% elif sala.estado == 'M' %}
                             <span class="badge badge--warning">Mantenimiento</span>
                         {% else %}
                             <span class="badge badge--danger">Inactivo</span>
                         {% endif %}
                     </td>
-                    <td>{{ sala.sala_fch_crea|date:"d/m/Y" }}</td>
+                    <td>{{ sala.fecha_creacion|date:"d/m/Y" }}</td>
                     <td class="text-center">
                         <div class="btn-group btn-group-sm">
-                            <a href="{% url 'modulo_puntos:editar_sala' sala.sala_cdgo %}" class="btn btn--sm" title="Editar">✏️</a>
-                            <a href="{% url 'modulo_puntos:activar_sala' sala.sala_cdgo %}" class="btn btn--sm"
-                               title="{% if sala.sala_estdo == 'A' %}Desactivar{% else %}Activar{% endif %}">
-                                {% if sala.sala_estdo == 'A' %}⏸️{% else %}▶️{% endif %}
+                            <a href="{% url 'modulo_puntos:editar_sala' sala.id %}" class="btn btn--sm" title="Editar">✏️</a>
+                            <a href="{% url 'modulo_puntos:activar_sala' sala.id %}" class="btn btn--sm"
+                               title="{% if sala.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
+                                {% if sala.estado == 'A' %}⏸️{% else %}▶️{% endif %}
                             </a>
                         </div>
                     </td>
@@ -97,7 +97,7 @@
         <h3 style="margin: 0 0 8px 0;">No hay salas registradas</h3>
         <p class="muted">
             {% if pvd_seleccionado %}
-                Comienza creando una sala para {{ pvd_seleccionado.pvd_nombre }}.
+                Comienza creando una sala para {{ pvd_seleccionado.nombre }}.
             {% else %}
                 Comienza creando tu primera sala para un Punto Vive Digital.
             {% endif %}

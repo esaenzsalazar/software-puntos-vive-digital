@@ -4,7 +4,10 @@
       "Bash(python manage.py makemigrations)",
       "Bash(python manage.py migrate)",
       "Bash(python *)",
-      "Bash(entorno\\\\Scripts\\\\python.exe *)"
+      "Bash(entorno\\\\Scripts\\\\python.exe *)",
+      "Bash(entorno/Scripts/python.exe *)",
+      "Bash(del db.sqlite3)",
+      "Bash(DJANGO_SETTINGS_MODULE=core.settings python *)"
     ]
   }
 }

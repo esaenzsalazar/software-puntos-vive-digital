@@ -56,7 +56,7 @@ def pvd_navigation(request):
     pvd_id = request.session.get('pvd_activo_id')
     if pvd_id:
         try:
-            pvd = PuntoViveDigital.objects.get(pk=pvd_id, pvd_estdo='A')
+            pvd = PuntoViveDigital.objects.get(pk=pvd_id, estado='A')
             # Solo usar si el PVD sigue activo
             ctx['pvd_activo'] = pvd
         except PuntoViveDigital.DoesNotExist:
@@ -64,7 +64,7 @@ def pvd_navigation(request):
 
     # Lista de PVDs disponibles (solo para la vista de selección)
     ctx['pvds_disponibles'] = list(
-        PuntoViveDigital.objects.filter(pvd_estdo='A').order_by('pvd_nombre')
+        PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
     )
 
     return ctx

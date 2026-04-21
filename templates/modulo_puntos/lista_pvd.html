@@ -34,14 +34,14 @@
             <tbody>
                 {% for pvd in pvds %}
                 <tr>
-                    <td><strong>{{ pvd.pvd_nombre }}</strong></td>
-                    <td>{{ pvd.pvd_dircion }}</td>
-                    <td>{{ pvd.pvd_barrio }}</td>
-                    <td>{{ pvd.pvd_telefono|default:"—" }}</td>
+                    <td><strong>{{ pvd.nombre }}</strong></td>
+                    <td>{{ pvd.direccion }}</td>
+                    <td>{{ pvd.barrio }}</td>
+                    <td>{{ pvd.telefono|default:"—" }}</td>
                     <td>
-                        {% if pvd.pvd_estdo == 'A' %}
+                        {% if pvd.estado == 'A' %}
                             <span class="badge badge--success">Activo</span>
-                        {% elif pvd.pvd_estdo == 'M' %}
+                        {% elif pvd.estado == 'M' %}
                             <span class="badge badge--warning">Mantenimiento</span>
                         {% else %}
                             <span class="badge badge--danger">Inactivo</span>
@@ -52,10 +52,10 @@
                     <td class="text-center">{{ pvd.total_recursos }}</td>
                     <td class="text-center">
                         <div class="btn-group btn-group-sm">
-                            <a href="{% url 'modulo_puntos:editar_pvd' pvd.pvd_cdgo %}" class="btn btn--sm" title="Editar">✏️</a>
-                            <a href="{% url 'modulo_puntos:activar_pvd' pvd.pvd_cdgo %}" class="btn btn--sm" 
-                               title="{% if pvd.pvd_estdo == 'A' %}Desactivar{% else %}Activar{% endif %}">
-                                {% if pvd.pvd_estdo == 'A' %}⏸️{% else %}▶️{% endif %}
+                            <a href="{% url 'modulo_puntos:editar_pvd' pvd.id %}" class="btn btn--sm" title="Editar">✏️</a>
+                            <a href="{% url 'modulo_puntos:activar_pvd' pvd.id %}" class="btn btn--sm"
+                               title="{% if pvd.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
+                                {% if pvd.estado == 'A' %}⏸️{% else %}▶️{% endif %}
                             </a>
                         </div>
                     </td>

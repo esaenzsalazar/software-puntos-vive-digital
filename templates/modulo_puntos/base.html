@@ -1,276 +1,376 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Puntos Vive Digital{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/pvd-theme.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    {% block extra_head %}{% endblock %}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables de color para mantener consistencia profesional */
+        :root {
+            --primary-color: #0f4a9b; /* Azul institucional */
+            --primary-hover: #0a336e;
+            --bg-body: #f4f7f9; /* Gris muy claro para no cansar la vista */
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --card-bg: #ffffff;
+            --border-radius: 12px;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* NAVBAR: Elegante, oscura y fija */
+        .navbar {
+            background: linear-gradient(90deg, #0f172a, #1e3a8a);
+            color: white;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .navbar h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .navbar .menu {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .navbar a {
+            color: #e2e8f0;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: var(--transition);
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .navbar a:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px 40px 20px;
+        }
+
+        /* TARJETAS: Blancas, limpias y con sombra suave */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            padding: 30px;
+            margin-bottom: 30px;
+            width: 100%;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        /* GRID Y TARJETAS DE MENU (Métricas) */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            width: 100%;
+        }
+
+        .menu-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            border-top: 4px solid var(--primary-color);
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            transition: var(--transition);
+        }
+
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .menu-card h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .menu-card p {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-bottom: 8px;
+            margin-top: 0;
+        }
+
+        /* BOTONES: Modernos y con efectos */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            text-align: center;
+            width: fit-content;
+            max-width: 100%;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px rgba(15, 74, 155, 0.2);
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(15, 74, 155, 0.3);
+        }
+
+        .btn-secondary {
+            background: #cbd5e1;
+            color: #334155;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: #94a3b8;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* FORMULARIOS */
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .form-control,
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 20px;
+            transition: var(--transition);
+            background-color: #f8fafc;
+            color: var(--text-main);
+        }
+
+        .form-control:focus,
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(15, 74, 155, 0.15);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-check-input {
+            transform: scale(1.2);
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        /* TEXTOS DE APOYO Y ALERTAS */
+        .page-title {
+            margin-top: 0;
+            color: var(--text-main);
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .muted {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-top: 0;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* ========================================= */
+        /* NUEVOS ESTILOS PARA TABLAS PROFESIONALES  */
+        /* ========================================= */
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 800px;
+        }
+
+        .table th, .table td {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .table th {
+            background-color: #f8fafc;
+            font-weight: 700;
+            color: #475569;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ETIQUETAS (BADGES) PARA ESTADOS */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            text-align: center;
+        }
+        .badge-success { background-color: #dcfce7; color: #166534; }
+        .badge-warning { background-color: #fef9c3; color: #854d0e; }
+        .badge-danger { background-color: #fee2e2; color: #991b1b; }
+        .badge-info { background-color: #e0f2fe; color: #075985; }
+
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 992px) {
+            .navbar { padding: 14px 20px; }
+            .container { margin: 24px auto; }
+            .grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        }
+
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; align-items: center; padding: 16px; }
+            .navbar .menu { width: 100%; justify-content: center; margin-top: 12px; gap: 10px; }
+            .navbar a { font-size: 14px; padding: 6px 10px; }
+            .container { margin: 16px auto; padding: 0 16px 24px 16px; }
+            .card { padding: 20px; border-radius: 12px; }
+            .page-title { font-size: 24px; }
+            .grid { grid-template-columns: 1fr; gap: 16px; }
+            .menu-card { min-height: auto; padding: 20px; }
+            .actions { flex-direction: column; width: 100%; }
+            .btn { width: 100%; text-align: center; }
+        }
+
+        @media (max-width: 480px) {
+            .navbar h1 { font-size: 20px; }
+            .navbar .menu { flex-direction: column; width: 100%; gap: 6px; }
+            .navbar a { width: 100%; text-align: center; background: rgba(255,255,255,0.05); }
+            .form-control, input, select, textarea { font-size: 16px; padding: 10px; }
+        }
+    </style>
 </head>
-<body class="{% if user.is_authenticated %}app-auth{% endif %} {% block body_class %}{% endblock %}">
+<body>
     {% if user.is_authenticated %}
-    <div class="app-shell">
-        <header class="app-topbar">
-            <div class="app-topbar__left">
-                <button type="button" class="app-topbar__menu" id="sidebar-toggle" aria-label="Abrir o cerrar menú" aria-expanded="false" aria-controls="app-sidebar">
-                    <span class="app-topbar__menu-bar"></span>
-                    <span class="app-topbar__menu-bar"></span>
-                    <span class="app-topbar__menu-bar"></span>
-                </button>
-                <a href="{% url 'modulo_puntos:panel_control' %}" class="app-topbar__brand">
-                    <span class="app-topbar__brand-title">Puntos Vive Digital</span>
-                    <span class="app-topbar__brand-sub">Bugalagrande</span>
-                </a>
-            </div>
+    <div class="navbar">
+        <h1>Puntos Vive Digital</h1>
+        <div class="menu">
+            <a href="{% url 'modulo_puntos:panel_control' %}">Panel</a>
+            <a href="{% url 'modulo_puntos:perfil_usuario' %}">Mi perfil</a>
+            <a href="{% url 'modulo_puntos:logout' %}">Cerrar sesión</a>
+        </div>
+    </div>
+    {% endif %}
 
-            <div class="app-topbar__center">
-                {% if pvd_activo and pvds_disponibles %}
-                <div class="pvd-selector">
-                    <span class="pvd-selector__label">📍</span>
-                    <select class="pvd-selector__select" id="pvd-selector-top" onchange="if(this.value) window.location.href=this.value">
-                        {% for pvd in pvds_disponibles %}
-                        <option value="{% url 'modulo_puntos:seleccionar_pvd' pvd.pvd_cdgo %}" 
-                                {% if pvd_activo.pvd_cdgo == pvd.pvd_cdgo %}selected{% endif %}>
-                            {{ pvd.pvd_nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="app-topbar__right">
-                <span class="app-topbar__user" title="Usuario en sesión">{{ user.username }}</span>
-            </div>
-        </header>
-
-        <div class="app-sidebar-backdrop" id="sidebar-backdrop" hidden aria-hidden="true"></div>
-
-        <div class="app-frame">
-            <aside class="app-sidebar" id="app-sidebar" aria-label="Menú de módulos">
-                <nav class="side-nav">
-                    <p class="side-nav__heading">General</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:panel_control' %}" class="side-nav__link {% if current_url_name == 'panel_control' %}is-active{% endif %}">📊 Panel de Control</a>
-                        </li>
-                    </ul>
-
-                    {# ============================================================================ #}
-                    {# NAVEGACIÓN SUPERUSUARIO #}
-                    {# ============================================================================ #}
-                    {% if es_superusuario %}
-                    <p class="side-nav__heading">👑 Funciones de Superusuario</p>
-                    
-                    <p class="side-nav__heading">📈 Informes</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y Exportación</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">🏛️ Infraestructura</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="side-nav__link {% if 'pvd' in current_url_name %}is-active{% endif %}">Gestionar PVDs</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">Salas</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">⚙️ Administración</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear Usuario PVD</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:crear_admin_tic' %}" class="side-nav__link {% if current_url_name == 'crear_admin_tic' %}is-active{% endif %}">Crear Usuario TIC</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:gestionar_roles' %}" class="side-nav__link {% if current_url_name == 'gestionar_roles' or current_url_name == 'asignar_rol_usuario' %}is-active{% endif %}">🔐 Roles y Permisos</a>
-                        </li>
-                    </ul>
-
-                    {# ============================================================================ #}
-                    {# NAVEGACIÓN ADMIN TIC #}
-                    {# ============================================================================ #}
-                    {% elif es_admin_tic_only %}
-                    <p class="side-nav__heading">🖥️ Funciones de Admin TIC</p>
-                    
-                    <p class="side-nav__heading">👥 Ciudadanos</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="side-nav__link {% if current_url_name == 'consultar_ciudadanos' or current_url_name == 'historial_ciudadano' or current_url_name == 'editar_ciudadano' %}is-active{% endif %}">Consultar</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">📈 Informes</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:reportes' %}" class="side-nav__link {% if current_url_name == 'reportes' %}is-active{% endif %}">Reportes y Exportación</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">🏛️ Infraestructura</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="side-nav__link {% if 'pvd' in current_url_name %}is-active{% endif %}">Gestionar PVDs</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:lista_salas' %}" class="side-nav__link {% if 'salas' in current_url_name %}is-active{% endif %}">Salas</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">⚙️ Administración</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:crear_admin_pvd' %}" class="side-nav__link {% if current_url_name == 'crear_admin_pvd' %}is-active{% endif %}">Crear Usuario PVD</a>
-                        </li>
-                    </ul>
-
-                    {# ============================================================================ #}
-                    {# NAVEGACIÓN ADMIN PVD #}
-                    {# ============================================================================ #}
-                    {% elif es_admin_pvd_only %}
-                    <p class="side-nav__heading">🏢 Funciones de Admin PVD</p>
-                    
-                    <p class="side-nav__heading">👥 Ciudadanos</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="side-nav__link {% if current_url_name == 'consultar_ciudadanos' or current_url_name == 'historial_ciudadano' or current_url_name == 'editar_ciudadano' %}is-active{% endif %}">Consultar</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_ciudadano' %}" class="side-nav__link {% if current_url_name == 'registrar_ciudadano' %}is-active{% endif %}">Registrar</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:ciudadanos_pendientes' %}" class="side-nav__link {% if current_url_name == 'ciudadanos_pendientes' %}is-active{% endif %}">⏳ Aprobar Registros</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">🎯 Atención al Ciudadano</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="side-nav__link {% if current_url_name == 'registrar_atencion' %}is-active{% endif %}">Registrar Atención</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="side-nav__link {% if current_url_name == 'registrar_servicio' %}is-active{% endif %}">Registrar Servicio</a>
-                        </li>
-                    </ul>
-
-                    <p class="side-nav__heading">📦 Inventario</p>
-                    <ul class="side-nav__list">
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="side-nav__link {% if current_url_name == 'registrar_recurso' %}is-active{% endif %}">Registrar Recurso</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="side-nav__link {% if current_url_name == 'registrar_prestamo' %}is-active{% endif %}">Registrar Préstamo</a>
-                        </li>
-                    </ul>
-                    {% endif %}
-                </nav>
-
-                <div class="app-sidebar__footer">
-                    <a href="{% url 'modulo_puntos:ayuda' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'ayuda' %}is-active{% endif %}">❓ Ayuda</a>
-                    <a href="{% url 'modulo_puntos:perfil_usuario' %}" class="side-nav__link side-nav__link--footer {% if current_url_name == 'perfil_usuario' %}is-active{% endif %}">👤 Mi Perfil</a>
-                    <a href="{% url 'modulo_puntos:logout' %}" class="side-nav__link side-nav__link--footer side-nav__link--logout">🚪 Cerrar Sesión</a>
-                </div>
-            </aside>
-
-            <div class="app-content">
-                <div class="container container--app">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-                                <strong>{{ message }}</strong>
-                                <button type="button" class="alert-close" onclick="this.parentElement.remove()" aria-label="Cerrar">&times;</button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                    <main class="main-stack">
-    {% else %}
     <div class="container">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-                    <strong>{{ message }}</strong>
-                    <button type="button" class="alert-close" onclick="this.parentElement.remove()" aria-label="Cerrar">&times;</button>
+                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                    {{ message }}
                 </div>
             {% endfor %}
         {% endif %}
-        <main class="main-stack">
-    {% endif %}
 
-                        {% block content %}{% endblock %}
-
-    {% if user.is_authenticated %}
-                    </main>
-                </div>
-            </div>
-        </div>
+        {% block content %}{% endblock %}
     </div>
-    {% else %}
-        </main>
-    </div>
-    {% endif %}
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        (function () {
-            var toggle = document.getElementById('sidebar-toggle');
-            var sidebar = document.getElementById('app-sidebar');
-            var backdrop = document.getElementById('sidebar-backdrop');
-            if (!toggle || !sidebar || !backdrop) return;
-
-            function openMenu() {
-                sidebar.classList.add('is-open');
-                backdrop.hidden = false;
-                backdrop.classList.add('is-visible');
-                toggle.setAttribute('aria-expanded', 'true');
-                document.body.classList.add('sidebar-open');
-            }
-            function closeMenu() {
-                sidebar.classList.remove('is-open');
-                backdrop.classList.remove('is-visible');
-                toggle.setAttribute('aria-expanded', 'false');
-                document.body.classList.remove('sidebar-open');
-                window.setTimeout(function () { backdrop.hidden = true; }, 200);
-            }
-            function onToggle() {
-                if (sidebar.classList.contains('is-open')) closeMenu();
-                else openMenu();
-            }
-            toggle.addEventListener('click', onToggle);
-            backdrop.addEventListener('click', closeMenu);
-            window.addEventListener('resize', function () {
-                if (window.innerWidth >= 960) closeMenu();
-            });
-            sidebar.querySelectorAll('a').forEach(function (a) {
-                a.addEventListener('click', function () {
-                    if (window.innerWidth < 960) closeMenu();
-                });
-            });
-        })();
-        $(document).ready(function() {
-            $('select:not([readonly])').select2({
-                width: '100%',
-                language: {
-                    noResults: function() { return "No se encontraron resultados"; }
-                }
-            });
-            // Inicializar select2 en el selector de PVD
-            $('#pvd-selector-top').select2({
-                minimumResultsForSearch: -1,
-                width: '200px'
-            });
-        });
-    </script>
-    <script src="{% static 'js/validaciones.js' %}"></script>
-    <script src="{% static 'js/validacion-forms.js' %}"></script>
-    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

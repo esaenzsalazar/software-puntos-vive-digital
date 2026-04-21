@@ -11,17 +11,17 @@
     </div>
 
     <div class="callout">
-        <h3>{{ ciudadano.ciu_nmbres }} {{ ciudadano.ciu_aplldos }}</h3>
+        <h3>{{ ciudadano.get_nombre_completo }}</h3>
         <div class="info-grid-2">
             <div>
-                <p><strong>Documento:</strong> {{ ciudadano.ciu_tpodoc }} {{ ciudadano.ciu_numdoc }}</p>
-                <p><strong>Correo:</strong> {{ ciudadano.ciu_email }}</p>
-                <p><strong>Teléfono:</strong> {{ ciudadano.ciu_tlfno }}</p>
+                <p><strong>Documento:</strong> {{ ciudadano.tipo_documento }} {{ ciudadano.numero_documento }}</p>
+                <p><strong>Correo:</strong> {{ ciudadano.correo }}</p>
+                <p><strong>Teléfono:</strong> {{ ciudadano.telefono }}</p>
             </div>
             <div>
-                <p><strong>Barrio:</strong> {{ ciudadano.ciu_barrio|default:"No registrado" }}</p>
-                <p><strong>Dirección:</strong> {{ ciudadano.ciu_dircion|default:"No registrada" }}</p>
-                <p><strong>Zona Rural:</strong> {{ ciudadano.ciu_zrural|default:"N/A" }}</p>
+                <p><strong>Barrio:</strong> {{ ciudadano.barrio|default:"No registrado" }}</p>
+                <p><strong>Dirección:</strong> {{ ciudadano.direccion|default:"No registrada" }}</p>
+                <p><strong>Zona Rural:</strong> {{ ciudadano.zona_rural|default:"N/A" }}</p>
             </div>
         </div>
     </div>
@@ -40,18 +40,18 @@
         <div class="grid">
             {% for atencion in atenciones %}
                 <div class="menu-card">
-                    <h3 class="text-accent">Atención #{{ atencion.atn_cdgo }}</h3>
-                    <p><strong>Fecha:</strong> {{ atencion.atn_fecha }}</p>
-                    <p><strong>Hora inicio:</strong> {{ atencion.atn_hrini }}</p>
-                    <p><strong>Hora fin:</strong> {{ atencion.atn_hrfin|default:"Sin registrar" }}</p>
-                    <p><strong>Estado:</strong> {{ atencion.get_atn_estdo_display }}</p>
-                    <p><strong>Observaciones:</strong> {{ atencion.atn_obs|default:"Sin observaciones" }}</p>
+                    <h3 class="text-accent">Atención #{{ atencion.id }}</h3>
+                    <p><strong>Fecha:</strong> {{ atencion.fecha }}</p>
+                    <p><strong>Hora inicio:</strong> {{ atencion.hora_inicio }}</p>
+                    <p><strong>Hora fin:</strong> {{ atencion.hora_fin|default:"Sin registrar" }}</p>
+                    <p><strong>Estado:</strong> {{ atencion.get_estado_display }}</p>
+                    <p><strong>Observaciones:</strong> {{ atencion.observaciones|default:"Sin observaciones" }}</p>
 
                     <hr class="divider">
 
                     <p><strong>Operador a cargo:</strong>
-                        {% if atencion.opr_cdgo %}
-                            {{ atencion.opr_cdgo.opr_nmbres }} {{ atencion.opr_cdgo.opr_aplldos }}
+                        {% if atencion.operador %}
+                            {{ atencion.operador.get_nombre_completo }}
                         {% else %}
                             Sin operador asignado
                         {% endif %}
@@ -61,7 +61,7 @@
                     {% if atencion.servicios_rel %}
                         <ul style="margin-top: 5px; color: var(--text-muted);">
                             {% for servicio in atencion.servicios_rel %}
-                                <li>{{ servicio.srv_nombre }} ({{ servicio.srv_tipo }})</li>
+                                <li>{{ servicio.nombre }} ({{ servicio.tipo }})</li>
                             {% endfor %}
                         </ul>
                     {% else %}
@@ -72,7 +72,7 @@
                     {% if atencion.satisfacciones_rel %}
                         <ul style="margin-top: 5px; color: var(--text-muted);">
                             {% for sat in atencion.satisfacciones_rel %}
-                                <li>Calificación {{ sat.sat_calif }}/5 — {{ sat.sat_cmntrio|default:"Sin comentario" }} ({{ sat.sat_fecha|date:"d/m/Y H:i" }})</li>
+                                <li>Calificación {{ sat.calificacion }}/5 — {{ sat.comentario|default:"Sin comentario" }} ({{ sat.fecha|date:"d/m/Y H:i" }})</li>
                             {% endfor %}
                         </ul>
                     {% else %}

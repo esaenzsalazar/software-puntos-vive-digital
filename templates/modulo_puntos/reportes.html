@@ -110,7 +110,7 @@
         <div class="grid">
             {% for item in ciudadanos_por_etnia %}
                 <div class="menu-card">
-                    <h3>{{ item.ciu_etnia }}</h3>
+                    <h3>{{ item.etnia }}</h3>
                     <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
@@ -126,7 +126,7 @@
         <div class="grid">
             {% for item in ciudadanos_por_nvleduc %}
                 <div class="menu-card">
-                    <h3>{{ item.ciu_nvleduc }}</h3>
+                    <h3>{{ item.nivel_educativo }}</h3>
                     <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
@@ -142,7 +142,7 @@
         <div class="grid">
             {% for item in ciudadanos_por_ocupacion %}
                 <div class="menu-card">
-                    <h3>{{ item.ciu_ocpcion }}</h3>
+                    <h3>{{ item.ocupacion }}</h3>
                     <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
@@ -174,7 +174,7 @@
         <div class="grid">
             {% for item in servicios_por_tipo %}
                 <div class="menu-card">
-                    <h3>{{ item.srv_tipo }}</h3>
+                    <h3>{{ item.tipo }}</h3>
                     <p class="tile-value">{{ item.total }}</p>
                 </div>
             {% endfor %}
@@ -191,8 +191,8 @@
             {% for item in atenciones_por_operador %}
                 <div class="menu-card">
                     <h3>
-                        {% if item.opr_cdgo__opr_nmbres %}
-                            {{ item.opr_cdgo__opr_nmbres }} {{ item.opr_cdgo__opr_aplldos }}
+                        {% if item.operador__primer_nombre %}
+                            {{ item.operador__primer_nombre }} {{ item.operador__primer_apellido }}
                         {% else %}
                             Sin operador asignado
                         {% endif %}
@@ -212,24 +212,24 @@
         <div class="grid">
             {% for atencion in atenciones_recientes %}
                 <div class="menu-card">
-                    <h3>Atención #{{ atencion.atn_cdgo }}</h3>
-                    <p><strong>Fecha:</strong> {{ atencion.atn_fecha }}</p>
-                    <p><strong>Hora:</strong> {{ atencion.atn_hrini }}</p>
+                    <h3>Atención #{{ atencion.id }}</h3>
+                    <p><strong>Fecha:</strong> {{ atencion.fecha }}</p>
+                    <p><strong>Hora:</strong> {{ atencion.hora_inicio }}</p>
                     <p><strong>Ciudadano:</strong>
-                        {% if atencion.ciu_cdgo %}
-                            {{ atencion.ciu_cdgo.ciu_nmbres }} {{ atencion.ciu_cdgo.ciu_aplldos }}
+                        {% if atencion.ciudadano %}
+                            {{ atencion.ciudadano.get_nombre_completo }}
                         {% else %}
                             Sin ciudadano
                         {% endif %}
                     </p>
                     <p><strong>Operador:</strong>
-                        {% if atencion.opr_cdgo %}
-                            {{ atencion.opr_cdgo.opr_nmbres }} {{ atencion.opr_cdgo.opr_aplldos }}
+                        {% if atencion.operador %}
+                            {{ atencion.operador.get_nombre_completo }}
                         {% else %}
                             Sin operador
                         {% endif %}
                     </p>
-                    <p><strong>Estado:</strong> {{ atencion.get_atn_estdo_display }}</p>
+                    <p><strong>Estado:</strong> {{ atencion.get_estado_display }}</p>
                 </div>
             {% endfor %}
         </div>

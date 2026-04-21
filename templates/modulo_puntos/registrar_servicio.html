@@ -18,8 +18,10 @@
         {% csrf_token %}
         <div class="grid form-grid-2">
             {% for field in form %}
-                <div {% if field.name == 'atn_cdgo' or field.name == 'srv_descr' or field.name == 'srv_nombre' %}class="span-full"{% endif %}>
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                <div {% if field.name == 'atencion' or field.name == 'descripcion' or field.name == 'nombre' %}class="span-full"{% endif %}>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
+                    </label>
                     {{ field }}
                     {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                 </div>
@@ -37,9 +39,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form[method="POST"]');
-    const nombreInput = document.getElementById('id_srv_nombre');
-    const tipoSelect = document.getElementById('id_srv_tipo');
-    const descrInput = document.getElementById('id_srv_descr');
+    const nombreInput = document.getElementById('id_nombre');
+    const tipoSelect = document.getElementById('id_tipo');
+    const descrInput = document.getElementById('id_descripcion');
 
     function wrap(input) {
         if (!input) return;

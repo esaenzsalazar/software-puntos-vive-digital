@@ -18,43 +18,43 @@
             </legend>
 
             <div class="form-group">
-                <label for="{{ form.pvd_cdgo.id_for_label }}">Punto Vive Digital *</label>
-                {{ form.pvd_cdgo }}
-                {% if form.pvd_cdgo.errors %}
-                    <div class="form-error">{{ form.pvd_cdgo.errors }}</div>
+                <label for="{{ form.punto_vive_digital.id_for_label }}">Punto Vive Digital <span style="color:red;">*</span></label>
+                {{ form.punto_vive_digital }}
+                {% if form.punto_vive_digital.errors %}
+                    <div class="form-error">{{ form.punto_vive_digital.errors }}</div>
                 {% endif %}
             </div>
 
             <div class="form-group">
-                <label for="{{ form.sala_nombre.id_for_label }}">Nombre de la Sala *</label>
-                {{ form.sala_nombre }}
-                {% if form.sala_nombre.errors %}
-                    <div class="form-error">{{ form.sala_nombre.errors }}</div>
+                <label for="{{ form.nombre.id_for_label }}">Nombre de la Sala <span style="color:red;">*</span></label>
+                {{ form.nombre }}
+                {% if form.nombre.errors %}
+                    <div class="form-error">{{ form.nombre.errors }}</div>
                 {% endif %}
                 <small class="form-hint">Ej: Sala de Capacitación, Sala de Navegación, Auditorio</small>
             </div>
 
             <div class="form-group">
-                <label for="{{ form.sala_descr.id_for_label }}">Descripción</label>
-                {{ form.sala_descr }}
-                {% if form.sala_descr.errors %}
-                    <div class="form-error">{{ form.sala_descr.errors }}</div>
+                <label for="{{ form.descripcion.id_for_label }}">Descripción</label>
+                {{ form.descripcion }}
+                {% if form.descripcion.errors %}
+                    <div class="form-error">{{ form.descripcion.errors }}</div>
                 {% endif %}
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="{{ form.sala_capacidad.id_for_label }}">Capacidad (personas)</label>
-                    {{ form.sala_capacidad }}
-                    {% if form.sala_capacidad.errors %}
-                        <div class="form-error">{{ form.sala_capacidad.errors }}</div>
+                    <label for="{{ form.capacidad.id_for_label }}">Capacidad (personas)</label>
+                    {{ form.capacidad }}
+                    {% if form.capacidad.errors %}
+                        <div class="form-error">{{ form.capacidad.errors }}</div>
                     {% endif %}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.sala_estdo.id_for_label }}">Estado</label>
-                    {{ form.sala_estdo }}
-                    {% if form.sala_estdo.errors %}
-                        <div class="form-error">{{ form.sala_estdo.errors }}</div>
+                    <label for="{{ form.estado.id_for_label }}">Estado</label>
+                    {{ form.estado }}
+                    {% if form.estado.errors %}
+                        <div class="form-error">{{ form.estado.errors }}</div>
                     {% endif %}
                 </div>
             </div>
@@ -95,8 +95,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form[method="POST"]');
-    const nombreInput = document.getElementById('{{ form.sala_nombre.id_for_label }}');
-    const capacidadInput = document.getElementById('{{ form.sala_capacidad.id_for_label }}');
+    const nombreInput = document.getElementById('{{ form.nombre.id_for_label }}');
+    const capacidadInput = document.getElementById('{{ form.capacidad.id_for_label }}');
 
     if (nombreInput) {
         nombreInput.addEventListener('blur', function () {

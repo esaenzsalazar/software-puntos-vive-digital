@@ -243,6 +243,46 @@ def validar_formato_telefono(telefono):
     return True, ''
 
 
+def tiene_permiso(user, codigo):
+    """
+    Verifica si un usuario tiene un permiso funcional específico.
+
+    Orden de resolución:
+    1. Superusuario → siempre True
+    2. Override individual (PermisoUsuario) → concedido=True/False
+    3. Permiso de rol (PermisoRol según grupo del usuario)
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+
+    from modulo_puntos.models import PermisoDefinicion, PermisoRol, PermisoUsuario
+
+    try:
+        permiso_def = PermisoDefinicion.objects.get(codigo=codigo, activo=True)
+    except PermisoDefinicion.DoesNotExist:
+        return False
+
+    override = PermisoUsuario.objects.filter(usuario=user, permiso=permiso_def).first()
+    if override is not None:
+        return override.concedido
+
+    grupos = user.groups.values_list('name', flat=True)
+    rol = None
+    if 'Administrador TIC' in grupos:
+        rol = 'admin_tic'
+    elif 'Administrador PVD' in grupos:
+        rol = 'admin_pvd'
+    elif grupos:
+        rol = 'operador'
+
+    if rol:
+        return PermisoRol.objects.filter(rol=rol, permiso=permiso_def).exists()
+
+    return False
+
+
 def validar_formato_email(email):
     """
     Valida el formato de un correo electrónico.

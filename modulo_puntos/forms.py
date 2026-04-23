@@ -7,7 +7,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital, Sala
+from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala
 
 # ==============================================================================
 # LISTAS DE OPCIONES GLOBALES
@@ -859,3 +859,171 @@ class SalaForm(forms.ModelForm):
                 raise ValidationError('Ya existe una sala con este nombre en este PVD.')
 
         return nombre
+
+
+# ==============================================================================
+# FORMULARIO DE PERMISOS
+# ==============================================================================
+
+CATEGORIA_CHOICES = [
+    ('', '— Seleccione una categoría —'),
+    ('Reportes', 'Reportes'),
+    ('Ciudadanos', 'Ciudadanos'),
+    ('Atenciones', 'Atenciones'),
+    ('Inventario', 'Inventario'),
+    ('Infraestructura', 'Infraestructura'),
+]
+
+
+class PermisoDefinicionForm(forms.ModelForm):
+    categoria = forms.ChoiceField(
+        choices=CATEGORIA_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Categoría',
+    )
+
+    class Meta:
+        model = PermisoDefinicion
+        fields = ['codigo', 'nombre', 'descripcion', 'categoria', 'activo', 'delegable_por_ofitic']
+        widgets = {
+            'codigo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'ej: ciudadanos.ver',
+            }),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'ej: Consultar Ciudadanos',
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del permiso...',
+            }),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'delegable_por_ofitic': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'codigo': 'Código único',
+            'nombre': 'Nombre visible',
+            'descripcion': 'Descripción',
+            'activo': 'Activo',
+            'delegable_por_ofitic': 'Delegable por Ofitic (admin TIC)',
+        }
+
+    def clean_codigo(self):
+        codigo = self.cleaned_data.get('codigo', '').strip().lower()
+        qs = PermisoDefinicion.objects.filter(codigo=codigo)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError('Ya existe un permiso con este código.')
+        return codigo
+
+
+# ==============================================================================
+# FORMULARIO DE HABILITACIÓN DE SALAS
+# ==============================================================================
+
+class HabilitacionSalaForm(forms.ModelForm):
+    class Meta:
+        model = HabilitacionSala
+        fields = [
+            'sala', 'tipo_uso', 'fecha',
+            'hora_inicio', 'hora_fin',
+            'solicitante', 'proposito',
+            'capacidad_requerida', 'estado', 'observaciones',
+        ]
+        labels = {
+            'sala': 'Sala',
+            'tipo_uso': 'Tipo de Uso',
+            'fecha': 'Fecha',
+            'hora_inicio': 'Hora de Inicio',
+            'hora_fin': 'Hora de Fin',
+            'solicitante': 'Solicitante / Grupo',
+            'proposito': 'Propósito / Descripción',
+            'capacidad_requerida': 'Personas Esperadas',
+            'estado': 'Estado',
+            'observaciones': 'Observaciones',
+        }
+        widgets = {
+            'sala': forms.Select(attrs={'class': 'form-control'}),
+            'tipo_uso': forms.Select(attrs={'class': 'form-control'}),
+            'fecha': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'hora_inicio': forms.TimeInput(
+                format='%H:%M',
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
+            'hora_fin': forms.TimeInput(
+                format='%H:%M',
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
+            'solicitante': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej: Grupo comunitario, Empresa XYZ, Ciudadano'}
+            ),
+            'proposito': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe el propósito de uso de la sala...'}
+            ),
+            'capacidad_requerida': forms.NumberInput(
+                attrs={'class': 'form-control', 'min': '1', 'placeholder': 'N.º de personas'}
+            ),
+            'estado': forms.Select(
+                choices=[('P', 'Pendiente'), ('C', 'Confirmada'), ('E', 'En curso'), ('F', 'Finalizada'), ('X', 'Cancelada')],
+                attrs={'class': 'form-control'}
+            ),
+            'observaciones': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Notas adicionales...'}
+            ),
+        }
+
+    def __init__(self, *args, pvd_id=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['proposito'].required = False
+        self.fields['capacidad_requerida'].required = False
+        self.fields['observaciones'].required = False
+        self.fields['sala'].empty_label = '--- Seleccione una sala ---'
+        if pvd_id:
+            self.fields['sala'].queryset = Sala.objects.filter(
+                punto_vive_digital_id=pvd_id, estado='A'
+            ).order_by('nombre')
+        else:
+            self.fields['sala'].queryset = Sala.objects.filter(estado='A').order_by(
+                'punto_vive_digital__nombre', 'nombre'
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        sala = cleaned_data.get('sala')
+        fecha = cleaned_data.get('fecha')
+        hora_inicio = cleaned_data.get('hora_inicio')
+        hora_fin = cleaned_data.get('hora_fin')
+
+        if hora_inicio and hora_fin and hora_fin <= hora_inicio:
+            self.add_error('hora_fin', 'La hora de fin debe ser posterior a la hora de inicio.')
+            return cleaned_data
+
+        if sala and fecha and hora_inicio and hora_fin:
+            qs = HabilitacionSala.objects.filter(
+                sala=sala,
+                fecha=fecha,
+                estado__in=['P', 'C', 'E'],
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            conflictos = qs.filter(
+                hora_inicio__lt=hora_fin,
+                hora_fin__gt=hora_inicio
+            )
+            if conflictos.exists():
+                c = conflictos.first()
+                self.add_error(
+                    None,
+                    f'Conflicto: la sala ya tiene una habilitación de '
+                    f'{c.hora_inicio.strftime("%H:%M")} a {c.hora_fin.strftime("%H:%M")} '
+                    f'en esa fecha ({c.get_tipo_uso_display()} — {c.solicitante}).'
+                )
+
+        return cleaned_data

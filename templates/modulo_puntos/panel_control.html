@@ -67,10 +67,11 @@
 
         <div class="menu-card">
             <h3>🏛️ Infraestructura</h3>
-            <p>Gestionar PVDs y salas del sistema.</p>
+            <p>Gestionar PVDs, salas y habilitaciones.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
             </div>
         </div>
 
@@ -80,6 +81,14 @@
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Usuario PVD</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear Usuario TIC</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🔐 Permisos</h3>
+            <p>Gestionar permisos y accesos por rol de usuario.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
             </div>
         </div>
     </div>
@@ -113,10 +122,11 @@
 
         <div class="menu-card">
             <h3>🏛️ Infraestructura</h3>
-            <p>Gestionar PVDs y salas.</p>
+            <p>Gestionar PVDs, salas y habilitaciones.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
             </div>
         </div>
 
@@ -125,6 +135,14 @@
             <p>Crear usuarios administradores PVD.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Usuario PVD</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🔐 Permisos</h3>
+            <p>Gestionar permisos de usuarios Admin PVD y Operadores.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
             </div>
         </div>
     </div>
@@ -164,6 +182,15 @@
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🏛️ Infraestructura</h3>
+            <p>Gestionar salas y habilitar espacios para uso.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
             </div>
         </div>
     </div>

@@ -6,7 +6,8 @@ from django.contrib import admin
 from .models import (
     UsuarioSistema, Satisfaccion, PrestamoRecurso, ListaValor,
     Atencion, Operador, Ciudadano, Recurso, Servicio, PuntoViveDigital,
-    AuditoriaAccion, UserProfile, Sala
+    AuditoriaAccion, UserProfile, Sala, HabilitacionSala,
+    PermisoDefinicion, PermisoRol, PermisoUsuario,
 )
 
 
@@ -30,6 +31,24 @@ class SalaAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'descripcion')
     readonly_fields = ('fecha_creacion',)
     ordering = ('punto_vive_digital', 'nombre')
+
+    @admin.display(description='Estado')
+    def estado_legible(self, obj):
+        return obj.get_estado_display()
+
+
+@admin.register(HabilitacionSala)
+class HabilitacionSalaAdmin(admin.ModelAdmin):
+    list_display = ('sala', 'tipo_uso_legible', 'fecha', 'hora_inicio', 'hora_fin', 'solicitante', 'capacidad_requerida', 'estado_legible', 'registrado_por')
+    list_filter = ('tipo_uso', 'estado', 'sala__punto_vive_digital', 'fecha')
+    search_fields = ('solicitante', 'proposito', 'sala__nombre')
+    ordering = ('-fecha', 'hora_inicio')
+    readonly_fields = ('fecha_registro',)
+    list_select_related = ('sala', 'sala__punto_vive_digital', 'registrado_por')
+
+    @admin.display(description='Tipo de Uso')
+    def tipo_uso_legible(self, obj):
+        return obj.get_tipo_uso_display()
 
     @admin.display(description='Estado')
     def estado_legible(self, obj):
@@ -216,3 +235,36 @@ class UsuarioSistemaAdmin(admin.ModelAdmin):
     search_fields = ('nombre',)
     list_filter = ('estado',)
     ordering = ('id',)
+
+
+@admin.register(PermisoDefinicion)
+class PermisoDefinicionAdmin(admin.ModelAdmin):
+    list_display = ('codigo', 'nombre', 'categoria', 'activo', 'delegable_por_ofitic', 'fecha_creacion')
+    list_filter = ('categoria', 'activo', 'delegable_por_ofitic')
+    search_fields = ('codigo', 'nombre', 'descripcion')
+    ordering = ('categoria', 'nombre')
+    readonly_fields = ('fecha_creacion',)
+
+
+@admin.register(PermisoRol)
+class PermisoRolAdmin(admin.ModelAdmin):
+    list_display = ('rol_legible', 'permiso', 'otorgado_por', 'fecha_asignacion')
+    list_filter = ('rol',)
+    list_select_related = ('permiso', 'otorgado_por')
+    ordering = ('rol', 'permiso__categoria')
+
+    @admin.display(description='Rol')
+    def rol_legible(self, obj):
+        return obj.get_rol_display()
+
+
+@admin.register(PermisoUsuario)
+class PermisoUsuarioAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'permiso', 'concedido_legible', 'otorgado_por', 'fecha_asignacion')
+    list_filter = ('concedido',)
+    list_select_related = ('usuario', 'permiso', 'otorgado_por')
+    ordering = ('usuario__username', 'permiso__categoria')
+
+    @admin.display(description='Estado')
+    def concedido_legible(self, obj):
+        return 'Concedido' if obj.concedido else 'Revocado'

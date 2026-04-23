@@ -342,6 +342,83 @@ class UserProfile(models.Model):
         return f"{self.usuario.username} - {pvd_name}"
 
 
+class PermisoDefinicion(models.Model):
+    codigo = models.CharField(max_length=64, unique=True, verbose_name='Código')
+    nombre = models.CharField(max_length=128, verbose_name='Nombre')
+    descripcion = models.TextField(blank=True, verbose_name='Descripción')
+    categoria = models.CharField(max_length=64, verbose_name='Categoría')
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    delegable_por_ofitic = models.BooleanField(default=False, verbose_name='Delegable por Ofitic')
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_permisos_definicion'
+        ordering = ['categoria', 'nombre']
+        verbose_name = 'Permiso'
+        verbose_name_plural = 'Permisos'
+
+    def __str__(self):
+        return f"[{self.categoria}] {self.nombre}"
+
+
+class PermisoRol(models.Model):
+    ROL_CHOICES = [
+        ('admin_tic', 'Administrador TIC (Ofitic)'),
+        ('admin_pvd', 'Administrador PVD'),
+        ('operador', 'Operador'),
+    ]
+
+    rol = models.CharField(max_length=32, choices=ROL_CHOICES, verbose_name='Rol')
+    permiso = models.ForeignKey(
+        PermisoDefinicion, on_delete=models.CASCADE,
+        related_name='roles', verbose_name='Permiso'
+    )
+    otorgado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='permisos_rol_otorgados', verbose_name='Otorgado por'
+    )
+    fecha_asignacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de asignación')
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_permisos_rol'
+        unique_together = [('rol', 'permiso')]
+        verbose_name = 'Permiso de Rol'
+        verbose_name_plural = 'Permisos de Roles'
+
+    def __str__(self):
+        return f"{self.get_rol_display()} → {self.permiso.nombre}"
+
+
+class PermisoUsuario(models.Model):
+    usuario = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE,
+        related_name='permisos_individuales', verbose_name='Usuario'
+    )
+    permiso = models.ForeignKey(
+        PermisoDefinicion, on_delete=models.CASCADE,
+        related_name='usuarios', verbose_name='Permiso'
+    )
+    concedido = models.BooleanField(default=True, verbose_name='Concedido')
+    otorgado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='permisos_usuario_otorgados', verbose_name='Otorgado por'
+    )
+    fecha_asignacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de asignación')
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_permisos_usuario'
+        unique_together = [('usuario', 'permiso')]
+        verbose_name = 'Permiso de Usuario'
+        verbose_name_plural = 'Permisos de Usuarios'
+
+    def __str__(self):
+        estado = 'Concedido' if self.concedido else 'Revocado'
+        return f"{self.usuario.username} → {self.permiso.nombre} [{estado}]"
+
+
 class Sala(models.Model):
     ESTADO_CHOICES = [
         ('A', 'Activo'),
@@ -369,3 +446,60 @@ class Sala(models.Model):
 
     def __str__(self):
         return f"{self.nombre} - {self.punto_vive_digital.nombre}"
+
+
+class HabilitacionSala(models.Model):
+    TIPO_USO_CHOICES = [
+        ('NAV', 'Sala de Navegación'),
+        ('CAP', 'Capacitación / Formación'),
+        ('CONF', 'Conferencia / Reunión'),
+        ('TRAM', 'Trámite en Línea'),
+        ('EXAM', 'Examen / Evaluación'),
+        ('OTRO', 'Otro uso'),
+    ]
+    ESTADO_CHOICES = [
+        ('P', 'Pendiente'),
+        ('C', 'Confirmada'),
+        ('E', 'En curso'),
+        ('F', 'Finalizada'),
+        ('X', 'Cancelada'),
+    ]
+
+    sala = models.ForeignKey(
+        'Sala', on_delete=models.CASCADE,
+        related_name='habilitaciones', verbose_name='Sala'
+    )
+    tipo_uso = models.CharField(max_length=4, choices=TIPO_USO_CHOICES, verbose_name='Tipo de Uso')
+    fecha = models.DateField(verbose_name='Fecha')
+    hora_inicio = models.TimeField(verbose_name='Hora de Inicio')
+    hora_fin = models.TimeField(verbose_name='Hora de Fin')
+    solicitante = models.CharField(max_length=128, verbose_name='Solicitante / Grupo')
+    proposito = models.TextField(blank=True, null=True, verbose_name='Propósito / Descripción')
+    capacidad_requerida = models.IntegerField(null=True, blank=True, verbose_name='Personas Esperadas')
+    estado = models.CharField(max_length=1, default='P', choices=ESTADO_CHOICES, verbose_name='Estado')
+    registrado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='habilitaciones_registradas', verbose_name='Registrado por'
+    )
+    fecha_registro = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')
+    observaciones = models.TextField(null=True, blank=True, verbose_name='Observaciones')
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_habilitaciones_sala'
+        ordering = ['fecha', 'hora_inicio']
+        verbose_name = 'Habilitación de Sala'
+        verbose_name_plural = 'Habilitaciones de Sala'
+        indexes = [
+            models.Index(fields=['sala', 'fecha'], name='idx_hab_sala_fecha'),
+            models.Index(fields=['estado'], name='idx_hab_estado'),
+        ]
+
+    def __str__(self):
+        return f"{self.sala.nombre} – {self.fecha} {self.hora_inicio.strftime('%H:%M')}"
+
+    def duracion_horas(self):
+        from datetime import datetime
+        inicio = datetime.combine(self.fecha, self.hora_inicio)
+        fin = datetime.combine(self.fecha, self.hora_fin)
+        return round((fin - inicio).seconds / 3600, 1)

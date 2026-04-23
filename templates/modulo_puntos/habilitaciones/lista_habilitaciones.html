@@ -1,0 +1,180 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Habilitaciones de Salas{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+            <div>
+                <span class="eyebrow">Infraestructura › Salas</span>
+                <h1 class="page-title">📅 Habilitaciones de Salas</h1>
+                <p class="muted">
+                    {% if pvd %}{{ pvd.nombre }}{% else %}Todos los Puntos Vive Digital{% endif %}
+                </p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="{% url 'modulo_puntos:crear_habilitacion' %}" class="btn btn-primary">
+                    ➕ Nueva Habilitación
+                </a>
+                <a href="{% url 'modulo_puntos:lista_salas' %}" class="btn">
+                    🏛️ Gestionar Salas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Filtros ── #}
+    <form method="GET" style="margin-bottom:24px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="margin:0; flex:1; min-width:160px;">
+            <label style="font-size:13px; font-weight:600;">Fecha</label>
+            <input type="date" name="fecha" value="{{ fecha_filtro }}" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+            <label style="font-size:13px; font-weight:600;">Sala</label>
+            <select name="sala_id" class="form-control">
+                <option value="">— Todas las salas —</option>
+                {% for sala in salas_pvd %}
+                    <option value="{{ sala.id }}" {% if sala_filtro == sala.id|stringformat:"s" %}selected{% endif %}>
+                        {{ sala.nombre }}{% if not pvd %} ({{ sala.punto_vive_digital.nombre }}){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin:0; flex:1; min-width:160px;">
+            <label style="font-size:13px; font-weight:600;">Estado</label>
+            <select name="estado" class="form-control">
+                <option value="">— Todos —</option>
+                {% for cod, etq in estados %}
+                    <option value="{{ cod }}" {% if estado_filtro == cod %}selected{% endif %}>{{ etq }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button type="submit" class="btn btn-primary btn--sm">Filtrar</button>
+            <a href="{% url 'modulo_puntos:lista_habilitaciones' %}" class="btn btn--sm">Limpiar</a>
+        </div>
+    </form>
+
+    {# ── Tabla ── #}
+    {% if habilitaciones %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Sala</th>
+                    {% if not pvd %}<th>PVD</th>{% endif %}
+                    <th>Tipo de Uso</th>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th>Solicitante</th>
+                    <th class="text-center">Personas</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hab in habilitaciones %}
+                <tr>
+                    <td>
+                        <strong>{{ hab.sala.nombre }}</strong>
+                        {% if hab.sala.capacidad %}
+                            <br><small class="muted">Cap. {{ hab.sala.capacidad }}</small>
+                        {% endif %}
+                    </td>
+                    {% if not pvd %}
+                    <td>{{ hab.sala.punto_vive_digital.nombre }}</td>
+                    {% endif %}
+                    <td>
+                        {% if hab.tipo_uso == 'NAV' %}🖥️{% elif hab.tipo_uso == 'CAP' %}📚{% elif hab.tipo_uso == 'CONF' %}🎤{% elif hab.tipo_uso == 'TRAM' %}📋{% elif hab.tipo_uso == 'EXAM' %}📝{% else %}🔧{% endif %}
+                        {{ hab.get_tipo_uso_display }}
+                    </td>
+                    <td>{{ hab.fecha|date:"d/m/Y" }}</td>
+                    <td>
+                        <span style="font-variant-numeric: tabular-nums;">
+                            {{ hab.hora_inicio|time:"H:i" }} – {{ hab.hora_fin|time:"H:i" }}
+                        </span>
+                        <br><small class="muted">{{ hab.duracion_horas }}h</small>
+                    </td>
+                    <td>
+                        {{ hab.solicitante }}
+                        {% if hab.proposito %}
+                            <br><small class="muted">{{ hab.proposito|truncatechars:40 }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ hab.capacidad_requerida|default:"—" }}</td>
+                    <td>
+                        {% if hab.estado == 'P' %}
+                            <span class="badge" style="background:#e2e8f0;color:#475569;">⏳ Pendiente</span>
+                        {% elif hab.estado == 'C' %}
+                            <span class="badge badge--success">✅ Confirmada</span>
+                        {% elif hab.estado == 'E' %}
+                            <span class="badge" style="background:#dbeafe;color:#1d4ed8;">🔵 En curso</span>
+                        {% elif hab.estado == 'F' %}
+                            <span class="badge" style="background:#f0fdf4;color:#166534;">🏁 Finalizada</span>
+                        {% else %}
+                            <span class="badge badge--danger">❌ Cancelada</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'modulo_puntos:agenda_sala' hab.sala.id %}" class="btn btn--sm" title="Ver agenda">📆</a>
+                            {% if hab.estado not in "FX" %}
+                                <a href="{% url 'modulo_puntos:editar_habilitacion' hab.id %}" class="btn btn--sm" title="Editar">✏️</a>
+                                <a href="{% url 'modulo_puntos:cancelar_habilitacion' hab.id %}"
+                                   class="btn btn--sm"
+                                   title="Cancelar"
+                                   onclick="return confirm('¿Cancelar esta habilitación?')">❌</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card card--hint" style="text-align:center; padding:48px 24px;">
+        <p style="font-size:48px; margin:0 0 16px 0;">📅</p>
+        <h3 style="margin:0 0 8px 0;">No hay habilitaciones registradas</h3>
+        <p class="muted">
+            {% if fecha_filtro or sala_filtro or estado_filtro %}
+                No se encontraron habilitaciones con los filtros aplicados.
+            {% else %}
+                Comienza registrando la primera habilitación de sala.
+            {% endif %}
+        </p>
+        <a href="{% url 'modulo_puntos:crear_habilitacion' %}" class="btn" style="margin-top:16px;">
+            ➕ Nueva Habilitación
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{# ── Accesos rápidos por sala ── #}
+{% if salas_pvd %}
+<div class="content-section" style="margin-top:24px;">
+    <div class="section-header">
+        <h3 class="section-title">🏛️ Agenda por Sala</h3>
+        <p class="muted" style="margin:4px 0 0 0;">Accede rápidamente a la agenda semanal de cada sala.</p>
+    </div>
+    <div class="grid" style="margin-top:16px;">
+        {% for sala in salas_pvd %}
+        <div class="menu-card" style="padding:16px;">
+            <h4 style="margin:0 0 4px 0;">{{ sala.nombre }}</h4>
+            {% if sala.descripcion %}
+                <p class="muted" style="font-size:13px; margin:0 0 12px 0;">{{ sala.descripcion|truncatechars:60 }}</p>
+            {% endif %}
+            {% if sala.capacidad %}
+                <p class="muted" style="font-size:12px; margin:0 0 12px 0;">Cap. máx: {{ sala.capacidad }} personas</p>
+            {% endif %}
+            <div class="menu-card__actions">
+                <a href="{% url 'modulo_puntos:agenda_sala' sala.id %}" class="btn btn--sm">📆 Ver Agenda</a>
+                <a href="{% url 'modulo_puntos:crear_habilitacion' %}?sala_id={{ sala.id }}" class="btn btn--sm">➕ Habilitar</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

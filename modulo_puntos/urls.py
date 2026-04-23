@@ -93,6 +93,24 @@ urlpatterns = [
     path('salas/activar/<int:sala_cdgo>/', views.activar_sala, name='activar_sala'),
     
     # ==========================================================================
+    # HABILITACIÓN DE SALAS
+    # ==========================================================================
+    path('habilitaciones/', views.lista_habilitaciones, name='lista_habilitaciones'),
+    path('habilitaciones/crear/', views.crear_habilitacion, name='crear_habilitacion'),
+    path('habilitaciones/editar/<int:hab_id>/', views.editar_habilitacion, name='editar_habilitacion'),
+    path('habilitaciones/cancelar/<int:hab_id>/', views.cancelar_habilitacion, name='cancelar_habilitacion'),
+    path('salas/<int:sala_id>/agenda/', views.agenda_sala, name='agenda_sala'),
+
+    # ==========================================================================
+    # MÓDULO PERMISOS (Solo Superusuario / Ofitic según vista)
+    # ==========================================================================
+    path('permisos/', views.lista_permisos_roles, name='lista_permisos_roles'),
+    path('permisos/crear/', views.crear_permiso, name='crear_permiso'),
+    path('permisos/editar/<int:permiso_id>/', views.editar_permiso, name='editar_permiso'),
+    path('permisos/usuario/<int:user_id>/', views.permisos_usuario, name='permisos_usuario'),
+    path('permisos/ofitic/', views.vista_permisos_ofitic, name='permisos_ofitic'),
+
+    # ==========================================================================
     # AYUDA Y SOPORTE
     # ==========================================================================
     path('ayuda/', views.ayuda_sistema, name='ayuda'),

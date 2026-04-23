@@ -1,0 +1,81 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Permisos de {{ usuario_objetivo.get_full_name|default:usuario_objetivo.username }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <span class="eyebrow">Panel → Permisos → Usuario</span>
+                <h1 class="page-title">👤 Permisos de {{ usuario_objetivo.get_full_name|default:usuario_objetivo.username }}</h1>
+                <p class="muted">
+                    Usuario: <strong>{{ usuario_objetivo.username }}</strong> |
+                    Rol base: <strong>{{ rol_usuario }}</strong>
+                </p>
+            </div>
+            <a href="{% url 'modulo_puntos:lista_permisos_roles' %}" class="btn btn--sm" style="background: #94a3b8; color: white;">← Volver a Permisos</a>
+        </div>
+    </div>
+</div>
+
+<div class="content-section">
+    <div class="card" style="padding: 16px 24px; background: #fffbeb; border: 1px solid #fde68a; margin-bottom: 16px;">
+        <p style="margin: 0; font-size: 14px; color: #92400e;">
+            <strong>Nota:</strong> Los permisos marcados en <span style="background: #d1fae5; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600;">verde</span>
+            vienen del rol del usuario. Los marcados con <span style="background: #dbeafe; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600;">override</span>
+            son ajustes individuales que sobreescriben el rol.
+        </p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% for categoria, filas in categorias.items %}
+        <div class="card" style="margin-bottom: 20px;">
+            <div style="padding: 14px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px 12px 0 0;">
+                <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--primary-color);">📂 {{ categoria }}</h3>
+            </div>
+            <div style="padding: 8px 0;">
+                {% for fila in filas %}
+                <div style="display: flex; align-items: center; gap: 16px; padding: 12px 24px; border-bottom: 1px solid #f1f5f9;">
+                    <input
+                        type="checkbox"
+                        name="perm_{{ fila.permiso.pk }}"
+                        id="perm_{{ fila.permiso.pk }}"
+                        {% if fila.activo %}checked{% endif %}
+                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary-color); flex-shrink: 0;"
+                    >
+                    <label for="perm_{{ fila.permiso.pk }}" style="flex: 1; cursor: pointer; margin: 0;">
+                        <span style="font-weight: 600; color: var(--text-main);">{{ fila.permiso.nombre }}</span>
+                        {% if fila.es_override %}
+                        <span style="background: #dbeafe; color: #1e40af; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 6px;">OVERRIDE</span>
+                        {% elif fila.hereda_rol %}
+                        <span style="background: #d1fae5; color: #065f46; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 6px;">ROL</span>
+                        {% endif %}
+                        {% if fila.permiso.descripcion %}
+                        <br><small style="color: var(--text-muted); font-size: 12px;">{{ fila.permiso.descripcion }}</small>
+                        {% endif %}
+                    </label>
+                    <code style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">{{ fila.permiso.codigo }}</code>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card" style="text-align: center; padding: 48px;">
+            <p style="color: var(--text-muted);">No hay permisos definidos en el sistema.</p>
+        </div>
+        {% endfor %}
+
+        {% if categorias %}
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+            <a href="{% url 'modulo_puntos:lista_permisos_roles' %}" class="btn" style="background: #94a3b8; color: white;">Cancelar</a>
+            <button type="submit" style="background: var(--primary-color); color: white; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: inherit;">
+                💾 Guardar Permisos
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

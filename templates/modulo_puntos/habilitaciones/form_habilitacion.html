@@ -1,0 +1,158 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Infraestructura › Salas › Habilitaciones</span>
+        <h1 class="page-title">{{ titulo }}</h1>
+        {% if accion == 'editar' and hab %}
+            <p class="muted">{{ hab.sala.nombre }} — {{ hab.fecha|date:"d/m/Y" }}</p>
+        {% endif %}
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert--danger" style="margin-bottom:16px; padding:12px 16px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; color:#991b1b;">
+        {% for error in form.non_field_errors %}
+            <p style="margin:0;">⚠️ {{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <fieldset style="margin-bottom:20px;">
+            <legend style="font-size:15px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--p-border);">
+                Datos de la Sala y Uso
+            </legend>
+
+            <div class="form-group">
+                <label for="{{ form.sala.id_for_label }}">Sala <span style="color:red;">*</span></label>
+                {{ form.sala }}
+                {% if form.sala.errors %}<div class="form-error">{{ form.sala.errors }}</div>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.tipo_uso.id_for_label }}">Tipo de Uso <span style="color:red;">*</span></label>
+                {{ form.tipo_uso }}
+                {% if form.tipo_uso.errors %}<div class="form-error">{{ form.tipo_uso.errors }}</div>{% endif %}
+                <small class="form-hint">¿Para qué se usará la sala?</small>
+            </div>
+        </fieldset>
+
+        <fieldset style="margin-bottom:20px;">
+            <legend style="font-size:15px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--p-border);">
+                Fecha y Horario
+            </legend>
+
+            <div class="form-group">
+                <label for="{{ form.fecha.id_for_label }}">Fecha <span style="color:red;">*</span></label>
+                {{ form.fecha }}
+                {% if form.fecha.errors %}<div class="form-error">{{ form.fecha.errors }}</div>{% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.hora_inicio.id_for_label }}">Hora de Inicio <span style="color:red;">*</span></label>
+                    {{ form.hora_inicio }}
+                    {% if form.hora_inicio.errors %}<div class="form-error">{{ form.hora_inicio.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.hora_fin.id_for_label }}">Hora de Fin <span style="color:red;">*</span></label>
+                    {{ form.hora_fin }}
+                    {% if form.hora_fin.errors %}<div class="form-error">{{ form.hora_fin.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div id="duracion-preview" style="display:none; padding:8px 12px; background:#f0f9ff; border-radius:6px; font-size:13px; color:#0369a1; margin-top:4px;">
+                ⏱️ Duración estimada: <strong id="duracion-texto">—</strong>
+            </div>
+        </fieldset>
+
+        <fieldset style="margin-bottom:20px;">
+            <legend style="font-size:15px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--p-border);">
+                Información del Solicitante
+            </legend>
+
+            <div class="form-group">
+                <label for="{{ form.solicitante.id_for_label }}">Solicitante / Grupo <span style="color:red;">*</span></label>
+                {{ form.solicitante }}
+                {% if form.solicitante.errors %}<div class="form-error">{{ form.solicitante.errors }}</div>{% endif %}
+                <small class="form-hint">Nombre de la persona, empresa o grupo que solicita la sala.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.proposito.id_for_label }}">Propósito / Descripción</label>
+                {{ form.proposito }}
+                {% if form.proposito.errors %}<div class="form-error">{{ form.proposito.errors }}</div>{% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.capacidad_requerida.id_for_label }}">Personas Esperadas</label>
+                    {{ form.capacidad_requerida }}
+                    {% if form.capacidad_requerida.errors %}<div class="form-error">{{ form.capacidad_requerida.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.estado.id_for_label }}">Estado</label>
+                    {{ form.estado }}
+                    {% if form.estado.errors %}<div class="form-error">{{ form.estado.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+                {{ form.observaciones }}
+                {% if form.observaciones.errors %}<div class="form-error">{{ form.observaciones.errors }}</div>{% endif %}
+            </div>
+        </fieldset>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">
+                {% if accion == 'crear' %}➕ Registrar Habilitación{% else %}💾 Guardar Cambios{% endif %}
+            </button>
+            <a href="{% url 'modulo_puntos:lista_habilitaciones' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-row { display:flex; gap:16px; }
+.form-row .form-group { flex:1; }
+.form-hint { display:block; color:var(--muted, #64748b); font-size:13px; margin-top:4px; }
+@media (max-width:768px) { .form-row { flex-direction:column; gap:0; } }
+</style>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const horaIni = document.getElementById('{{ form.hora_inicio.id_for_label }}');
+    const horaFin = document.getElementById('{{ form.hora_fin.id_for_label }}');
+    const durPreview = document.getElementById('duracion-preview');
+    const durTexto = document.getElementById('duracion-texto');
+
+    function calcularDuracion() {
+        const ini = horaIni.value;
+        const fin = horaFin.value;
+        if (ini && fin && fin > ini) {
+            const [hI, mI] = ini.split(':').map(Number);
+            const [hF, mF] = fin.split(':').map(Number);
+            const mins = (hF * 60 + mF) - (hI * 60 + mI);
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            durTexto.textContent = h > 0 ? `${h}h ${m > 0 ? m + 'min' : ''}` : `${m} min`;
+            durPreview.style.display = 'block';
+        } else {
+            durPreview.style.display = 'none';
+        }
+    }
+
+    if (horaIni) horaIni.addEventListener('change', calcularDuracion);
+    if (horaFin) horaFin.addEventListener('change', calcularDuracion);
+    calcularDuracion();
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,6 +1,6 @@
 import csv
 import random
-from datetime import datetime
+from datetime import datetime, date as date_type, time as time_type
 from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
@@ -13,14 +13,16 @@ from django.urls import reverse
 
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso,
-    Recurso, Operador, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion
+    Recurso, Operador, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
+    PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
-    CrearUsuarioForm, PuntoViveDigitalForm, SalaForm
+    CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
+    HabilitacionSalaForm,
 )
-from .utils import registrar_auditoria
+from .utils import registrar_auditoria, tiene_permiso
 
 
 # ── HELPERS ────────────────────────────────────────────────────────────────────
@@ -992,3 +994,514 @@ def activar_sala(request, sala_cdgo):
     estado_str = 'activada' if sala.estado == 'A' else 'desactivada'
     messages.success(request, f'Sala "{sala.nombre}" {estado_str} correctamente.')
     return redirect('modulo_puntos:lista_salas')
+
+
+# ── MÓDULO PERMISOS ────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def lista_permisos_roles(request):
+    """Matriz de permisos por rol. Superusuario: todos los roles. Admin TIC: solo admin_pvd y operador."""
+    es_superusuario = request.user.is_superuser
+    es_admin_tic = not es_superusuario and usuario_es_admin_tic(request.user)
+
+    if not (es_superusuario or es_admin_tic):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('modulo_puntos:panel_control')
+
+    if es_superusuario:
+        roles = [('admin_tic', 'Administrador TIC'), ('admin_pvd', 'Administrador PVD'), ('operador', 'Operador')]
+        usuarios_con_permisos = User.objects.filter(
+            groups__name__in=['Administrador TIC', 'Administrador PVD']
+        ).distinct().order_by('username')
+    else:
+        roles = [('admin_pvd', 'Administrador PVD'), ('operador', 'Operador')]
+        usuarios_con_permisos = User.objects.filter(
+            Q(groups__name='Administrador PVD') | Q(pvd_profile__rol='operador')
+        ).distinct().order_by('username')
+
+    permisos = PermisoDefinicion.objects.filter(activo=True).order_by('categoria', 'nombre')
+
+    if request.method == 'POST':
+        for permiso in PermisoDefinicion.objects.filter(activo=True):
+            for rol_codigo, _ in roles:
+                checkbox_name = f'perm_{permiso.pk}_{rol_codigo}'
+                tiene = checkbox_name in request.POST
+                if tiene:
+                    PermisoRol.objects.get_or_create(
+                        rol=rol_codigo,
+                        permiso=permiso,
+                        defaults={'otorgado_por': request.user},
+                    )
+                else:
+                    PermisoRol.objects.filter(rol=rol_codigo, permiso=permiso).delete()
+
+        actor = 'superusuario' if es_superusuario else 'admin_tic'
+        registrar_auditoria(
+            request, 'UPDATE', 'PermisoRol', None,
+            f'Matriz de permisos por rol actualizada por {actor}.'
+        )
+        messages.success(request, 'Permisos de roles actualizados correctamente.')
+        return redirect('modulo_puntos:lista_permisos_roles')
+
+    asignaciones = set(
+        PermisoRol.objects.values_list('permiso_id', 'rol')
+    )
+
+    categorias = {}
+    for permiso in permisos:
+        cat = permiso.categoria
+        if cat not in categorias:
+            categorias[cat] = []
+        celdas = []
+        for rol_codigo, _ in roles:
+            marcado = (permiso.pk, rol_codigo) in asignaciones
+            celdas.append((f'perm_{permiso.pk}_{rol_codigo}', marcado))
+        categorias[cat].append({'permiso': permiso, 'celdas': celdas})
+
+    return render(request, 'modulo_puntos/permisos/lista_roles.html', {
+        'categorias': categorias,
+        'roles': roles,
+        'usuarios_con_permisos': usuarios_con_permisos,
+        'es_superusuario': es_superusuario,
+    })
+
+
+@login_required(login_url='/login/')
+@user_passes_test(lambda u: u.is_superuser)
+def crear_permiso(request):
+    """Crear nueva definición de permiso. Solo superusuario."""
+    form = PermisoDefinicionForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            permiso = form.save()
+            registrar_auditoria(
+                request, 'CREATE', 'PermisoDefinicion', permiso.pk,
+                f'Permiso creado: [{permiso.categoria}] {permiso.nombre} ({permiso.codigo})'
+            )
+            messages.success(request, f'Permiso "{permiso.nombre}" creado correctamente.')
+            return redirect('modulo_puntos:lista_permisos_roles')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/permisos/form_permiso.html', {
+        'form': form,
+        'titulo': 'Crear Permiso',
+        'accion': 'crear',
+    })
+
+
+@login_required(login_url='/login/')
+@user_passes_test(lambda u: u.is_superuser)
+def editar_permiso(request, permiso_id):
+    """Editar definición de permiso existente. Solo superusuario."""
+    permiso = get_object_or_404(PermisoDefinicion, pk=permiso_id)
+    form = PermisoDefinicionForm(request.POST or None, instance=permiso)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            registrar_auditoria(
+                request, 'UPDATE', 'PermisoDefinicion', permiso.pk,
+                f'Permiso editado: [{permiso.categoria}] {permiso.nombre} ({permiso.codigo})'
+            )
+            messages.success(request, f'Permiso "{permiso.nombre}" actualizado correctamente.')
+            return redirect('modulo_puntos:lista_permisos_roles')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/permisos/form_permiso.html', {
+        'form': form,
+        'titulo': f'Editar Permiso: {permiso.nombre}',
+        'accion': 'editar',
+        'permiso': permiso,
+    })
+
+
+@login_required(login_url='/login/')
+def permisos_usuario(request, user_id):
+    """Overrides individuales por usuario. Superusuario: cualquier usuario. Admin TIC: solo admin_pvd y operador."""
+    es_superusuario = request.user.is_superuser
+    es_admin_tic = not es_superusuario and usuario_es_admin_tic(request.user)
+
+    if not (es_superusuario or es_admin_tic):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('modulo_puntos:panel_control')
+
+    usuario_objetivo = get_object_or_404(User, pk=user_id)
+
+    grupos = list(usuario_objetivo.groups.values_list('name', flat=True))
+    if 'Administrador TIC' in grupos:
+        rol_usuario = 'admin_tic'
+    elif 'Administrador PVD' in grupos:
+        rol_usuario = 'admin_pvd'
+    else:
+        rol_usuario = 'operador'
+
+    if es_admin_tic and rol_usuario == 'admin_tic':
+        messages.error(request, 'No tienes permisos para gestionar los permisos de un Administrador TIC.')
+        return redirect('modulo_puntos:lista_permisos_roles')
+
+    if es_admin_tic:
+        permisos_pvd_operador_ids = PermisoRol.objects.filter(
+            rol__in=['admin_pvd', 'operador']
+        ).values_list('permiso_id', flat=True)
+        permisos = PermisoDefinicion.objects.filter(
+            activo=True, pk__in=permisos_pvd_operador_ids
+        ).order_by('categoria', 'nombre')
+    else:
+        permisos = PermisoDefinicion.objects.filter(activo=True).order_by('categoria', 'nombre')
+
+    permisos_rol = set(
+        PermisoRol.objects.filter(rol=rol_usuario).values_list('permiso_id', flat=True)
+    )
+    overrides_existentes = {
+        pu.permiso_id: pu for pu in PermisoUsuario.objects.filter(usuario=usuario_objetivo)
+    }
+
+    if request.method == 'POST':
+        for permiso in permisos:
+            checkbox_name = f'perm_{permiso.pk}'
+            marcado = checkbox_name in request.POST
+            override_existente = overrides_existentes.get(permiso.pk)
+            hereda_del_rol = permiso.pk in permisos_rol
+
+            if marcado == hereda_del_rol and override_existente:
+                override_existente.delete()
+            elif marcado != hereda_del_rol:
+                PermisoUsuario.objects.update_or_create(
+                    usuario=usuario_objetivo,
+                    permiso=permiso,
+                    defaults={'concedido': marcado, 'otorgado_por': request.user},
+                )
+            elif marcado == hereda_del_rol and not override_existente:
+                pass
+
+        registrar_auditoria(
+            request, 'UPDATE', 'PermisoUsuario', usuario_objetivo.pk,
+            f'Permisos individuales actualizados para usuario: {usuario_objetivo.username}'
+        )
+        messages.success(request, f'Permisos de {usuario_objetivo.username} actualizados.')
+        return redirect('modulo_puntos:permisos_usuario', user_id=user_id)
+
+    categorias = {}
+    for permiso in permisos:
+        cat = permiso.categoria
+        if cat not in categorias:
+            categorias[cat] = []
+        override = overrides_existentes.get(permiso.pk)
+        if override is not None:
+            activo = override.concedido
+            es_override = True
+        else:
+            activo = permiso.pk in permisos_rol
+            es_override = False
+        categorias[cat].append({
+            'permiso': permiso,
+            'activo': activo,
+            'es_override': es_override,
+            'hereda_rol': permiso.pk in permisos_rol,
+        })
+
+    return render(request, 'modulo_puntos/permisos/usuario_permisos.html', {
+        'usuario_objetivo': usuario_objetivo,
+        'categorias': categorias,
+        'rol_usuario': rol_usuario,
+        'es_superusuario': es_superusuario,
+    })
+
+
+@login_required(login_url='/login/')
+def vista_permisos_ofitic(request):
+    """Permisos que Ofitic puede gestionar para usuarios admin_pvd."""
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('modulo_puntos:panel_control')
+
+    permisos_delegables = PermisoDefinicion.objects.filter(
+        activo=True, delegable_por_ofitic=True
+    ).order_by('categoria', 'nombre')
+
+    usuarios_pvd = User.objects.filter(
+        groups__name='Administrador PVD'
+    ).select_related('pvd_profile').distinct()
+
+    usuario_seleccionado = None
+    user_id = request.GET.get('usuario_id') or request.POST.get('usuario_id')
+    if user_id:
+        usuario_seleccionado = get_object_or_404(User, pk=user_id, groups__name='Administrador PVD')
+
+    overrides_existentes = {}
+    permisos_rol_pvd = set(
+        PermisoRol.objects.filter(
+            rol='admin_pvd',
+            permiso__in=permisos_delegables
+        ).values_list('permiso_id', flat=True)
+    )
+
+    if usuario_seleccionado:
+        overrides_existentes = {
+            pu.permiso_id: pu
+            for pu in PermisoUsuario.objects.filter(usuario=usuario_seleccionado, permiso__in=permisos_delegables)
+        }
+
+    if request.method == 'POST' and usuario_seleccionado:
+        for permiso in permisos_delegables:
+            checkbox_name = f'perm_{permiso.pk}'
+            marcado = checkbox_name in request.POST
+            override_existente = overrides_existentes.get(permiso.pk)
+            hereda_del_rol = permiso.pk in permisos_rol_pvd
+
+            if marcado == hereda_del_rol and override_existente:
+                override_existente.delete()
+            elif marcado != hereda_del_rol:
+                PermisoUsuario.objects.update_or_create(
+                    usuario=usuario_seleccionado,
+                    permiso=permiso,
+                    defaults={'concedido': marcado, 'otorgado_por': request.user},
+                )
+
+        registrar_auditoria(
+            request, 'UPDATE', 'PermisoUsuario', usuario_seleccionado.pk,
+            f'Ofitic {request.user.username} actualizó permisos de {usuario_seleccionado.username}'
+        )
+        messages.success(request, f'Permisos de {usuario_seleccionado.username} actualizados.')
+        return redirect(f"{request.path}?usuario_id={usuario_seleccionado.pk}")
+
+    categorias = {}
+    if usuario_seleccionado:
+        for permiso in permisos_delegables:
+            cat = permiso.categoria
+            if cat not in categorias:
+                categorias[cat] = []
+            override = overrides_existentes.get(permiso.pk)
+            if override is not None:
+                activo = override.concedido
+                es_override = True
+            else:
+                activo = permiso.pk in permisos_rol_pvd
+                es_override = False
+            categorias[cat].append({
+                'permiso': permiso,
+                'activo': activo,
+                'es_override': es_override,
+            })
+
+    return render(request, 'modulo_puntos/permisos/ofitic_permisos.html', {
+        'usuarios_pvd': usuarios_pvd,
+        'usuario_seleccionado': usuario_seleccionado,
+        'categorias': categorias,
+        'user_id': user_id,
+    })
+
+
+# ── HABILITACIÓN DE SALAS ──────────────────────────────────────────────────────
+
+def _actualizar_estados_habilitaciones(qs):
+    """Actualiza automáticamente el estado de habilitaciones según la hora actual."""
+    ahora = datetime.now()
+    hoy = ahora.date()
+    hora_actual = ahora.time()
+
+    for hab in qs:
+        if hab.estado in ('X', 'F'):
+            continue
+        if hab.fecha < hoy:
+            if hab.estado != 'F':
+                HabilitacionSala.objects.filter(pk=hab.pk).update(estado='F')
+                hab.estado = 'F'
+        elif hab.fecha == hoy:
+            if hab.hora_inicio <= hora_actual <= hab.hora_fin and hab.estado not in ('E',):
+                HabilitacionSala.objects.filter(pk=hab.pk).update(estado='E')
+                hab.estado = 'E'
+            elif hora_actual > hab.hora_fin and hab.estado != 'F':
+                HabilitacionSala.objects.filter(pk=hab.pk).update(estado='F')
+                hab.estado = 'F'
+
+
+@login_required(login_url='/login/')
+def lista_habilitaciones(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    fecha_filtro = request.GET.get('fecha', '')
+    sala_filtro = request.GET.get('sala_id', '')
+    estado_filtro = request.GET.get('estado', '')
+
+    if pvd_id:
+        salas_pvd = Sala.objects.filter(punto_vive_digital_id=pvd_id)
+        qs = HabilitacionSala.objects.filter(sala__punto_vive_digital_id=pvd_id)
+        pvd = PuntoViveDigital.objects.filter(pk=pvd_id).first()
+    else:
+        salas_pvd = Sala.objects.all().select_related('punto_vive_digital')
+        qs = HabilitacionSala.objects.all()
+        pvd = None
+
+    qs = qs.select_related('sala', 'sala__punto_vive_digital', 'registrado_por')
+
+    if fecha_filtro:
+        try:
+            qs = qs.filter(fecha=fecha_filtro)
+        except Exception:
+            pass
+    if sala_filtro:
+        qs = qs.filter(sala_id=sala_filtro)
+    if estado_filtro:
+        qs = qs.filter(estado=estado_filtro)
+
+    _actualizar_estados_habilitaciones(list(qs))
+    qs = qs.order_by('fecha', 'hora_inicio')
+
+    return render(request, 'modulo_puntos/habilitaciones/lista_habilitaciones.html', {
+        'habilitaciones': qs,
+        'salas_pvd': salas_pvd,
+        'pvd': pvd,
+        'fecha_filtro': fecha_filtro,
+        'sala_filtro': sala_filtro,
+        'estado_filtro': estado_filtro,
+        'estados': HabilitacionSala.ESTADO_CHOICES,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_habilitacion(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    sala_inicial = request.GET.get('sala_id')
+    fecha_inicial = request.GET.get('fecha')
+
+    initial = {}
+    if sala_inicial:
+        initial['sala'] = sala_inicial
+    if fecha_inicial:
+        initial['fecha'] = fecha_inicial
+
+    form = HabilitacionSalaForm(
+        request.POST or None,
+        pvd_id=pvd_id,
+        initial=initial,
+    )
+
+    if request.method == 'POST':
+        if form.is_valid():
+            hab = form.save(commit=False)
+            hab.registrado_por = request.user
+            hab.save()
+            registrar_auditoria(
+                request, 'CREATE', 'HabilitacionSala', hab.pk,
+                f'Habilitación creada: {hab.sala.nombre} – {hab.fecha}'
+            )
+            messages.success(request, f'Habilitación para "{hab.sala.nombre}" el {hab.fecha} registrada correctamente.')
+            return redirect('modulo_puntos:lista_habilitaciones')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/habilitaciones/form_habilitacion.html', {
+        'form': form,
+        'titulo': 'Nueva Habilitación de Sala',
+        'accion': 'crear',
+    })
+
+
+@login_required(login_url='/login/')
+def editar_habilitacion(request, hab_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    hab = get_object_or_404(HabilitacionSala, pk=hab_id)
+
+    if hab.estado in ('F', 'X'):
+        messages.warning(request, 'No se puede editar una habilitación finalizada o cancelada.')
+        return redirect('modulo_puntos:lista_habilitaciones')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    form = HabilitacionSalaForm(request.POST or None, instance=hab, pvd_id=pvd_id)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            hab = form.save()
+            registrar_auditoria(
+                request, 'UPDATE', 'HabilitacionSala', hab.pk,
+                f'Habilitación editada: {hab.sala.nombre} – {hab.fecha}'
+            )
+            messages.success(request, f'Habilitación actualizada correctamente.')
+            return redirect('modulo_puntos:lista_habilitaciones')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/habilitaciones/form_habilitacion.html', {
+        'form': form,
+        'titulo': f'Editar Habilitación – {hab.sala.nombre}',
+        'accion': 'editar',
+        'hab': hab,
+    })
+
+
+@login_required(login_url='/login/')
+def cancelar_habilitacion(request, hab_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    hab = get_object_or_404(HabilitacionSala, pk=hab_id)
+
+    if hab.estado in ('F', 'X'):
+        messages.warning(request, 'Esta habilitación ya está finalizada o cancelada.')
+        return redirect('modulo_puntos:lista_habilitaciones')
+
+    hab.estado = 'X'
+    hab.save()
+    registrar_auditoria(
+        request, 'UPDATE', 'HabilitacionSala', hab.pk,
+        f'Habilitación cancelada: {hab.sala.nombre} – {hab.fecha}'
+    )
+    messages.success(request, f'Habilitación de "{hab.sala.nombre}" cancelada.')
+    return redirect('modulo_puntos:lista_habilitaciones')
+
+
+@login_required(login_url='/login/')
+def agenda_sala(request, sala_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    sala = get_object_or_404(Sala, pk=sala_id)
+
+    fecha_str = request.GET.get('fecha', '')
+    try:
+        from datetime import date as dt_date, timedelta
+        if fecha_str:
+            fecha_base = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        else:
+            fecha_base = dt_date.today()
+    except ValueError:
+        from datetime import date as dt_date, timedelta
+        fecha_base = dt_date.today()
+
+    from datetime import timedelta
+    fecha_inicio_semana = fecha_base - timedelta(days=fecha_base.weekday())
+    dias_semana = [fecha_inicio_semana + timedelta(days=i) for i in range(7)]
+
+    habilitaciones_semana = HabilitacionSala.objects.filter(
+        sala=sala,
+        fecha__range=[dias_semana[0], dias_semana[-1]],
+    ).order_by('fecha', 'hora_inicio')
+
+    _actualizar_estados_habilitaciones(list(habilitaciones_semana))
+
+    agenda = {d: [] for d in dias_semana}
+    for hab in habilitaciones_semana:
+        if hab.fecha in agenda:
+            agenda[hab.fecha].append(hab)
+
+    semana_anterior = (fecha_inicio_semana - timedelta(days=7)).strftime('%Y-%m-%d')
+    semana_siguiente = (fecha_inicio_semana + timedelta(days=7)).strftime('%Y-%m-%d')
+
+    return render(request, 'modulo_puntos/habilitaciones/agenda_sala.html', {
+        'sala': sala,
+        'dias_semana': dias_semana,
+        'agenda': agenda,
+        'semana_anterior': semana_anterior,
+        'semana_siguiente': semana_siguiente,
+        'fecha_base': fecha_base,
+    })

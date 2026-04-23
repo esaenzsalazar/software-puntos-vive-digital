@@ -1,0 +1,119 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}{{ curso.nombre }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Formación › Cursos</span>
+        <h1 class="page-title">{{ curso.nombre }}</h1>
+        <p class="muted">{{ curso.punto_vive_digital.nombre }} · {{ curso.get_modalidad_display }}</p>
+        <div class="page-hero__actions" style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm">✏️ Editar</a>
+            <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm btn-primary">➕ Nueva Sesión</a>
+            <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">👤 Inscribir Ciudadano</a>
+            <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm btn-secondary">← Volver</a>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px;">
+        <div class="stat-card">
+            <div class="stat-card__value">{{ curso.total_inscritos }}</div>
+            <div class="stat-card__label">Inscritos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value">{{ sesiones.count }}</div>
+            <div class="stat-card__label">Sesiones</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value">{{ curso.fecha_inicio|date:"d/m/Y" }}</div>
+            <div class="stat-card__label">Inicio</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value">
+                {% if curso.estado == 'AC' %}<span class="badge badge--success">En curso</span>
+                {% elif curso.estado == 'PL' %}<span class="badge badge--warning">Planificado</span>
+                {% elif curso.estado == 'FI' %}<span class="badge" style="background:#e2e8f0;color:#475569;">Finalizado</span>
+                {% else %}<span class="badge badge--danger">Cancelado</span>{% endif %}
+            </div>
+            <div class="stat-card__label">Estado</div>
+        </div>
+    </div>
+
+    {% if curso.descripcion %}
+    <p style="color:#374151; margin-bottom:24px;">{{ curso.descripcion }}</p>
+    {% endif %}
+
+    <!-- SESIONES -->
+    <h2 style="font-size:18px; font-weight:600; margin-bottom:12px; border-bottom:1px solid var(--p-border); padding-bottom:8px;">
+        📅 Sesiones ({{ sesiones.count }})
+    </h2>
+
+    {% if sesiones %}
+    <div class="table-responsive" style="margin-bottom:32px;">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Tema</th>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th class="text-center">Asistencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ses in sesiones %}
+                <tr>
+                    <td>{{ ses.numero_sesion }}</td>
+                    <td>{{ ses.tema }}</td>
+                    <td>{{ ses.fecha|date:"d/m/Y" }}</td>
+                    <td>{{ ses.hora_inicio|time:"H:i" }} – {{ ses.hora_fin|time:"H:i" }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'modulo_puntos:marcar_asistencia' ses.id %}" class="btn btn--sm">📋 Registrar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="margin-bottom:24px;">Sin sesiones registradas aún.</p>
+    {% endif %}
+
+    <!-- INSCRITOS -->
+    <h2 style="font-size:18px; font-weight:600; margin-bottom:12px; border-bottom:1px solid var(--p-border); padding-bottom:8px;">
+        👥 Inscritos ({{ inscripciones.count }})
+    </h2>
+
+    {% if inscripciones %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Ciudadano</th>
+                    <th>Documento</th>
+                    <th>Estado</th>
+                    <th>Fecha Inscripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ins in inscripciones %}
+                <tr>
+                    <td>{{ ins.ciudadano.get_nombre_completo }}</td>
+                    <td>{{ ins.ciudadano.numero_documento }}</td>
+                    <td>
+                        {% if ins.estado == 'I' %}<span class="badge badge--success">Inscrito</span>
+                        {% elif ins.estado == 'C' %}<span class="badge" style="background:#e2e8f0;color:#475569;">Completado</span>
+                        {% else %}<span class="badge badge--danger">Retirado</span>{% endif %}
+                    </td>
+                    <td>{{ ins.fecha_inscripcion|date:"d/m/Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">Sin inscritos aún. <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}">Inscribir ciudadano</a></p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -113,6 +113,31 @@ urlpatterns = [
     path('permisos/ofitic/', views.vista_permisos_ofitic, name='permisos_ofitic'),
 
     # ==========================================================================
+    # CURSOS / TALLERES
+    # ==========================================================================
+    path('cursos/', views.lista_cursos, name='lista_cursos'),
+    path('cursos/crear/', views.crear_curso, name='crear_curso'),
+    path('cursos/<int:curso_id>/', views.detalle_curso, name='detalle_curso'),
+    path('cursos/<int:curso_id>/editar/', views.editar_curso, name='editar_curso'),
+    path('cursos/<int:curso_id>/sesion/', views.crear_sesion_curso, name='crear_sesion_curso'),
+    path('cursos/<int:curso_id>/inscribir/', views.inscribir_ciudadano, name='inscribir_ciudadano'),
+    path('cursos/sesion/<int:sesion_id>/asistencia/', views.marcar_asistencia, name='marcar_asistencia'),
+
+    # ==========================================================================
+    # MANTENIMIENTO DE EQUIPOS
+    # ==========================================================================
+    path('mantenimientos/', views.lista_mantenimientos, name='lista_mantenimientos'),
+    path('mantenimientos/crear/', views.crear_mantenimiento, name='crear_mantenimiento'),
+    path('mantenimientos/<int:mant_id>/editar/', views.editar_mantenimiento, name='editar_mantenimiento'),
+
+    # ==========================================================================
+    # APERTURA / CIERRE
+    # ==========================================================================
+    path('aperturas/', views.lista_aperturas, name='lista_aperturas'),
+    path('aperturas/registrar/', views.registrar_apertura, name='registrar_apertura'),
+    path('aperturas/<int:apertura_id>/editar/', views.editar_apertura, name='editar_apertura'),
+
+    # ==========================================================================
     # AYUDA Y SOPORTE
     # ==========================================================================
     path('ayuda/', views.ayuda_sistema, name='ayuda'),

@@ -163,6 +163,32 @@
             </div>
         </div>
 
+        <div class="menu-card">
+            <h3>📚 Cursos y Talleres</h3>
+            <p>Gestionar cursos de formación en todos los PVDs.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_cursos' %}">Ver Cursos</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_curso' %}">Nuevo Curso</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🔧 Mantenimientos</h3>
+            <p>Registros de mantenimiento de equipos de los PVDs.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_mantenimientos' %}">Ver Registros</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_mantenimiento' %}">Registrar</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>⏱️ Apertura / Cierre</h3>
+            <p>Historial de horarios de operación de los puntos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_aperturas' %}">Ver Registros</a>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -212,9 +238,33 @@
 
         <div class="menu-card">
             <h3>🔐 Permisos</h3>
-            <p>Gestionar permisos de usuarios Admin PVD y Operadores.</p>
+            <p>Gestionar permisos de usuarios Admin TIC y Admin PVD.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>📚 Cursos y Talleres</h3>
+            <p>Supervisar cursos de formación en todos los PVDs.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_cursos' %}">Ver Cursos</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🔧 Mantenimientos</h3>
+            <p>Consultar registros de mantenimiento de equipos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_mantenimientos' %}">Ver Registros</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>⏱️ Apertura / Cierre</h3>
+            <p>Consultar horarios de operación de los puntos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_aperturas' %}">Ver Registros</a>
             </div>
         </div>
     </div>
@@ -265,52 +315,31 @@
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
             </div>
         </div>
-    </div>
-</div>
 
-{# ============================================================================ #}
-{# PANEL OPERADOR #}
-{# ============================================================================ #}
-{% elif es_operador_only %}
-<div class="content-section">
-    <div class="section-header">
-        <h3 class="section-title">🧑‍💼 Funciones de Operador{% if pvd_activo %} — {{ pvd_activo.nombre }}{% endif %}</h3>
-    </div>
-
-    <div class="grid" style="margin-top: 24px;">
         <div class="menu-card">
-            <h3>👥 Ciudadanos</h3>
-            <p>Consultar, registrar y editar ciudadanos del PVD.</p>
+            <h3>📚 Cursos y Talleres</h3>
+            <p>Gestionar cursos de formación, inscripciones y asistencia.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
-                <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
-            </div>
-        </div>
-
-        <div class="menu-card menu-card--featured">
-            <h3>🎯 Atención al Ciudadano</h3>
-            <p>Registrar atenciones y servicios prestados.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_atencion' %}">Nueva Atención</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_cursos' %}">Ver Cursos</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_curso' %}">Nuevo Curso</a>
             </div>
         </div>
 
         <div class="menu-card">
-            <h3>📦 Inventario</h3>
-            <p>Registrar recursos y préstamos de equipos.</p>
+            <h3>🔧 Mantenimiento</h3>
+            <p>Registrar mantenimientos preventivos y correctivos de equipos.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_mantenimientos' %}">Ver Registros</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_mantenimiento' %}">Registrar</a>
             </div>
         </div>
 
         <div class="menu-card">
-            <h3>🏛️ Infraestructura</h3>
-            <p>Consultar salas y agenda de habilitaciones.</p>
+            <h3>⏱️ Apertura / Cierre</h3>
+            <p>Registrar el horario diario de apertura y cierre del punto.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_aperturas' %}">Ver Registros</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_apertura' %}">Registrar Hoy</a>
             </div>
         </div>
     </div>

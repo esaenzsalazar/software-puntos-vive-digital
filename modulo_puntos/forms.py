@@ -7,7 +7,11 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from .models import Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso, Operador, PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala
+from .models import (
+    Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
+    PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
+    Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo, RegistroApertura,
+)
 
 # ==============================================================================
 # LISTAS DE OPCIONES GLOBALES
@@ -48,17 +52,31 @@ OCUPACION_CHOICES = [
     ('Hogar', 'Labores del Hogar'), ('Pensionado', 'Pensionado'), ('Otro', 'Otro'),
 ]
 
+NOMBRE_SERVICIO_CHOICES = [
+    ('', '--- Seleccione un servicio ---'),
+    ('Acceso a internet', 'Acceso a internet'),
+    ('Acceso a sala de capacitaciones y cómputo', 'Acceso a sala de capacitaciones y cómputo'),
+    ('Impresiones', 'Impresiones'),
+    ('Cursos de aprendizaje', 'Cursos de aprendizaje'),
+    ('Trámites en Línea / Gobierno Digital', 'Trámites en Línea / Gobierno Digital'),
+]
+
 TIPO_SERVICIO_CHOICES = [
-    ('Navegación Libre', 'Navegación Libre (Internet)'), ('Capacitación', 'Capacitación / Curso'),
-    ('Trámite en Línea', 'Trámite en Línea (Gobierno/Entidades)'), ('Entretenimiento', 'Entretenimiento / Juegos'),
-    ('Impresión/Escáner', 'Servicio de Impresión o Escáner'), ('Otro', 'Otro'),
+    ('', '--- Seleccione una categoría ---'),
+    ('Acceso a internet', 'Acceso a internet'),
+    ('Capacitación / Cómputo', 'Capacitación / Cómputo'),
+    ('Impresión', 'Impresión'),
+    ('Formación', 'Formación'),
 ]
 
 TIPO_RECURSO_CHOICES = [
-    ('Computador de Mesa', 'Computador de Mesa'), ('Portátil', 'Computador Portátil'),
-    ('Tablet', 'Tablet'), ('Diadema', 'Diadema / Audífonos'),
-    ('Proyector', 'Video Beam / Proyector'), ('Impresora', 'Impresora / Escáner'),
-    ('Mobiliario', 'Silla / Mesa'), ('Otro', 'Otro'),
+    ('', '— Seleccione un tipo —'),
+    ('Portátil', 'Portátil'),
+    ('Video Beam', 'Video Beam'),
+    ('Televisor', 'Televisor'),
+    ('Impresora Láser', 'Impresora Láser'),
+    ('Impresora de Inyección', 'Impresora de Inyección'),
+    ('Computador de Mesa', 'Computador de Mesa'),
 ]
 
 # ==============================================================================
@@ -232,18 +250,16 @@ class CiudadanoForm(forms.ModelForm):
 class AtencionForm(forms.ModelForm):
     """
     Formulario para registrar atenciones a ciudadanos.
-    Incluye validación de horarios y auto-asignación de operador.
     """
     class Meta:
         model = Atencion
         fields = [
-            'ciudadano', 'operador', 'prestamo',
+            'ciudadano', 'prestamo',
             'fecha', 'hora_inicio', 'hora_fin',
             'estado', 'observaciones'
         ]
         labels = {
             'ciudadano': 'Ciudadano Atendido',
-            'operador': 'Operador a Cargo',
             'prestamo': 'Préstamo Vinculado (Opcional)',
             'fecha': 'Fecha de Atención',
             'hora_inicio': 'Hora de Inicio',
@@ -253,7 +269,6 @@ class AtencionForm(forms.ModelForm):
         }
         widgets = {
             'ciudadano': forms.Select(attrs={'class': 'form-control'}),
-            'operador': forms.Select(attrs={'class': 'form-control'}),
             'prestamo': forms.Select(attrs={'class': 'form-control'}),
             'fecha': forms.DateInput(
                 format='%Y-%m-%d',
@@ -281,26 +296,13 @@ class AtencionForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Inicializar campos con valores por defecto y bloquear operador si es necesario."""
         super().__init__(*args, **kwargs)
-        # Hacer campos opcionales
         self.fields['ciudadano'].required = False
-        self.fields['operador'].required = False
         self.fields['prestamo'].required = False
-
-        # Etiquetas vacías para selects
         self.fields['ciudadano'].empty_label = '--- Seleccione un ciudadano ---'
-        self.fields['operador'].empty_label = '--- Seleccione un operador ---'
         self.fields['prestamo'].empty_label = '--- Sin préstamo vinculado ---'
-
-        # Campo hora final opcional
         self.fields['hora_fin'].required = False
         self.fields['estado'].initial = 'P'
-
-        # BLOQUEAR OPERADOR SI SE ASIGNÓ AUTOMÁTICAMENTE
-        if 'initial' in kwargs and 'operador' in kwargs['initial']:
-            self.fields['operador'].widget.attrs['readonly'] = True
-            self.fields['operador'].widget.attrs['style'] = 'pointer-events: none; background-color: #e2e8f0;'
 
     def clean(self):
         """Validar que la hora final no sea menor que la hora inicial."""
@@ -379,7 +381,10 @@ class ServicioForm(forms.ModelForm):
         }
         widgets = {
             'atencion': forms.Select(attrs={'class': 'form-control'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'nombre': forms.Select(
+                choices=NOMBRE_SERVICIO_CHOICES,
+                attrs={'class': 'form-control'}
+            ),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'tipo': forms.Select(
                 choices=TIPO_SERVICIO_CHOICES,
@@ -931,5 +936,142 @@ class HabilitacionSalaForm(forms.ModelForm):
                     f'{c.hora_inicio.strftime("%H:%M")} a {c.hora_fin.strftime("%H:%M")} '
                     f'en esa fecha ({c.get_tipo_uso_display()} — {c.solicitante}).'
                 )
+
+
+# ==============================================================================
+# CURSOS / TALLERES
+# ==============================================================================
+
+class CursoForm(forms.ModelForm):
+    class Meta:
+        model = Curso
+        fields = ['nombre', 'descripcion', 'modalidad', 'poblacion_objetivo',
+                  'fecha_inicio', 'fecha_fin', 'estado']
+        labels = {
+            'nombre': 'Nombre del Curso / Taller *',
+            'descripcion': 'Descripción',
+            'modalidad': 'Modalidad *',
+            'poblacion_objetivo': 'Población Objetivo',
+            'fecha_inicio': 'Fecha de Inicio *',
+            'fecha_fin': 'Fecha de Fin (opcional)',
+            'estado': 'Estado *',
+        }
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Alfabetización Digital Básica'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción breve del curso...'}),
+            'modalidad': forms.Select(attrs={'class': 'form-control'}),
+            'poblacion_objetivo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Adultos mayores, jóvenes...'}),
+            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'estado': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        fecha_inicio = cleaned.get('fecha_inicio')
+        fecha_fin = cleaned.get('fecha_fin')
+        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+            self.add_error('fecha_fin', 'La fecha de fin no puede ser anterior a la de inicio.')
+        return cleaned
+
+
+class SesionCursoForm(forms.ModelForm):
+    class Meta:
+        model = SesionCurso
+        fields = ['numero_sesion', 'fecha', 'hora_inicio', 'hora_fin', 'tema', 'contenido']
+        labels = {
+            'numero_sesion': 'N° de Sesión *',
+            'fecha': 'Fecha *',
+            'hora_inicio': 'Hora de Inicio *',
+            'hora_fin': 'Hora de Fin *',
+            'tema': 'Tema *',
+            'contenido': 'Contenido / Descripción',
+        }
+        widgets = {
+            'numero_sesion': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'hora_inicio': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'hora_fin': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'tema': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Uso de correo electrónico'}),
+            'contenido': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        hi = cleaned.get('hora_inicio')
+        hf = cleaned.get('hora_fin')
+        if hi and hf and hf <= hi:
+            self.add_error('hora_fin', 'La hora de fin debe ser posterior a la de inicio.')
+        return cleaned
+
+
+class InscripcionCursoForm(forms.ModelForm):
+    class Meta:
+        model = InscripcionCurso
+        fields = ['ciudadano', 'estado']
+        labels = {
+            'ciudadano': 'Ciudadano *',
+            'estado': 'Estado',
+        }
+        widgets = {
+            'ciudadano': forms.Select(attrs={'class': 'form-control'}),
+            'estado': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+
+# ==============================================================================
+# MANTENIMIENTO DE EQUIPOS
+# ==============================================================================
+
+class MantenimientoEquipoForm(forms.ModelForm):
+    class Meta:
+        model = MantenimientoEquipo
+        fields = ['tipo', 'fecha', 'equipos_intervenidos', 'descripcion', 'hallazgos', 'acciones']
+        labels = {
+            'tipo': 'Tipo de Mantenimiento *',
+            'fecha': 'Fecha *',
+            'equipos_intervenidos': 'Equipos Intervenidos *',
+            'descripcion': 'Descripción del Trabajo Realizado *',
+            'hallazgos': 'Hallazgos',
+            'acciones': 'Acciones / Recomendaciones',
+        }
+        widgets = {
+            'tipo': forms.Select(attrs={'class': 'form-control'}),
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'equipos_intervenidos': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Ej. 5 computadores de mesa, 1 impresora...'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe el trabajo realizado...'}),
+            'hallazgos': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Problemas encontrados...'}),
+            'acciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Acciones tomadas o recomendaciones...'}),
+        }
+
+
+# ==============================================================================
+# REGISTRO DE APERTURA / CIERRE
+# ==============================================================================
+
+class RegistroAperturaForm(forms.ModelForm):
+    class Meta:
+        model = RegistroApertura
+        fields = ['fecha', 'hora_apertura', 'hora_cierre', 'observaciones']
+        labels = {
+            'fecha': 'Fecha *',
+            'hora_apertura': 'Hora de Apertura *',
+            'hora_cierre': 'Hora de Cierre (opcional)',
+            'observaciones': 'Observaciones',
+        }
+        widgets = {
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'hora_apertura': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'hora_cierre': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Novedades del día, incidentes, etc.'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        ha = cleaned.get('hora_apertura')
+        hc = cleaned.get('hora_cierre')
+        if ha and hc and hc <= ha:
+            self.add_error('hora_cierre', 'La hora de cierre debe ser posterior a la de apertura.')
+        return cleaned
 
         return cleaned_data

@@ -6,21 +6,24 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, Permission, User
-from django.db.models import Q, Count, Avg
+from django.db.models import Q, Count, Avg, Max
 from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso,
-    Recurso, Operador, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
+    Recurso, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
+    Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
+    MantenimientoEquipo, RegistroApertura,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
     CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
-    HabilitacionSalaForm,
+    HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
+    MantenimientoEquipoForm, RegistroAperturaForm,
 )
 from .utils import registrar_auditoria, tiene_permiso
 
@@ -37,22 +40,13 @@ def usuario_es_admin_tic(user):
     return user.is_superuser or user.groups.filter(name='Administrador TIC').exists()
 
 
-def usuario_es_operador(user):
-    if not user.is_authenticated:
-        return False
-    return user.groups.filter(name='Operador').exists()
-
-
 def usuario_necesita_seleccionar_pvd(user):
-    """Admin PVD y Operador deben elegir un PVD antes de operar."""
+    """Admin PVD debe elegir un PVD antes de operar."""
     if not user.is_authenticated:
         return False
     if user.is_superuser or usuario_es_admin_tic(user):
         return False
-    return (
-        user.groups.filter(name='Administrador PVD').exists()
-        or user.groups.filter(name='Operador').exists()
-    )
+    return user.groups.filter(name='Administrador PVD').exists()
 
 
 def usuario_puede_usar_modulos_pvd(user):
@@ -62,7 +56,6 @@ def usuario_puede_usar_modulos_pvd(user):
         user.is_superuser
         or usuario_es_admin_tic(user)
         or user.groups.filter(name='Administrador PVD').exists()
-        or user.groups.filter(name='Operador').exists()
     )
 
 
@@ -140,19 +133,12 @@ def perfil_usuario(request):
 def panel_control(request):
     user = request.user
 
-    # Admin PVD y Operador deben seleccionar PVD antes de entrar al panel
+    # Admin PVD debe seleccionar PVD antes de entrar al panel
     if usuario_necesita_seleccionar_pvd(user):
         pvd_id_session = request.session.get('pvd_activo_id')
         if not pvd_id_session:
             messages.info(request, 'Selecciona un Punto Vive Digital para comenzar.')
             return redirect('modulo_puntos:seleccionar_pvd_view')
-
-    es_operador_only = (
-        usuario_es_operador(user)
-        and not user.groups.filter(name='Administrador PVD').exists()
-        and not usuario_es_admin_tic(user)
-        and not user.is_superuser
-    )
 
     context = {
         'total_ciudadanos': Ciudadano.objects.count(),
@@ -163,7 +149,6 @@ def panel_control(request):
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
         'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
-        'es_operador_only': es_operador_only,
         'mostrar_modulos_tic': usuario_es_admin_tic(user),
         'mostrar_modulos_pvd': usuario_puede_usar_modulos_pvd(user),
         'rol_usuario': obtener_rol_usuario(user),
@@ -330,15 +315,34 @@ def reportes(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
+    fecha_desde_str = request.GET.get('fecha_desde', '')
+    fecha_hasta_str = request.GET.get('fecha_hasta', '')
+    fecha_desde = None
+    fecha_hasta = None
+    try:
+        if fecha_desde_str:
+            fecha_desde = datetime.strptime(fecha_desde_str, '%Y-%m-%d').date()
+        if fecha_hasta_str:
+            fecha_hasta = datetime.strptime(fecha_hasta_str, '%Y-%m-%d').date()
+    except ValueError:
+        pass
+
+    atencion_qs = Atencion.objects.all()
+    servicio_qs = Servicio.objects.all()
+    if fecha_desde:
+        atencion_qs = atencion_qs.filter(fecha__gte=fecha_desde)
+        servicio_qs = servicio_qs.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        atencion_qs = atencion_qs.filter(fecha__lte=fecha_hasta)
+        servicio_qs = servicio_qs.filter(fecha__lte=fecha_hasta)
+
     total_ciudadanos = Ciudadano.objects.count()
     ciudadanos_activos = Ciudadano.objects.filter(estado='A').count()
-    total_operadores = Operador.objects.count()
-    operadores_activos = Operador.objects.filter(estado='A').count()
-    total_atenciones = Atencion.objects.count()
-    atenciones_pendientes = Atencion.objects.filter(estado='P').count()
-    atenciones_finalizadas = Atencion.objects.filter(estado='F').count()
-    atenciones_canceladas = Atencion.objects.filter(estado='C').count()
-    total_servicios = Servicio.objects.count()
+    total_atenciones = atencion_qs.count()
+    atenciones_pendientes = atencion_qs.filter(estado='P').count()
+    atenciones_finalizadas = atencion_qs.filter(estado='F').count()
+    atenciones_canceladas = atencion_qs.filter(estado='C').count()
+    total_servicios = servicio_qs.count()
     total_prestamos = PrestamoRecurso.objects.count()
     prestamos_activos = PrestamoRecurso.objects.filter(fecha_devolucion__isnull=True).count()
 
@@ -346,18 +350,19 @@ def reportes(request):
         promedio=Avg('calificacion')
     )['promedio']
 
-    servicios_por_tipo = Servicio.objects.values('tipo').annotate(
+    servicios_por_tipo = servicio_qs.values('tipo').annotate(
         total=Count('id')
     ).order_by('-total', 'tipo')
 
-    atenciones_por_operador = Atencion.objects.values(
-        'operador__primer_nombre',
-        'operador__primer_apellido'
+    atenciones_por_admin = atencion_qs.values(
+        'operador__first_name',
+        'operador__last_name',
+        'operador__username'
     ).annotate(
         total=Count('id')
     ).order_by('-total')
 
-    atenciones_recientes = Atencion.objects.select_related(
+    atenciones_recientes = atencion_qs.select_related(
         'ciudadano', 'operador'
     ).order_by('-fecha', '-hora_inicio')[:10]
 
@@ -396,7 +401,7 @@ def reportes(request):
     ciudadanos_sin_discapacidad = Ciudadano.objects.filter(tiene_discapacidad=False).count()
 
     atenciones_por_mes = list(
-        Atencion.objects.annotate(mes=TruncMonth('fecha'))
+        atencion_qs.annotate(mes=TruncMonth('fecha'))
         .values('mes')
         .annotate(total=Count('id'))
         .order_by('-mes')[:12]
@@ -405,8 +410,6 @@ def reportes(request):
     return render(request, 'modulo_puntos/reportes.html', {
         'total_ciudadanos': total_ciudadanos,
         'ciudadanos_activos': ciudadanos_activos,
-        'total_operadores': total_operadores,
-        'operadores_activos': operadores_activos,
         'total_atenciones': total_atenciones,
         'atenciones_pendientes': atenciones_pendientes,
         'atenciones_finalizadas': atenciones_finalizadas,
@@ -416,7 +419,7 @@ def reportes(request):
         'prestamos_activos': prestamos_activos,
         'satisfaccion_promedio': satisfaccion_promedio,
         'servicios_por_tipo': servicios_por_tipo,
-        'atenciones_por_operador': atenciones_por_operador,
+        'atenciones_por_admin': atenciones_por_admin,
         'atenciones_recientes': atenciones_recientes,
         'ciudadanos_por_genero': ciudadanos_por_genero,
         'ciudadanos_por_etnia': ciudadanos_por_etnia,
@@ -426,6 +429,8 @@ def reportes(request):
         'ciudadanos_con_discapacidad': ciudadanos_con_discapacidad,
         'ciudadanos_sin_discapacidad': ciudadanos_sin_discapacidad,
         'atenciones_por_mes': atenciones_por_mes,
+        'fecha_desde': fecha_desde_str,
+        'fecha_hasta': fecha_hasta_str,
     })
 
 
@@ -437,22 +442,14 @@ def registrar_atencion(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    operador_actual = None
-    if request.user.first_name:
-        operador_actual = Operador.objects.filter(
-            primer_nombre__icontains=request.user.first_name
-        ).first()
-
-    datos_iniciales = {}
-    if operador_actual:
-        datos_iniciales['operador'] = operador_actual.pk
-
-    form = AtencionForm(request.POST or None, initial=datos_iniciales)
+    form = AtencionForm(request.POST or None)
 
     if request.method == 'POST':
         if form.is_valid():
             try:
-                form.save()
+                atencion = form.save(commit=False)
+                atencion.operador = request.user
+                atencion.save()
                 messages.success(request, 'Atención registrada correctamente en la base de datos.')
                 return redirect('modulo_puntos:panel_control')
             except Exception as e:
@@ -569,7 +566,7 @@ def exportar_atenciones_csv(request):
         'ID Atención', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado Atención',
         'Documento Ciudadano', 'Nombre Completo', 'Género', 'Etnia',
         'Discapacidad', 'Detalle Discapacidad', 'Barrio', 'Dirección', 'Vereda / Corregimiento',
-        'Operador a Cargo', 'Observaciones'
+        'Admin PVD a Cargo', 'Observaciones'
     ])
 
     atenciones = Atencion.objects.select_related('ciudadano', 'operador').order_by('-fecha', '-hora_inicio')
@@ -591,8 +588,8 @@ def exportar_atenciones_csv(request):
             doc_ciu = nom_ciu = gen_ciu = etnia_ciu = discap_ciu = desc_discap_ciu = barrio_ciu = dir_ciu = rural_ciu = 'N/A'
 
         if atencion.operador:
-            o = atencion.operador
-            operador_info = f"{o.primer_nombre or ''} {o.primer_apellido or ''}".strip()
+            u = atencion.operador
+            operador_info = u.get_full_name() or u.username
         else:
             operador_info = 'N/A'
 
@@ -761,17 +758,6 @@ def crear_admin_pvd(request):
             user = form.save()
             grupo, _ = Group.objects.get_or_create(name='Administrador PVD')
             user.groups.add(grupo)
-
-            num_doc_temp = str(random.randint(10000000, 99999999))
-            Operador.objects.create(
-                tipo_documento='CC',
-                numero_documento=num_doc_temp,
-                primer_nombre=form.cleaned_data.get('primer_nombre', ''),
-                primer_apellido=form.cleaned_data.get('primer_apellido', ''),
-                correo=form.cleaned_data.get('email', ''),
-                telefono='0000000000',
-                estado='A'
-            )
 
             messages.success(request, f'Administrador PVD "{user.get_full_name() or user.username}" creado correctamente.')
             return redirect('modulo_puntos:panel_control')
@@ -1077,7 +1063,7 @@ def eliminar_sala(request, sala_cdgo):
 
 @login_required(login_url='/login/')
 def lista_permisos_roles(request):
-    """Matriz de permisos por rol. Superusuario: todos los roles. Admin TIC: solo admin_pvd y operador."""
+    """Matriz de permisos por rol. Superusuario y Admin TIC: Admin TIC y Admin PVD."""
     es_superusuario = request.user.is_superuser
     es_admin_tic = not es_superusuario and usuario_es_admin_tic(request.user)
 
@@ -1085,16 +1071,10 @@ def lista_permisos_roles(request):
         messages.error(request, 'No tienes permisos para acceder a esta sección.')
         return redirect('modulo_puntos:panel_control')
 
-    if es_superusuario:
-        roles = [('admin_tic', 'Administrador TIC'), ('admin_pvd', 'Administrador PVD'), ('operador', 'Operador')]
-        usuarios_con_permisos = User.objects.filter(
-            groups__name__in=['Administrador TIC', 'Administrador PVD']
-        ).distinct().order_by('username')
-    else:
-        roles = [('admin_pvd', 'Administrador PVD'), ('operador', 'Operador')]
-        usuarios_con_permisos = User.objects.filter(
-            Q(groups__name='Administrador PVD') | Q(pvd_profile__rol='operador')
-        ).distinct().order_by('username')
+    roles = [('admin_tic', 'Administrador TIC'), ('admin_pvd', 'Administrador PVD')]
+    usuarios_con_permisos = User.objects.filter(
+        groups__name__in=['Administrador TIC', 'Administrador PVD']
+    ).distinct().order_by('username')
 
     permisos = PermisoDefinicion.objects.filter(activo=True).order_by('categoria', 'nombre')
 
@@ -1193,7 +1173,7 @@ def editar_permiso(request, permiso_id):
 
 @login_required(login_url='/login/')
 def permisos_usuario(request, user_id):
-    """Overrides individuales por usuario. Superusuario: cualquier usuario. Admin TIC: solo admin_pvd y operador."""
+    """Overrides individuales por usuario. Superusuario: cualquier usuario. Admin TIC: solo admin_pvd."""
     es_superusuario = request.user.is_superuser
     es_admin_tic = not es_superusuario and usuario_es_admin_tic(request.user)
 
@@ -1209,18 +1189,18 @@ def permisos_usuario(request, user_id):
     elif 'Administrador PVD' in grupos:
         rol_usuario = 'admin_pvd'
     else:
-        rol_usuario = 'operador'
+        rol_usuario = 'admin_pvd'
 
     if es_admin_tic and rol_usuario == 'admin_tic':
         messages.error(request, 'No tienes permisos para gestionar los permisos de un Administrador TIC.')
         return redirect('modulo_puntos:lista_permisos_roles')
 
     if es_admin_tic:
-        permisos_pvd_operador_ids = PermisoRol.objects.filter(
-            rol__in=['admin_pvd', 'operador']
+        permisos_pvd_ids = PermisoRol.objects.filter(
+            rol='admin_pvd'
         ).values_list('permiso_id', flat=True)
         permisos = PermisoDefinicion.objects.filter(
-            activo=True, pk__in=permisos_pvd_operador_ids
+            activo=True, pk__in=permisos_pvd_ids
         ).order_by('categoria', 'nombre')
     else:
         permisos = PermisoDefinicion.objects.filter(activo=True).order_by('categoria', 'nombre')
@@ -1581,4 +1561,406 @@ def agenda_sala(request, sala_id):
         'semana_anterior': semana_anterior,
         'semana_siguiente': semana_siguiente,
         'fecha_base': fecha_base,
+    })
+
+
+# ==============================================================================
+# CURSOS / TALLERES
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def lista_cursos(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    es_admin_tic = usuario_es_admin_tic(request.user)
+
+    if es_admin_tic:
+        qs = Curso.objects.select_related('punto_vive_digital', 'registrado_por').all()
+    elif pvd_id:
+        qs = Curso.objects.filter(punto_vive_digital_id=pvd_id).select_related('punto_vive_digital', 'registrado_por')
+    else:
+        qs = Curso.objects.none()
+
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro:
+        qs = qs.filter(estado=estado_filtro)
+
+    return render(request, 'modulo_puntos/cursos/lista_cursos.html', {
+        'cursos': qs,
+        'estado_filtro': estado_filtro,
+        'estados': Curso.ESTADO_CHOICES,
+        'es_admin_tic': es_admin_tic,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_curso(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if not pvd_id and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Debes seleccionar un Punto Vive Digital primero.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    form = CursoForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            curso = form.save(commit=False)
+            if pvd_id:
+                curso.punto_vive_digital_id = pvd_id
+            curso.registrado_por = request.user
+            curso.save()
+            registrar_auditoria(request, 'CREATE', 'Curso', curso.pk, f'Curso creado: {curso.nombre}')
+            messages.success(request, f'Curso "{curso.nombre}" creado correctamente.')
+            return redirect('modulo_puntos:detalle_curso', curso_id=curso.pk)
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/cursos/form_curso.html', {
+        'form': form,
+        'titulo': 'Nuevo Curso / Taller',
+        'accion': 'crear',
+    })
+
+
+@login_required(login_url='/login/')
+def editar_curso(request, curso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    curso = get_object_or_404(Curso, pk=curso_id)
+    form = CursoForm(request.POST or None, instance=curso)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            curso = form.save()
+            registrar_auditoria(request, 'UPDATE', 'Curso', curso.pk, f'Curso editado: {curso.nombre}')
+            messages.success(request, 'Curso actualizado correctamente.')
+            return redirect('modulo_puntos:detalle_curso', curso_id=curso.pk)
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/cursos/form_curso.html', {
+        'form': form,
+        'titulo': f'Editar: {curso.nombre}',
+        'accion': 'editar',
+        'curso': curso,
+    })
+
+
+@login_required(login_url='/login/')
+def detalle_curso(request, curso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    curso = get_object_or_404(Curso.objects.select_related('punto_vive_digital', 'registrado_por'), pk=curso_id)
+    sesiones = curso.sesiones.order_by('numero_sesion')
+    inscripciones = curso.inscripciones.select_related('ciudadano').order_by('fecha_inscripcion')
+
+    return render(request, 'modulo_puntos/cursos/detalle_curso.html', {
+        'curso': curso,
+        'sesiones': sesiones,
+        'inscripciones': inscripciones,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_sesion_curso(request, curso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    curso = get_object_or_404(Curso, pk=curso_id)
+    ultimo_num = curso.sesiones.aggregate(max_n=Max('numero_sesion'))['max_n'] or 0
+    form = SesionCursoForm(request.POST or None, initial={'numero_sesion': ultimo_num + 1})
+
+    if request.method == 'POST':
+        if form.is_valid():
+            sesion = form.save(commit=False)
+            sesion.curso = curso
+            sesion.save()
+            registrar_auditoria(request, 'CREATE', 'SesionCurso', sesion.pk,
+                                f'Sesión {sesion.numero_sesion} creada para curso {curso.nombre}')
+            messages.success(request, f'Sesión {sesion.numero_sesion} registrada.')
+            return redirect('modulo_puntos:detalle_curso', curso_id=curso.pk)
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/cursos/form_sesion.html', {
+        'form': form,
+        'curso': curso,
+        'titulo': f'Nueva Sesión — {curso.nombre}',
+    })
+
+
+@login_required(login_url='/login/')
+def inscribir_ciudadano(request, curso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    curso = get_object_or_404(Curso, pk=curso_id)
+    inscritos_ids = InscripcionCurso.objects.filter(curso=curso).values_list('ciudadano_id', flat=True)
+    ciudadanos_disponibles = Ciudadano.objects.filter(estado='A').exclude(pk__in=inscritos_ids)
+
+    form = InscripcionCursoForm(request.POST or None)
+    form.fields['ciudadano'].queryset = ciudadanos_disponibles
+
+    if request.method == 'POST':
+        if form.is_valid():
+            inscripcion = form.save(commit=False)
+            inscripcion.curso = curso
+            inscripcion.registrado_por = request.user
+            inscripcion.save()
+            registrar_auditoria(request, 'CREATE', 'InscripcionCurso', inscripcion.pk,
+                                f'{inscripcion.ciudadano} inscrito en {curso.nombre}')
+            messages.success(request, f'{inscripcion.ciudadano} inscrito correctamente.')
+            return redirect('modulo_puntos:detalle_curso', curso_id=curso.pk)
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/cursos/form_inscripcion.html', {
+        'form': form,
+        'curso': curso,
+        'titulo': f'Inscribir Ciudadano — {curso.nombre}',
+    })
+
+
+@login_required(login_url='/login/')
+def marcar_asistencia(request, sesion_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    sesion = get_object_or_404(SesionCurso.objects.select_related('curso'), pk=sesion_id)
+    inscritos = InscripcionCurso.objects.filter(
+        curso=sesion.curso, estado__in=['I', 'C']
+    ).select_related('ciudadano')
+
+    asistencias_existentes = {
+        a.ciudadano_id: a for a in AsistenciaSesion.objects.filter(sesion=sesion)
+    }
+
+    if request.method == 'POST':
+        presentes = set(map(int, request.POST.getlist('asistio')))
+        for insc in inscritos:
+            cid = insc.ciudadano_id
+            asistio = cid in presentes
+            if cid in asistencias_existentes:
+                a = asistencias_existentes[cid]
+                if a.asistio != asistio:
+                    a.asistio = asistio
+                    a.save()
+            else:
+                AsistenciaSesion.objects.create(sesion=sesion, ciudadano=insc.ciudadano, asistio=asistio)
+        registrar_auditoria(request, 'UPDATE', 'SesionCurso', sesion.pk,
+                            f'Asistencia registrada para sesión {sesion.numero_sesion} de {sesion.curso.nombre}')
+        messages.success(request, 'Asistencia guardada correctamente.')
+        return redirect('modulo_puntos:detalle_curso', curso_id=sesion.curso.pk)
+
+    lista = []
+    for insc in inscritos:
+        lista.append({
+            'ciudadano': insc.ciudadano,
+            'asistio': asistencias_existentes.get(insc.ciudadano_id, None) and asistencias_existentes[insc.ciudadano_id].asistio,
+        })
+
+    return render(request, 'modulo_puntos/cursos/asistencia_sesion.html', {
+        'sesion': sesion,
+        'lista': lista,
+    })
+
+
+# ==============================================================================
+# MANTENIMIENTO DE EQUIPOS
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def lista_mantenimientos(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    es_admin_tic = usuario_es_admin_tic(request.user)
+
+    if es_admin_tic:
+        qs = MantenimientoEquipo.objects.select_related('punto_vive_digital', 'realizado_por').all()
+    elif pvd_id:
+        qs = MantenimientoEquipo.objects.filter(punto_vive_digital_id=pvd_id).select_related('punto_vive_digital', 'realizado_por')
+    else:
+        qs = MantenimientoEquipo.objects.none()
+
+    tipo_filtro = request.GET.get('tipo', '')
+    if tipo_filtro:
+        qs = qs.filter(tipo=tipo_filtro)
+
+    return render(request, 'modulo_puntos/mantenimientos/lista_mantenimientos.html', {
+        'mantenimientos': qs,
+        'tipo_filtro': tipo_filtro,
+        'tipos': MantenimientoEquipo.TIPO_CHOICES,
+        'es_admin_tic': es_admin_tic,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_mantenimiento(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if not pvd_id and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Debes seleccionar un Punto Vive Digital primero.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    form = MantenimientoEquipoForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            mant = form.save(commit=False)
+            if pvd_id:
+                mant.punto_vive_digital_id = pvd_id
+            mant.realizado_por = request.user
+            mant.save()
+            registrar_auditoria(request, 'CREATE', 'MantenimientoEquipo', mant.pk,
+                                f'Mantenimiento {mant.get_tipo_display()} registrado: {mant.fecha}')
+            messages.success(request, 'Mantenimiento registrado correctamente.')
+            return redirect('modulo_puntos:lista_mantenimientos')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/mantenimientos/form_mantenimiento.html', {
+        'form': form,
+        'titulo': 'Registrar Mantenimiento',
+        'accion': 'crear',
+    })
+
+
+@login_required(login_url='/login/')
+def editar_mantenimiento(request, mant_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    mant = get_object_or_404(MantenimientoEquipo, pk=mant_id)
+    form = MantenimientoEquipoForm(request.POST or None, instance=mant)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            mant = form.save()
+            registrar_auditoria(request, 'UPDATE', 'MantenimientoEquipo', mant.pk,
+                                f'Mantenimiento editado: {mant.fecha}')
+            messages.success(request, 'Mantenimiento actualizado correctamente.')
+            return redirect('modulo_puntos:lista_mantenimientos')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/mantenimientos/form_mantenimiento.html', {
+        'form': form,
+        'titulo': f'Editar Mantenimiento — {mant.fecha}',
+        'accion': 'editar',
+        'mant': mant,
+    })
+
+
+# ==============================================================================
+# REGISTRO DE APERTURA / CIERRE
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def lista_aperturas(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    es_admin_tic = usuario_es_admin_tic(request.user)
+
+    if es_admin_tic:
+        qs = RegistroApertura.objects.select_related('punto_vive_digital', 'registrado_por').all()
+    elif pvd_id:
+        qs = RegistroApertura.objects.filter(punto_vive_digital_id=pvd_id).select_related('punto_vive_digital', 'registrado_por')
+    else:
+        qs = RegistroApertura.objects.none()
+
+    mes_filtro = request.GET.get('mes', '')
+    if mes_filtro:
+        try:
+            anio, mes = mes_filtro.split('-')
+            qs = qs.filter(fecha__year=anio, fecha__month=mes)
+        except (ValueError, AttributeError):
+            pass
+
+    return render(request, 'modulo_puntos/aperturas/lista_aperturas.html', {
+        'aperturas': qs,
+        'mes_filtro': mes_filtro,
+        'es_admin_tic': es_admin_tic,
+    })
+
+
+@login_required(login_url='/login/')
+def registrar_apertura(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if not pvd_id and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Debes seleccionar un Punto Vive Digital primero.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    from datetime import date as date_today
+    initial = {'fecha': date_today.today()}
+    form = RegistroAperturaForm(request.POST or None, initial=initial)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            apertura = form.save(commit=False)
+            if pvd_id:
+                apertura.punto_vive_digital_id = pvd_id
+            apertura.registrado_por = request.user
+            try:
+                apertura.save()
+                registrar_auditoria(request, 'CREATE', 'RegistroApertura', apertura.pk,
+                                    f'Apertura/cierre registrado: {apertura.fecha}')
+                messages.success(request, f'Registro del {apertura.fecha} guardado correctamente.')
+                return redirect('modulo_puntos:lista_aperturas')
+            except Exception:
+                messages.error(request, 'Ya existe un registro de apertura para esa fecha en este PVD.')
+        else:
+            messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/aperturas/form_apertura.html', {
+        'form': form,
+        'titulo': 'Registrar Apertura / Cierre',
+        'accion': 'crear',
+    })
+
+
+@login_required(login_url='/login/')
+def editar_apertura(request, apertura_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    apertura = get_object_or_404(RegistroApertura, pk=apertura_id)
+    form = RegistroAperturaForm(request.POST or None, instance=apertura)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            apertura = form.save()
+            registrar_auditoria(request, 'UPDATE', 'RegistroApertura', apertura.pk,
+                                f'Apertura/cierre editado: {apertura.fecha}')
+            messages.success(request, 'Registro actualizado correctamente.')
+            return redirect('modulo_puntos:lista_aperturas')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/aperturas/form_apertura.html', {
+        'form': form,
+        'titulo': f'Editar Registro — {apertura.fecha}',
+        'accion': 'editar',
+        'apertura': apertura,
     })

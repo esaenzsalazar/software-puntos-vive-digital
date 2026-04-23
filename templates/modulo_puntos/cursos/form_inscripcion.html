@@ -1,0 +1,39 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Formación › {{ curso.nombre }}</span>
+        <h1 class="page-title">Inscribir Ciudadano</h1>
+        <p class="muted">Selecciona el ciudadano a inscribir en "{{ curso.nombre }}"</p>
+    </div>
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="{{ form.ciudadano.id_for_label }}">{{ form.ciudadano.label }}</label>
+            {{ form.ciudadano }}
+            {% if form.ciudadano.errors %}<div class="form-error">{{ form.ciudadano.errors }}</div>{% endif %}
+            <small class="form-hint">Solo se muestran ciudadanos activos no inscritos.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.estado.id_for_label }}">{{ form.estado.label }}</label>
+            {{ form.estado }}
+            {% if form.estado.errors %}<div class="form-error">{{ form.estado.errors }}</div>{% endif %}
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">👤 Inscribir</button>
+            <a href="{% url 'modulo_puntos:detalle_curso' curso.id %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-hint { display:block; color:var(--muted, #64748b); font-size:13px; margin-top:4px; }
+</style>
+{% endblock %}

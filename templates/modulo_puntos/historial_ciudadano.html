@@ -49,11 +49,11 @@
 
                     <hr class="divider">
 
-                    <p><strong>Operador a cargo:</strong>
+                    <p><strong>Registrado por:</strong>
                         {% if atencion.operador %}
-                            {{ atencion.operador.get_nombre_completo }}
+                            {{ atencion.operador.get_full_name|default:atencion.operador.username }}
                         {% else %}
-                            Sin operador asignado
+                            Sin asignar
                         {% endif %}
                     </p>
 

@@ -1,0 +1,55 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Asistencia — Sesión {{ sesion.numero_sesion }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Formación › {{ sesion.curso.nombre }}</span>
+        <h1 class="page-title">Asistencia — Sesión {{ sesion.numero_sesion }}</h1>
+        <p class="muted">{{ sesion.tema }} · {{ sesion.fecha|date:"d/m/Y" }} · {{ sesion.hora_inicio|time:"H:i" }}–{{ sesion.hora_fin|time:"H:i" }}</p>
+    </div>
+
+    {% if lista %}
+    <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Ciudadano</th>
+                        <th>Documento</th>
+                        <th class="text-center">¿Asistió?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in lista %}
+                    <tr>
+                        <td>{{ item.ciudadano.get_nombre_completo }}</td>
+                        <td>{{ item.ciudadano.numero_documento }}</td>
+                        <td class="text-center">
+                            <input type="checkbox" name="asistio" value="{{ item.ciudadano.id }}"
+                                   {% if item.asistio %}checked{% endif %}
+                                   style="width:18px; height:18px; cursor:pointer;">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions" style="margin-top:20px;">
+            <button type="submit" class="btn btn-primary">💾 Guardar Asistencia</button>
+            <a href="{% url 'modulo_puntos:detalle_curso' sesion.curso.id %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+    {% else %}
+    <div class="card card--hint" style="text-align:center; padding:32px;">
+        <p style="font-size:36px; margin:0 0 12px 0;">👥</p>
+        <p class="muted">No hay ciudadanos inscritos en este curso.</p>
+        <a href="{% url 'modulo_puntos:inscribir_ciudadano' sesion.curso.id %}" class="btn" style="margin-top:12px;">Inscribir ciudadano</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

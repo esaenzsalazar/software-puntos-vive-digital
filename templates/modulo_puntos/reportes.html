@@ -12,6 +12,30 @@
     <div class="actions" style="margin-top: 8px;">
         <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al inicio</a>
     </div>
+
+    <form method="GET" style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; padding:16px; background:var(--bg-alt,#f8fafc); border-radius:8px;">
+        <div>
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Desde</label>
+            <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}" style="max-width:160px;">
+        </div>
+        <div>
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Hasta</label>
+            <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}" style="max-width:160px;">
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button type="submit" class="btn btn--sm btn-primary">Filtrar</button>
+            {% if fecha_desde or fecha_hasta %}
+            <a href="{% url 'modulo_puntos:reportes' %}" class="btn btn--sm btn-secondary">✕ Quitar filtro</a>
+            {% endif %}
+        </div>
+        {% if fecha_desde or fecha_hasta %}
+        <span style="font-size:13px; color:#0369a1; align-self:flex-end;">
+            📅 Mostrando atenciones y servicios
+            {% if fecha_desde %}desde {{ fecha_desde }}{% endif %}
+            {% if fecha_hasta %}hasta {{ fecha_hasta }}{% endif %}
+        </span>
+        {% endif %}
+    </form>
     <details class="export-panel">
         <summary class="export-panel__summary">Descargar datos (CSV para Excel)</summary>
         <div class="export-panel__body">
@@ -32,11 +56,6 @@
         <h3>Ciudadanos</h3>
         <p class="stat-card__value">{{ total_ciudadanos }}</p>
         <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ ciudadanos_activos }}</p>
-    </div>
-    <div class="stat-card stat-card--accent-violet">
-        <h3>Operadores</h3>
-        <p class="stat-card__value">{{ total_operadores }}</p>
-        <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ operadores_activos }}</p>
     </div>
     <div class="stat-card stat-card--accent-emerald">
         <h3>Atenciones</h3>
@@ -185,16 +204,18 @@
 </div>
 
 <div class="card">
-    <h3>Atenciones por operador</h3>
-    {% if atenciones_por_operador %}
+    <h3>Atenciones por Admin PVD</h3>
+    {% if atenciones_por_admin %}
         <div class="grid">
-            {% for item in atenciones_por_operador %}
+            {% for item in atenciones_por_admin %}
                 <div class="menu-card">
                     <h3>
-                        {% if item.operador__primer_nombre %}
-                            {{ item.operador__primer_nombre }} {{ item.operador__primer_apellido }}
+                        {% if item.operador__first_name or item.operador__last_name %}
+                            {{ item.operador__first_name }} {{ item.operador__last_name }}
+                        {% elif item.operador__username %}
+                            {{ item.operador__username }}
                         {% else %}
-                            Sin operador asignado
+                            Sin admin asignado
                         {% endif %}
                     </h3>
                     <p class="tile-value">{{ item.total }}</p>
@@ -222,11 +243,11 @@
                             Sin ciudadano
                         {% endif %}
                     </p>
-                    <p><strong>Operador:</strong>
+                    <p><strong>Admin PVD:</strong>
                         {% if atencion.operador %}
-                            {{ atencion.operador.get_nombre_completo }}
+                            {{ atencion.operador.get_full_name|default:atencion.operador.username }}
                         {% else %}
-                            Sin operador
+                            Sin asignar
                         {% endif %}
                     </p>
                     <p><strong>Estado:</strong> {{ atencion.get_estado_display }}</p>

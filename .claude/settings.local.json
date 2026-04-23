@@ -8,7 +8,12 @@
       "Bash(entorno/Scripts/python.exe *)",
       "Bash(del db.sqlite3)",
       "Bash(DJANGO_SETTINGS_MODULE=core.settings python *)",
-      "Bash(grep -E \"\\\\.py$\")"
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(where antiword *)",
+      "Bash(where catdoc *)",
+      "Bash(where soffice *)",
+      "Bash(where libreoffice *)",
+      "Bash(antiword *)"
     ]
   }
 }

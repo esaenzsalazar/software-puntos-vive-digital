@@ -274,8 +274,6 @@ def tiene_permiso(user, codigo):
         rol = 'admin_tic'
     elif 'Administrador PVD' in grupos:
         rol = 'admin_pvd'
-    elif grupos:
-        rol = 'operador'
 
     if rol:
         return PermisoRol.objects.filter(rol=rol, permiso=permiso_def).exists()

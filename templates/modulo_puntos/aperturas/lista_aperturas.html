@@ -1,0 +1,75 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Apertura y Cierre{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Operación Diaria</span>
+        <h1 class="page-title">Registro de Apertura / Cierre</h1>
+        <p class="muted">Control diario de horarios del Punto Vive Digital</p>
+        <div class="page-hero__actions" style="margin-top:16px;">
+            <a href="{% url 'modulo_puntos:registrar_apertura' %}" class="btn btn-primary">➕ Registrar Hoy</a>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+        <form method="GET" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label style="font-weight:600; margin:0;">Mes:</label>
+            <input type="month" name="mes" class="form-control" style="max-width:180px;"
+                   value="{{ mes_filtro }}"
+                   placeholder="AAAA-MM">
+            <button type="submit" class="btn btn--sm">Filtrar</button>
+            {% if mes_filtro %}<a href="{% url 'modulo_puntos:lista_aperturas' %}" class="btn btn--sm btn-secondary">✕ Limpiar</a>{% endif %}
+        </form>
+    </div>
+
+    {% if aperturas %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    {% if es_admin_tic %}<th>PVD</th>{% endif %}
+                    <th>Fecha</th>
+                    <th>Apertura</th>
+                    <th>Cierre</th>
+                    <th>Horas</th>
+                    <th>Registrado por</th>
+                    <th>Observaciones</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ap in aperturas %}
+                <tr>
+                    {% if es_admin_tic %}<td>{{ ap.punto_vive_digital.nombre }}</td>{% endif %}
+                    <td>{{ ap.fecha|date:"d/m/Y" }} <small class="muted">({{ ap.fecha|date:"l" }})</small></td>
+                    <td>{{ ap.hora_apertura|time:"H:i" }}</td>
+                    <td>{{ ap.hora_cierre|time:"H:i"|default:"—" }}</td>
+                    <td>
+                        {% if ap.hora_cierre %}
+                            {{ ap.horas_operacion }} h
+                        {% else %}
+                            <span class="badge badge--warning">Abierto</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ ap.registrado_por.get_full_name|default:ap.registrado_por.username|default:"—" }}</td>
+                    <td style="max-width:200px;">{{ ap.observaciones|truncatechars:60|default:"—" }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'modulo_puntos:editar_apertura' ap.id %}" class="btn btn--sm" title="Editar">✏️</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card card--hint" style="text-align:center; padding:40px;">
+        <p style="font-size:48px; margin:0 0 16px 0;">🕐</p>
+        <h3 style="margin:0 0 8px 0;">Sin registros de apertura</h3>
+        <p class="muted">Registra el horario de apertura y cierre de hoy.</p>
+        <a href="{% url 'modulo_puntos:registrar_apertura' %}" class="btn" style="margin-top:16px;">Registrar hoy</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

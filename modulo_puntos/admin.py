@@ -4,10 +4,12 @@ Contract CD-224-2026 - Alcaldía de Bugalagrande
 """
 from django.contrib import admin
 from .models import (
-    UsuarioSistema, Satisfaccion, PrestamoRecurso, ListaValor,
-    Atencion, Operador, Ciudadano, Recurso, Servicio, PuntoViveDigital,
+    Satisfaccion, PrestamoRecurso,
+    Atencion, Ciudadano, Recurso, Servicio, PuntoViveDigital,
     AuditoriaAccion, UserProfile, Sala, HabilitacionSala,
     PermisoDefinicion, PermisoRol, PermisoUsuario,
+    Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
+    MantenimientoEquipo, RegistroApertura,
 )
 
 
@@ -89,28 +91,11 @@ class CiudadanoAdmin(admin.ModelAdmin):
         return obj.get_estado_display()
 
 
-@admin.register(Operador)
-class OperadorAdmin(admin.ModelAdmin):
-    list_display = ('numero_documento', 'nombre_completo', 'correo', 'telefono', 'punto_vive_digital', 'estado_legible')
-    search_fields = ('numero_documento', 'primer_nombre', 'primer_apellido', 'segundo_apellido', 'correo')
-    list_filter = ('estado', 'punto_vive_digital')
-    ordering = ('-id',)
-    list_select_related = ('punto_vive_digital',)
-
-    @admin.display(description='Nombre Completo')
-    def nombre_completo(self, obj):
-        return obj.get_nombre_completo()
-
-    @admin.display(description='Estado')
-    def estado_legible(self, obj):
-        return obj.get_estado_display()
-
-
 @admin.register(Atencion)
 class AtencionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'fecha', 'ciudadano_nombre', 'ciudadano_doc', 'operador_nombre', 'punto_vive_digital', 'hora_inicio', 'hora_fin', 'estado_legible')
+    list_display = ('id', 'fecha', 'ciudadano_nombre', 'ciudadano_doc', 'admin_pvd_nombre', 'punto_vive_digital', 'hora_inicio', 'hora_fin', 'estado_legible')
     list_filter = ('fecha', 'estado', 'punto_vive_digital')
-    search_fields = ('ciudadano__primer_nombre', 'ciudadano__primer_apellido', 'ciudadano__numero_documento', 'operador__primer_nombre', 'observaciones')
+    search_fields = ('ciudadano__primer_nombre', 'ciudadano__primer_apellido', 'ciudadano__numero_documento', 'operador__username', 'observaciones')
     ordering = ('-fecha', '-hora_inicio')
     list_select_related = ('ciudadano', 'operador', 'punto_vive_digital')
 
@@ -122,9 +107,11 @@ class AtencionAdmin(admin.ModelAdmin):
     def ciudadano_doc(self, obj):
         return obj.ciudadano.numero_documento if obj.ciudadano else '—'
 
-    @admin.display(description='Operador')
-    def operador_nombre(self, obj):
-        return obj.operador.get_nombre_completo() if obj.operador else '—'
+    @admin.display(description='Admin PVD')
+    def admin_pvd_nombre(self, obj):
+        if obj.operador:
+            return obj.operador.get_full_name() or obj.operador.username
+        return '—'
 
     @admin.display(description='Estado')
     def estado_legible(self, obj):
@@ -221,21 +208,6 @@ class SatisfaccionAdmin(admin.ModelAdmin):
         return (obj.comentario[:60] + '...') if obj.comentario and len(obj.comentario) > 60 else obj.comentario or '—'
 
 
-@admin.register(ListaValor)
-class ListaValorAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'descripcion', 'estado')
-    list_filter = ('estado',)
-    search_fields = ('nombre', 'descripcion')
-    ordering = ('id',)
-
-
-@admin.register(UsuarioSistema)
-class UsuarioSistemaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'estado')
-    search_fields = ('nombre',)
-    list_filter = ('estado',)
-    ordering = ('id',)
-
 
 @admin.register(PermisoDefinicion)
 class PermisoDefinicionAdmin(admin.ModelAdmin):
@@ -268,3 +240,58 @@ class PermisoUsuarioAdmin(admin.ModelAdmin):
     @admin.display(description='Estado')
     def concedido_legible(self, obj):
         return 'Concedido' if obj.concedido else 'Revocado'
+
+
+@admin.register(Curso)
+class CursoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'punto_vive_digital', 'modalidad', 'estado', 'fecha_inicio', 'fecha_fin', 'total_inscritos')
+    list_filter = ('estado', 'modalidad', 'punto_vive_digital')
+    search_fields = ('nombre', 'descripcion', 'poblacion_objetivo')
+    ordering = ('-fecha_inicio',)
+    list_select_related = ('punto_vive_digital',)
+
+    @admin.display(description='Inscritos')
+    def total_inscritos(self, obj):
+        return obj.total_inscritos()
+
+
+@admin.register(SesionCurso)
+class SesionCursoAdmin(admin.ModelAdmin):
+    list_display = ('curso', 'numero_sesion', 'fecha', 'hora_inicio', 'hora_fin', 'tema')
+    list_filter = ('curso__punto_vive_digital', 'fecha')
+    search_fields = ('tema', 'curso__nombre')
+    ordering = ('curso', 'numero_sesion')
+    list_select_related = ('curso',)
+
+
+@admin.register(InscripcionCurso)
+class InscripcionCursoAdmin(admin.ModelAdmin):
+    list_display = ('ciudadano', 'curso', 'estado', 'fecha_inscripcion')
+    list_filter = ('estado', 'curso__punto_vive_digital')
+    search_fields = ('ciudadano__primer_nombre', 'ciudadano__primer_apellido', 'curso__nombre')
+    list_select_related = ('ciudadano', 'curso')
+
+
+@admin.register(AsistenciaSesion)
+class AsistenciaSesionAdmin(admin.ModelAdmin):
+    list_display = ('sesion', 'ciudadano', 'asistio')
+    list_filter = ('asistio', 'sesion__curso__punto_vive_digital')
+    list_select_related = ('sesion', 'ciudadano')
+
+
+@admin.register(MantenimientoEquipo)
+class MantenimientoEquipoAdmin(admin.ModelAdmin):
+    list_display = ('punto_vive_digital', 'tipo', 'fecha', 'realizado_por', 'fecha_registro')
+    list_filter = ('tipo', 'punto_vive_digital', 'fecha')
+    search_fields = ('descripcion', 'equipos_intervenidos', 'hallazgos')
+    ordering = ('-fecha',)
+    list_select_related = ('punto_vive_digital', 'realizado_por')
+
+
+@admin.register(RegistroApertura)
+class RegistroAperturaAdmin(admin.ModelAdmin):
+    list_display = ('punto_vive_digital', 'fecha', 'hora_apertura', 'hora_cierre', 'registrado_por')
+    list_filter = ('punto_vive_digital', 'fecha')
+    search_fields = ('observaciones',)
+    ordering = ('-fecha',)
+    list_select_related = ('punto_vive_digital', 'registrado_por')

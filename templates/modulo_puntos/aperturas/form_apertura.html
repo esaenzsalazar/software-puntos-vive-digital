@@ -1,0 +1,93 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Operación Diaria › Apertura / Cierre</span>
+        <h1 class="page-title">{{ titulo }}</h1>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert--danger" style="margin-bottom:16px; padding:12px 16px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; color:#991b1b;">
+        {% for error in form.non_field_errors %}<p style="margin:0;">⚠️ {{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="{{ form.fecha.id_for_label }}">{{ form.fecha.label }}</label>
+            {{ form.fecha }}
+            {% if form.fecha.errors %}<div class="form-error">{{ form.fecha.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.hora_apertura.id_for_label }}">{{ form.hora_apertura.label }}</label>
+                {{ form.hora_apertura }}
+                {% if form.hora_apertura.errors %}<div class="form-error">{{ form.hora_apertura.errors }}</div>{% endif %}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.hora_cierre.id_for_label }}">{{ form.hora_cierre.label }}</label>
+                {{ form.hora_cierre }}
+                {% if form.hora_cierre.errors %}<div class="form-error">{{ form.hora_cierre.errors }}</div>{% endif %}
+                <small class="form-hint">Puedes dejarlo en blanco y completarlo al cerrar.</small>
+            </div>
+        </div>
+
+        <div id="horas-preview" style="display:none; padding:8px 12px; background:#f0f9ff; border-radius:6px; font-size:13px; color:#0369a1; margin-top:-8px; margin-bottom:12px;">
+            ⏱️ Horas de operación estimadas: <strong id="horas-texto">—</strong>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.observaciones.id_for_label }}">{{ form.observaciones.label }}</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}<div class="form-error">{{ form.observaciones.errors }}</div>{% endif %}
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">
+                {% if accion == 'crear' %}⏱️ Guardar Registro{% else %}💾 Actualizar Registro{% endif %}
+            </button>
+            <a href="{% url 'modulo_puntos:lista_aperturas' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-row { display:flex; gap:16px; }
+.form-row .form-group { flex:1; }
+.form-hint { display:block; color:var(--muted, #64748b); font-size:13px; margin-top:4px; }
+@media (max-width:768px) { .form-row { flex-direction:column; gap:0; } }
+</style>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const hAp = document.getElementById('{{ form.hora_apertura.id_for_label }}');
+    const hCi = document.getElementById('{{ form.hora_cierre.id_for_label }}');
+    const preview = document.getElementById('horas-preview');
+    const texto = document.getElementById('horas-texto');
+
+    function calcular() {
+        if (!hAp || !hCi || !hAp.value || !hCi.value) { preview.style.display = 'none'; return; }
+        const [hA, mA] = hAp.value.split(':').map(Number);
+        const [hC, mC] = hCi.value.split(':').map(Number);
+        const mins = (hC * 60 + mC) - (hA * 60 + mA);
+        if (mins <= 0) { preview.style.display = 'none'; return; }
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        texto.textContent = h > 0 ? `${h}h ${m > 0 ? m + 'min' : ''}` : `${m} min`;
+        preview.style.display = 'block';
+    }
+
+    if (hAp) hAp.addEventListener('change', calcular);
+    if (hCi) hCi.addEventListener('change', calcular);
+    calcular();
+});
+</script>
+{% endblock %}
+{% endblock %}

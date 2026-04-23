@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -372,5 +373,8 @@
 
         {% block content %}{% endblock %}
     </div>
+    <script src="{% static 'js/validaciones.js' %}"></script>
+    <script src="{% static 'js/validacion-forms.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

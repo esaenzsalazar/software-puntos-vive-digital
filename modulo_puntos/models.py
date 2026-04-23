@@ -50,6 +50,13 @@ class PuntoViveDigital(models.Model):
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
     fecha_creacion = models.DateField(auto_now_add=True, null=True, verbose_name='Fecha de creación')
     descripcion = models.TextField(null=True, blank=True, verbose_name='Descripción/Notas')
+    admin_a_cargo = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pvd_a_cargo',
+        verbose_name='Administrador PVD a cargo',
+    )
 
     class Meta:
         app_label = 'modulo_puntos_app'

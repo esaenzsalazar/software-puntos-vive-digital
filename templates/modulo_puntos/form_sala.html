@@ -94,36 +94,60 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form[method="POST"]');
-    const nombreInput = document.getElementById('{{ form.nombre.id_for_label }}');
+    const form          = document.querySelector('form[method="POST"]');
+    const pvdSelect     = document.getElementById('{{ form.punto_vive_digital.id_for_label }}');
+    const nombreInput   = document.getElementById('{{ form.nombre.id_for_label }}');
     const capacidadInput = document.getElementById('{{ form.capacidad.id_for_label }}');
 
+    function validarPVD() {
+        if (!pvdSelect) return true;
+        if (!pvdSelect.value) {
+            ValidacionPVD.mostrarError(pvdSelect, 'Debes seleccionar un Punto Vive Digital');
+            return false;
+        }
+        ValidacionPVD.ocultarError(pvdSelect);
+        return true;
+    }
+
+    function validarCapacidad() {
+        if (!capacidadInput || !capacidadInput.value) return true;
+        const val = parseInt(capacidadInput.value);
+        if (isNaN(val) || val < 1) {
+            ValidacionPVD.mostrarError(capacidadInput, 'La capacidad debe ser mayor a 0');
+            return false;
+        }
+        ValidacionPVD.ocultarError(capacidadInput);
+        return true;
+    }
+
+    if (pvdSelect) pvdSelect.addEventListener('change', validarPVD);
+
     if (nombreInput) {
-        nombreInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre de la sala');
-        });
-        nombreInput.addEventListener('input', function () {
-            if (this.classList.contains('input-error'))
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre de la sala');
+        nombreInput.addEventListener('blur', () => ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre de la sala'));
+        nombreInput.addEventListener('input', () => {
+            if (nombreInput.classList.contains('input-error'))
+                ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre de la sala');
         });
     }
 
     if (capacidadInput) {
-        capacidadInput.addEventListener('input', function () {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value && parseInt(this.value) < 1) {
-                ValidacionPVD.mostrarError(this, 'La capacidad debe ser mayor a 0');
-            } else {
-                ValidacionPVD.ocultarError(this);
-            }
+        capacidadInput.addEventListener('input', () => {
+            capacidadInput.value = capacidadInput.value.replace(/[^0-9]/g, '');
+            validarCapacidad();
         });
     }
 
     if (form) {
         form.addEventListener('submit', function (e) {
             let ok = true;
+            if (!validarPVD()) ok = false;
             if (nombreInput && !ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre de la sala').valido) ok = false;
-            if (!ok) e.preventDefault();
+            if (!validarCapacidad()) ok = false;
+            if (!ok) {
+                e.preventDefault();
+                const primerError = form.querySelector('.input-error');
+                if (primerError) primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         });
     }
 });

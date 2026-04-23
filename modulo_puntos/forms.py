@@ -542,179 +542,77 @@ class PerfilUsuarioForm(forms.ModelForm):
 
 class CrearUsuarioForm(UserCreationForm):
     """
-    Formulario para crear nuevos usuarios con información completa.
-    Incluye campos separadas para primer/segundo nombre y primer/segundo apellido.
-    Auto-genera username y password basado en los nombres.
-    Usado para crear Admin TIC y Admin PVD.
+    Formulario para crear Administradores TIC y PVD.
+    El usuario y contraseña son ingresados manualmente por quien crea la cuenta.
     """
-    # Campos de nombre separados para mejor organización
     primer_nombre = forms.CharField(
-        label='Primer Nombre *',
+        label='Primer Nombre',
         required=True,
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: Juan',
-                'id': 'id_primer_nombre'
-            }
-        )
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Juan'})
     )
     segundo_nombre = forms.CharField(
-        label='Segundo Nombre (Opcional)',
+        label='Segundo Nombre',
         required=False,
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: Carlos',
-                'id': 'id_segundo_nombre'
-            }
-        )
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'})
     )
     primer_apellido = forms.CharField(
-        label='Primer Apellido *',
+        label='Primer Apellido',
         required=True,
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: Pérez',
-                'id': 'id_primer_apellido'
-            }
-        )
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Pérez'})
     )
     segundo_apellido = forms.CharField(
-        label='Segundo Apellido (Opcional)',
+        label='Segundo Apellido',
         required=False,
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: Gómez',
-                'id': 'id_segundo_apellido'
-            }
-        )
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'})
     )
-
     email = forms.EmailField(
         label='Correo electrónico',
         required=False,
-        widget=forms.EmailInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'correo@ejemplo.com'
-            }
-        )
-    )
-
-    # Campo para mostrar el username generado
-    username_generado = forms.CharField(
-        label='Username Generado (automático)',
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'readonly': True,
-                'style': 'background-color: #f3f4f6;',
-                'id': 'id_username_generado',
-                'placeholder': 'Se generará automáticamente'
-            }
-        )
-    )
-
-    # Campo para mostrar/ocultar password generado
-    password_generado = forms.CharField(
-        label='Contraseña Generada (automático - puede modificarla)',
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'id': 'id_password_generado',
-                'placeholder': 'Se generará automáticamente'
-            }
-        )
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
     )
 
     class Meta:
         model = User
-        fields = []  # No usamos los campos por defecto
+        fields = ['username']
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: PVDJuan o admintic_nombre',
+                'autocomplete': 'off',
+            })
+        }
+        labels = {'username': 'Nombre de usuario'}
 
     def __init__(self, *args, **kwargs):
-        """Aplicar clases CSS a todos los campos y configurar lógica."""
         super().__init__(*args, **kwargs)
-
-        # Aplicar clases a los campos de password
-        self.fields['password1'].widget.attrs.update({
+        self.fields['password1'].widget = forms.PasswordInput(attrs={
             'class': 'form-control',
-            'id': 'id_password1'
+            'placeholder': 'Contraseña (mínimo 8 caracteres)',
+            'autocomplete': 'new-password',
+            'id': 'id_password1_visible',
         })
-        self.fields['password2'].widget.attrs.update({
+        self.fields['password2'].widget = forms.PasswordInput(attrs={
             'class': 'form-control',
-            'id': 'id_password2'
+            'placeholder': 'Repite la contraseña',
+            'autocomplete': 'new-password',
         })
-
-        # Hacer los campos password1 y password2 opcionales en el formulario
-        # porque usaremos password_generado como valor por defecto
-        self.fields['password1'].required = False
-        self.fields['password2'].required = False
-
-    def clean(self):
-        """Validar que los campos requeridos estén presentes y que las contraseñas coincidan."""
-        cleaned_data = super().clean()
-        primer_nombre = cleaned_data.get('primer_nombre')
-        primer_apellido = cleaned_data.get('primer_apellido')
-
-        if not primer_nombre:
-            self.add_error('primer_nombre', 'El primer nombre es requerido')
-        if not primer_apellido:
-            self.add_error('primer_apellido', 'El primer apellido es requerido')
-
-        # Si se proporcionó password_generado, usarlo
-        password_generado = cleaned_data.get('password_generado')
-        if password_generado:
-            cleaned_data['password1'] = password_generado
-            cleaned_data['password2'] = password_generado
-        else:
-            # Si no hay password_generado, validar los campos password1 y password2
-            password1 = cleaned_data.get('password1')
-            password2 = cleaned_data.get('password2')
-            if password1 or password2:
-                if not password1:
-                    self.add_error('password1', 'La contraseña es requerida')
-                if not password2:
-                    self.add_error('password2', 'La confirmación es requerida')
-                if password1 and password2 and password1 != password2:
-                    self.add_error('password2', 'Las contraseñas no coinciden')
-
-        return cleaned_data
+        self.fields['password1'].label = 'Contraseña'
+        self.fields['password2'].label = 'Confirmar contraseña'
 
     def save(self, commit=True):
-        """Guardar usuario con el username y password generados."""
-        # Generar username si no existe
-        username_generado = self.cleaned_data.get('username_generado')
-        if username_generado:
-            self.instance.username = username_generado
-
-        # Establecer nombre completo
-        primer_nombre = self.cleaned_data.get('primer_nombre', '')
+        user = super().save(commit=False)
+        primer_nombre  = self.cleaned_data.get('primer_nombre', '')
         segundo_nombre = self.cleaned_data.get('segundo_nombre', '')
-        primer_apellido = self.cleaned_data.get('primer_apellido', '')
+        primer_apellido  = self.cleaned_data.get('primer_apellido', '')
         segundo_apellido = self.cleaned_data.get('segundo_apellido', '')
-
-        nombre_completo = f"{primer_nombre} {segundo_nombre}".strip()
-        apellido_completo = f"{primer_apellido} {segundo_apellido}".strip()
-
-        self.instance.first_name = nombre_completo
-        self.instance.last_name = apellido_completo
-
-        # Establecer email si existe
+        user.first_name = f"{primer_nombre} {segundo_nombre}".strip()
+        user.last_name  = f"{primer_apellido} {segundo_apellido}".strip()
         email = self.cleaned_data.get('email')
         if email:
-            self.instance.email = email
-
-        # Establecer contraseña
-        password = self.cleaned_data.get('password1')
-        if password:
-            self.instance.set_password(password)
-
-        return super().save(commit=commit)
+            user.email = email
+        if commit:
+            user.save()
+        return user
 
 
 class PuntoViveDigitalForm(forms.ModelForm):
@@ -726,7 +624,7 @@ class PuntoViveDigitalForm(forms.ModelForm):
         fields = [
             'nombre', 'direccion', 'barrio',
             'telefono', 'correo', 'estado',
-            'descripcion'
+            'descripcion', 'admin_a_cargo',
         ]
         labels = {
             'nombre': 'Nombre del Punto Vive Digital',
@@ -736,6 +634,7 @@ class PuntoViveDigitalForm(forms.ModelForm):
             'correo': 'Correo electrónico',
             'estado': 'Estado',
             'descripcion': 'Descripción / Notas',
+            'admin_a_cargo': 'Administrador PVD a cargo (referencia)',
         }
         widgets = {
             'nombre': forms.TextInput(
@@ -769,11 +668,18 @@ class PuntoViveDigitalForm(forms.ModelForm):
                     'placeholder': 'Notas adicionales sobre el PVD'
                 }
             ),
+            'admin_a_cargo': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['telefono'].required = True
+        # Filtrar solo usuarios del grupo Administrador PVD
+        self.fields['admin_a_cargo'].queryset = User.objects.filter(
+            groups__name='Administrador PVD'
+        ).order_by('first_name', 'last_name', 'username')
+        self.fields['admin_a_cargo'].empty_label = '— Sin asignación (se puede cambiar después) —'
+        self.fields['admin_a_cargo'].required = False
 
     def clean_telefono(self):
         tlfno = self.cleaned_data.get('telefono')

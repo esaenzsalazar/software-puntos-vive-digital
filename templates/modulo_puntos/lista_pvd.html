@@ -57,6 +57,14 @@
                                title="{% if pvd.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
                                 {% if pvd.estado == 'A' %}⏸️{% else %}▶️{% endif %}
                             </a>
+                            {% if puede_eliminar_pvd %}
+                            <button type="button" class="btn btn--sm btn--danger" title="Eliminar PVD"
+                                    data-url="{% url 'modulo_puntos:eliminar_pvd' pvd.id %}"
+                                    data-nombre="{{ pvd.nombre|escapejs }}"
+                                    onclick="confirmarEliminarPVD(this)">
+                                🗑️
+                            </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -73,4 +81,45 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Modal de confirmación de eliminación PVD -->
+<div id="modal-eliminar-pvd" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:32px; max-width:460px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <h3 style="margin:0 0 8px 0; color:#991b1b;">⚠️ Eliminar PVD</h3>
+        <p style="margin:0 0 8px 0; color:#374151;">
+            ¿Estás seguro de que deseas eliminar el Punto Vive Digital <strong id="modal-pvd-nombre"></strong>?
+        </p>
+        <p style="margin:0 0 20px 0; color:#991b1b; font-size:14px;">
+            Esta acción eliminará también todas las salas y datos asociados. <strong>No se puede deshacer.</strong>
+        </p>
+        <form id="form-eliminar-pvd" method="POST">
+            {% csrf_token %}
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+                <button type="button" onclick="cerrarModalPVD()" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary" style="background:#dc2626; border-color:#dc2626;">
+                    Sí, eliminar PVD
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function confirmarEliminarPVD(btn) {
+    document.getElementById('modal-pvd-nombre').textContent = btn.dataset.nombre;
+    document.getElementById('form-eliminar-pvd').action = btn.dataset.url;
+    const modal = document.getElementById('modal-eliminar-pvd');
+    modal.style.display = 'flex';
+}
+
+function cerrarModalPVD() {
+    document.getElementById('modal-eliminar-pvd').style.display = 'none';
+}
+
+document.getElementById('modal-eliminar-pvd').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalPVD();
+});
+</script>
 {% endblock %}

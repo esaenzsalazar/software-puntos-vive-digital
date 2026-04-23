@@ -123,23 +123,23 @@
             </div>
         </fieldset>
 
-        {% if accion == 'crear' and admins_pvd %}
-        <fieldset style="margin-bottom: 20px;">
-            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
-                Asignación de Administrador (opcional)
+        <fieldset style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 4px; padding: 0 6px; color: #166534;">
+                <i class="fas fa-user-tie me-1"></i> Administrador PVD a cargo
             </legend>
+            <p style="font-size: 12px; color: #166534; margin: 0 0 12px 0; background: #dcfce7; padding: 8px 12px; border-radius: 6px;">
+                <i class="fas fa-info-circle me-1"></i>
+                Esta asignación es de <strong>referencia</strong>. Cualquier Administrador PVD activo puede
+                seleccionar y trabajar en este edificio sin restricciones — esta opción solo indica quién
+                está principalmente a cargo.
+            </p>
             <div class="form-group">
-                <label for="admin_pvd_asignado">Asignar Administrador PVD</label>
-                <select name="admin_pvd_asignado" id="admin_pvd_asignado">
-                    <option value="">— Sin asignar —</option>
-                    {% for admin in admins_pvd %}
-                        <option value="{{ admin.pk }}">{{ admin.username }} ({{ admin.first_name }} {{ admin.last_name }})</option>
-                    {% endfor %}
-                </select>
-                <small class="form-hint">Solo administradores PVD sin PVD asignado aparecen aquí.</small>
+                <label for="{{ form.admin_a_cargo.id_for_label }}">{{ form.admin_a_cargo.label }}</label>
+                {{ form.admin_a_cargo }}
+                {% if form.admin_a_cargo.errors %}<div class="form-error">{{ form.admin_a_cargo.errors }}</div>{% endif %}
+                <small class="form-hint">Puedes cambiar este valor en cualquier momento desde "Editar PVD".</small>
             </div>
         </fieldset>
-        {% endif %}
 
         <div class="actions">
             <button type="submit" class="btn btn-primary">

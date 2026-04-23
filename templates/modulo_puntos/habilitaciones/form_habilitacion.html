@@ -128,14 +128,20 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const horaIni = document.getElementById('{{ form.hora_inicio.id_for_label }}');
-    const horaFin = document.getElementById('{{ form.hora_fin.id_for_label }}');
+    const horaIni  = document.getElementById('{{ form.hora_inicio.id_for_label }}');
+    const horaFin  = document.getElementById('{{ form.hora_fin.id_for_label }}');
+    const salaSel  = document.getElementById('{{ form.sala.id_for_label }}');
+    const tipoUso  = document.getElementById('{{ form.tipo_uso.id_for_label }}');
+    const fechaInp = document.getElementById('{{ form.fecha.id_for_label }}');
+    const solicit  = document.getElementById('{{ form.solicitante.id_for_label }}');
+    const capReq   = document.getElementById('{{ form.capacidad_requerida.id_for_label }}');
     const durPreview = document.getElementById('duracion-preview');
-    const durTexto = document.getElementById('duracion-texto');
+    const durTexto   = document.getElementById('duracion-texto');
 
+    // ── Duración estimada ──────────────────────────────────────────────────────
     function calcularDuracion() {
-        const ini = horaIni.value;
-        const fin = horaFin.value;
+        const ini = horaIni ? horaIni.value : '';
+        const fin = horaFin ? horaFin.value : '';
         if (ini && fin && fin > ini) {
             const [hI, mI] = ini.split(':').map(Number);
             const [hF, mF] = fin.split(':').map(Number);
@@ -149,9 +155,72 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    if (horaIni) horaIni.addEventListener('change', calcularDuracion);
-    if (horaFin) horaFin.addEventListener('change', calcularDuracion);
+    // ── Validación select requerido ────────────────────────────────────────────
+    function validarSelect(el, nombre) {
+        if (!el) return true;
+        if (!el.value) {
+            ValidacionPVD.mostrarError(el, `Debes seleccionar ${nombre}`);
+            return false;
+        }
+        ValidacionPVD.ocultarError(el);
+        return true;
+    }
+
+    // ── Validación hora fin > hora inicio ─────────────────────────────────────
+    function validarHoraFin() {
+        if (!horaFin || !horaIni) return true;
+        if (horaFin.value && horaIni.value && horaFin.value <= horaIni.value) {
+            ValidacionPVD.mostrarError(horaFin, 'La hora de fin debe ser mayor a la hora de inicio');
+            return false;
+        }
+        ValidacionPVD.ocultarError(horaFin);
+        return true;
+    }
+
+    // ── Validación capacidad requerida ─────────────────────────────────────────
+    function validarCapacidad() {
+        if (!capReq || !capReq.value) return true;
+        const val = parseInt(capReq.value);
+        if (isNaN(val) || val < 1) {
+            ValidacionPVD.mostrarError(capReq, 'El número de personas debe ser mayor a 0');
+            return false;
+        }
+        ValidacionPVD.ocultarError(capReq);
+        return true;
+    }
+
+    // ── Listeners blur / change / input ───────────────────────────────────────
+    if (salaSel)  salaSel.addEventListener('change',  () => validarSelect(salaSel, 'una sala'));
+    if (tipoUso)  tipoUso.addEventListener('change',  () => validarSelect(tipoUso, 'el tipo de uso'));
+    if (fechaInp) fechaInp.addEventListener('change',  () => ValidacionPVD.validarYMostrar(fechaInp, ValidacionPVD.validarRequerido, 'Fecha'));
+    if (horaIni)  horaIni.addEventListener('change',  () => { ValidacionPVD.validarYMostrar(horaIni, ValidacionPVD.validarRequerido, 'Hora de inicio'); calcularDuracion(); validarHoraFin(); });
+    if (horaFin)  horaFin.addEventListener('change',  () => { validarHoraFin(); calcularDuracion(); });
+    if (solicit)  solicit.addEventListener('blur',     () => ValidacionPVD.validarYMostrar(solicit, ValidacionPVD.validarRequerido, 'Solicitante'));
+    if (solicit)  solicit.addEventListener('input',    () => { if (solicit.classList.contains('input-error')) ValidacionPVD.validarYMostrar(solicit, ValidacionPVD.validarRequerido, 'Solicitante'); });
+    if (capReq)   capReq.addEventListener('input',    () => { capReq.value = capReq.value.replace(/[^0-9]/g, ''); validarCapacidad(); });
+
     calcularDuracion();
+
+    // ── Validación al enviar ───────────────────────────────────────────────────
+    const form = document.querySelector('form[method="POST"]');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let ok = true;
+            if (!validarSelect(salaSel, 'una sala'))   ok = false;
+            if (!validarSelect(tipoUso, 'el tipo de uso')) ok = false;
+            if (fechaInp && !ValidacionPVD.validarYMostrar(fechaInp, ValidacionPVD.validarRequerido, 'Fecha').valido)          ok = false;
+            if (horaIni  && !ValidacionPVD.validarYMostrar(horaIni,  ValidacionPVD.validarRequerido, 'Hora de inicio').valido) ok = false;
+            if (!validarHoraFin()) ok = false;
+            if (solicit  && !ValidacionPVD.validarYMostrar(solicit,  ValidacionPVD.validarRequerido, 'Solicitante').valido)    ok = false;
+            if (!validarCapacidad()) ok = false;
+            if (!ok) {
+                e.preventDefault();
+                // Desplazar al primer campo con error
+                const primerError = form.querySelector('.input-error');
+                if (primerError) primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

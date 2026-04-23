@@ -283,6 +283,38 @@ def tiene_permiso(user, codigo):
     return False
 
 
+def generar_username_admin_pvd(primer_nombre):
+    """
+    Genera username para Admin PVD: 'PVD' + primer_nombre capitalizado sin acentos.
+    Ejemplo: 'Juan' → 'PVDJuan'
+    """
+    if not primer_nombre:
+        return 'PVDOperador'
+    nombre = primer_nombre.strip()
+    for origen, destino in [('á','a'),('é','e'),('í','i'),('ó','o'),('ú','u'),
+                             ('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),
+                             ('ñ','n'),('Ñ','N')]:
+        nombre = nombre.replace(origen, destino)
+    nombre = re.sub(r'[^a-zA-Z]', '', nombre).capitalize()
+    return f"PVD{nombre}" if nombre else 'PVDOperador'
+
+
+def generar_password_admin_pvd(primer_nombre):
+    """
+    Genera contraseña para Admin PVD: primer_nombre capitalizado + 'adminpvd'.
+    Ejemplo: 'Juan' → 'Juanadminpvd'
+    """
+    if not primer_nombre:
+        return 'Operadoradminpvd'
+    nombre = primer_nombre.strip()
+    for origen, destino in [('á','a'),('é','e'),('í','i'),('ó','o'),('ú','u'),
+                             ('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),
+                             ('ñ','n'),('Ñ','N')]:
+        nombre = nombre.replace(origen, destino)
+    nombre = re.sub(r'[^a-zA-Z]', '', nombre).capitalize()
+    return f"{nombre}adminpvd" if nombre else 'Operadoradminpvd'
+
+
 def validar_formato_email(email):
     """
     Valida el formato de un correo electrónico.

@@ -37,6 +37,24 @@ def usuario_es_admin_tic(user):
     return user.is_superuser or user.groups.filter(name='Administrador TIC').exists()
 
 
+def usuario_es_operador(user):
+    if not user.is_authenticated:
+        return False
+    return user.groups.filter(name='Operador').exists()
+
+
+def usuario_necesita_seleccionar_pvd(user):
+    """Admin PVD y Operador deben elegir un PVD antes de operar."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or usuario_es_admin_tic(user):
+        return False
+    return (
+        user.groups.filter(name='Administrador PVD').exists()
+        or user.groups.filter(name='Operador').exists()
+    )
+
+
 def usuario_puede_usar_modulos_pvd(user):
     if not user.is_authenticated:
         return False
@@ -44,6 +62,7 @@ def usuario_puede_usar_modulos_pvd(user):
         user.is_superuser
         or usuario_es_admin_tic(user)
         or user.groups.filter(name='Administrador PVD').exists()
+        or user.groups.filter(name='Operador').exists()
     )
 
 
@@ -73,8 +92,11 @@ def login_usuario(request):
 
     if request.method == 'POST':
         if form.is_valid():
-            login(request, form.get_user())
+            user = form.get_user()
+            login(request, user)
             messages.success(request, 'Inicio de sesión correcto.')
+            if usuario_necesita_seleccionar_pvd(user):
+                return redirect('modulo_puntos:seleccionar_pvd_view')
             return redirect(next_url)
         messages.error(request, 'Usuario o contraseña incorrectos.')
 
@@ -116,18 +138,35 @@ def perfil_usuario(request):
 
 @login_required(login_url='/login/')
 def panel_control(request):
+    user = request.user
+
+    # Admin PVD y Operador deben seleccionar PVD antes de entrar al panel
+    if usuario_necesita_seleccionar_pvd(user):
+        pvd_id_session = request.session.get('pvd_activo_id')
+        if not pvd_id_session:
+            messages.info(request, 'Selecciona un Punto Vive Digital para comenzar.')
+            return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    es_operador_only = (
+        usuario_es_operador(user)
+        and not user.groups.filter(name='Administrador PVD').exists()
+        and not usuario_es_admin_tic(user)
+        and not user.is_superuser
+    )
+
     context = {
         'total_ciudadanos': Ciudadano.objects.count(),
         'atenciones_registradas': Atencion.objects.count(),
         'total_satisfacciones': Satisfaccion.objects.count(),
         'total_servicios': Servicio.objects.count(),
         'total_prestamos': PrestamoRecurso.objects.count(),
-        'es_superusuario': usuario_es_superusuario(request.user),
-        'es_admin_tic_only': request.user.groups.filter(name='Administrador TIC').exists() and not request.user.is_superuser,
-        'es_admin_pvd_only': request.user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(request.user),
-        'mostrar_modulos_tic': usuario_es_admin_tic(request.user),
-        'mostrar_modulos_pvd': usuario_puede_usar_modulos_pvd(request.user),
-        'rol_usuario': obtener_rol_usuario(request.user),
+        'es_superusuario': usuario_es_superusuario(user),
+        'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
+        'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
+        'es_operador_only': es_operador_only,
+        'mostrar_modulos_tic': usuario_es_admin_tic(user),
+        'mostrar_modulos_pvd': usuario_puede_usar_modulos_pvd(user),
+        'rol_usuario': obtener_rol_usuario(user),
         'pvd_activo': None,
     }
     pvd_id = request.session.get('pvd_activo_id')
@@ -149,7 +188,7 @@ def seleccionar_pvd(request, pvd_cdgo):
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo, estado='A')
     request.session['pvd_activo_id'] = pvd.pk
     messages.success(request, f'Trabajando en: {pvd.nombre}')
-    return redirect('modulo_puntos:inicio_pvd')
+    return redirect('modulo_puntos:panel_control')
 
 
 @login_required(login_url='/login/')
@@ -698,14 +737,15 @@ def crear_admin_tic(request):
             user = form.save()
             grupo, _ = Group.objects.get_or_create(name='Administrador TIC')
             user.groups.add(grupo)
-            messages.success(request, f'Administrador TIC ({user.username}) creado correctamente.')
+            messages.success(request, f'Administrador TIC creado. Usuario: {user.username}')
             return redirect('modulo_puntos:panel_control')
         messages.error(request, 'No se pudo crear el usuario. Revisa los datos ingresados.')
 
     return render(request, 'modulo_puntos/crear_usuario.html', {
         'form': form,
         'titulo': 'Crear Administrador TIC',
-        'rol': 'Administrador TIC'
+        'rol': 'Administrador TIC',
+        'rol_tipo': 'admin_tic',
     })
 
 
@@ -726,21 +766,22 @@ def crear_admin_pvd(request):
             Operador.objects.create(
                 tipo_documento='CC',
                 numero_documento=num_doc_temp,
-                primer_nombre=user.first_name,
-                primer_apellido=user.last_name,
-                correo=user.email,
+                primer_nombre=form.cleaned_data.get('primer_nombre', ''),
+                primer_apellido=form.cleaned_data.get('primer_apellido', ''),
+                correo=form.cleaned_data.get('email', ''),
                 telefono='0000000000',
                 estado='A'
             )
 
-            messages.success(request, f'Administrador PVD ({user.username}) y su perfil de Operador creados correctamente.')
+            messages.success(request, f'Administrador PVD "{user.get_full_name() or user.username}" creado correctamente.')
             return redirect('modulo_puntos:panel_control')
         messages.error(request, 'No se pudo crear el usuario. Revisa los errores.')
 
     return render(request, 'modulo_puntos/crear_usuario.html', {
         'form': form,
         'titulo': 'Crear Administrador PVD',
-        'rol': 'Administrador PVD'
+        'rol': 'Administrador PVD',
+        'rol_tipo': 'admin_pvd',
     })
 
 
@@ -824,7 +865,11 @@ def lista_pvd(request):
         messages.error(request, 'No tienes permisos para gestionar PVDs.')
         return redirect('modulo_puntos:panel_control')
     pvds = PuntoViveDigital.objects.all().order_by('nombre')
-    return render(request, 'modulo_puntos/lista_pvd.html', {'pvds': pvds})
+    puede_eliminar_pvd = tiene_permiso(request.user, 'infraestructura.eliminar_pvd')
+    return render(request, 'modulo_puntos/lista_pvd.html', {
+        'pvds': pvds,
+        'puede_eliminar_pvd': puede_eliminar_pvd,
+    })
 
 
 @login_required(login_url='/login/')
@@ -833,27 +878,10 @@ def crear_pvd(request):
         messages.error(request, 'No tienes permisos para crear PVDs.')
         return redirect('modulo_puntos:panel_control')
 
-    admins_pvd = User.objects.filter(
-        groups__name='Administrador PVD'
-    ).exclude(
-        pvd_profile__punto_asignado__isnull=False
-    ).distinct()
-
     form = PuntoViveDigitalForm(request.POST or None)
     if request.method == 'POST':
         if form.is_valid():
             pvd = form.save()
-
-            admin_id = request.POST.get('admin_pvd_asignado')
-            if admin_id:
-                try:
-                    admin_user = User.objects.get(pk=admin_id)
-                    profile, _ = UserProfile.objects.get_or_create(usuario=admin_user)
-                    profile.punto_asignado = pvd
-                    profile.rol = 'admin_pvd'
-                    profile.save()
-                except User.DoesNotExist:
-                    pass
 
             Sala.objects.get_or_create(
                 punto_vive_digital=pvd,
@@ -870,7 +898,6 @@ def crear_pvd(request):
         'form': form,
         'titulo': 'Crear Punto Vive Digital',
         'accion': 'crear',
-        'admins_pvd': admins_pvd,
     })
 
 
@@ -912,6 +939,23 @@ def activar_pvd(request, pvd_cdgo):
     return redirect('modulo_puntos:lista_pvd')
 
 
+@login_required(login_url='/login/')
+def eliminar_pvd(request, pvd_cdgo):
+    if not tiene_permiso(request.user, 'infraestructura.eliminar_pvd'):
+        messages.error(request, 'No tienes permiso para eliminar Puntos Vive Digital.')
+        return redirect('modulo_puntos:lista_pvd')
+
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo)
+    if request.method == 'POST':
+        nombre = pvd.nombre
+        registrar_auditoria(request, 'DELETE', 'PuntoViveDigital', pvd.pk, f'PVD eliminado: {nombre}')
+        pvd.delete()
+        messages.success(request, f'PVD "{nombre}" eliminado correctamente.')
+        return redirect('modulo_puntos:lista_pvd')
+
+    return redirect('modulo_puntos:lista_pvd')
+
+
 # ── GESTIÓN DE SALAS ───────────────────────────────────────────────────────────
 
 @login_required(login_url='/login/')
@@ -920,15 +964,31 @@ def lista_salas(request):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    pvd_id = request.session.get('pvd_activo_id')
-    if pvd_id:
-        salas = Sala.objects.filter(punto_vive_digital_id=pvd_id).order_by('nombre')
-        pvd = PuntoViveDigital.objects.filter(pk=pvd_id).first()
-    else:
-        salas = Sala.objects.all().select_related('punto_vive_digital').order_by('punto_vive_digital__nombre', 'nombre')
-        pvd = None
+    es_admin_tic = usuario_es_admin_tic(request.user) or request.user.is_superuser
+    puede_eliminar = tiene_permiso(request.user, 'infraestructura.eliminar_sala')
 
-    return render(request, 'modulo_puntos/lista_salas.html', {'salas': salas, 'pvd': pvd})
+    if es_admin_tic:
+        pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+        pvd_id = request.GET.get('pvd_id') or request.session.get('pvd_activo_id')
+        pvd_seleccionado = PuntoViveDigital.objects.filter(pk=pvd_id).first() if pvd_id else None
+        if pvd_seleccionado:
+            salas = Sala.objects.filter(punto_vive_digital=pvd_seleccionado).order_by('nombre')
+        else:
+            salas = Sala.objects.all().select_related('punto_vive_digital').order_by('punto_vive_digital__nombre', 'nombre')
+    else:
+        pvds = []
+        pvd_id = request.session.get('pvd_activo_id')
+        pvd_seleccionado = PuntoViveDigital.objects.filter(pk=pvd_id).first() if pvd_id else None
+        salas = Sala.objects.filter(punto_vive_digital_id=pvd_id).order_by('nombre') if pvd_id else Sala.objects.none()
+
+    return render(request, 'modulo_puntos/lista_salas.html', {
+        'salas': salas,
+        'pvd': pvd_seleccionado,
+        'pvd_seleccionado': pvd_seleccionado,
+        'pvds': pvds,
+        'es_admin_tic': es_admin_tic,
+        'puede_eliminar': puede_eliminar,
+    })
 
 
 @login_required(login_url='/login/')
@@ -993,6 +1053,23 @@ def activar_sala(request, sala_cdgo):
     sala.save()
     estado_str = 'activada' if sala.estado == 'A' else 'desactivada'
     messages.success(request, f'Sala "{sala.nombre}" {estado_str} correctamente.')
+    return redirect('modulo_puntos:lista_salas')
+
+
+@login_required(login_url='/login/')
+def eliminar_sala(request, sala_cdgo):
+    if not tiene_permiso(request.user, 'infraestructura.eliminar_sala'):
+        messages.error(request, 'No tienes permiso para eliminar salas.')
+        return redirect('modulo_puntos:lista_salas')
+
+    sala = get_object_or_404(Sala, pk=sala_cdgo)
+    if request.method == 'POST':
+        nombre = sala.nombre
+        registrar_auditoria(request, 'DELETE', 'Sala', sala.pk, f'Sala eliminada: {nombre}')
+        sala.delete()
+        messages.success(request, f'Sala "{nombre}" eliminada correctamente.')
+        return redirect('modulo_puntos:lista_salas')
+
     return redirect('modulo_puntos:lista_salas')
 
 

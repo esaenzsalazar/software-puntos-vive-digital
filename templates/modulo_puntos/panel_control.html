@@ -48,49 +48,121 @@
 </div>
 
 {# ============================================================================ #}
-{# PANEL SUPERUSUARIO #}
+{# PANEL SUPERUSUARIO — acceso total a todas las funciones del sistema #}
 {# ============================================================================ #}
 {% if es_superusuario %}
-<div class="content-section">
-    <div class="section-header">
-        <h3 class="section-title">👑 Funciones de Superusuario</h3>
+
+{# ── Contexto de PVD para módulos operacionales ── #}
+<div class="content-section" style="margin-bottom: 8px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>
+            <strong style="font-size:14px; color:#1e293b;">PVD activo para módulos operacionales:</strong>
+            {% if pvd_activo %}
+                <span class="badge badge-success" style="margin-left:8px;">{{ pvd_activo.nombre }}</span>
+                <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm btn-secondary" style="margin-left:10px;">Cambiar</a>
+            {% else %}
+                <span class="badge badge-warning" style="margin-left:8px;">Sin PVD seleccionado — se mostrarán datos globales</span>
+                <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left:10px;">Seleccionar PVD</a>
+            {% endif %}
+        </div>
+        <span style="font-size:12px; color:#64748b;"><i class="fas fa-info-circle"></i> El superusuario puede operar en cualquier PVD sin restricciones.</span>
     </div>
-    
-    <div class="grid" style="margin-top: 24px;">
-        <div class="menu-card">
-            <h3>📈 Informes</h3>
-            <p>Reportes y exportación de datos del sistema.</p>
+</div>
+
+{# ── Estadísticas globales ── #}
+<div class="content-section" style="margin-bottom: 8px;">
+    <div class="section-header"><h3 class="section-title">📊 Indicadores Globales del Sistema</h3></div>
+    <div class="stats-grid" style="margin-top:16px;">
+        <div class="stat-card stat-card--accent-blue"><h3>👥 Ciudadanos</h3><p class="stat-card__value">{{ total_ciudadanos }}</p></div>
+        <div class="stat-card stat-card--accent-emerald"><h3>🎯 Atenciones</h3><p class="stat-card__value">{{ atenciones_registradas }}</p></div>
+        <div class="stat-card stat-card--accent-amber"><h3>⭐ Satisfacción</h3><p class="stat-card__value">{{ total_satisfacciones }}</p></div>
+        <div class="stat-card stat-card--accent-violet"><h3>🛠️ Servicios</h3><p class="stat-card__value">{{ total_servicios }}</p></div>
+        <div class="stat-card stat-card--accent-rose"><h3>📦 Préstamos</h3><p class="stat-card__value">{{ total_prestamos }}</p></div>
+    </div>
+</div>
+
+{# ── 1. Administración del sistema ── #}
+<div class="content-section">
+    <div class="section-header"><h3 class="section-title">👑 Administración del Sistema</h3></div>
+    <div class="grid" style="margin-top:16px;">
+
+        <div class="menu-card menu-card--featured">
+            <h3>⚙️ Usuarios</h3>
+            <p>Crear y gestionar cuentas de administradores TIC y PVD.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear Admin TIC</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Admin PVD</a>
             </div>
         </div>
 
         <div class="menu-card">
-            <h3>🏛️ Infraestructura</h3>
-            <p>Gestionar PVDs, salas y habilitaciones.</p>
+            <h3>🔐 Permisos y Roles</h3>
+            <p>Gestionar permisos por rol y sobreescrituras individuales.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🏛️ Edificios PVD</h3>
+            <p>Crear, editar y administrar los Puntos Vive Digital.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>📈 Reportes</h3>
+            <p>Informes, estadísticas y exportación de datos del sistema.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── 2. Módulos operacionales ── #}
+<div class="content-section">
+    <div class="section-header"><h3 class="section-title">🏢 Módulos Operacionales del PVD</h3></div>
+    <div class="grid" style="margin-top:16px;">
+
+        <div class="menu-card">
+            <h3>👥 Ciudadanos</h3>
+            <p>Consultar, registrar y editar ciudadanos del sistema.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
+                <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
+            </div>
+        </div>
+
+        <div class="menu-card menu-card--featured">
+            <h3>🎯 Atención al Ciudadano</h3>
+            <p>Registrar atenciones, servicios y encuestas de satisfacción.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_atencion' %}">Nueva Atención</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_satisfaccion' %}">Satisfacción</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>📦 Inventario</h3>
+            <p>Gestionar recursos (equipos) y préstamos del PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🏛️ Salas y Espacios</h3>
+            <p>Gestionar salas y habilitar espacios para uso en los PVDs.</p>
+            <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
             </div>
         </div>
 
-        <div class="menu-card menu-card--featured">
-            <h3>⚙️ Administración</h3>
-            <p>Crear usuarios administradores.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Usuario PVD</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_tic' %}">Crear Usuario TIC</a>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <h3>🔐 Permisos</h3>
-            <p>Gestionar permisos y accesos por rol de usuario.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -188,6 +260,54 @@
         <div class="menu-card">
             <h3>🏛️ Infraestructura</h3>
             <p>Gestionar salas y habilitar espacios para uso.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ============================================================================ #}
+{# PANEL OPERADOR #}
+{# ============================================================================ #}
+{% elif es_operador_only %}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title">🧑‍💼 Funciones de Operador{% if pvd_activo %} — {{ pvd_activo.nombre }}{% endif %}</h3>
+    </div>
+
+    <div class="grid" style="margin-top: 24px;">
+        <div class="menu-card">
+            <h3>👥 Ciudadanos</h3>
+            <p>Consultar, registrar y editar ciudadanos del PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:consultar_ciudadanos' %}">Consultar</a>
+                <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
+            </div>
+        </div>
+
+        <div class="menu-card menu-card--featured">
+            <h3>🎯 Atención al Ciudadano</h3>
+            <p>Registrar atenciones y servicios prestados.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_atencion' %}">Nueva Atención</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>📦 Inventario</h3>
+            <p>Registrar recursos y préstamos de equipos.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🏛️ Infraestructura</h3>
+            <p>Consultar salas y agenda de habilitaciones.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>

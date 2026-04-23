@@ -82,6 +82,7 @@ urlpatterns = [
     path('pvd/crear/', views.crear_pvd, name='crear_pvd'),
     path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
     path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
+    path('pvd/eliminar/<int:pvd_cdgo>/', views.eliminar_pvd, name='eliminar_pvd'),
     path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
     path('configuracion/roles/', views.gestionar_roles, name='gestionar_roles'),
     # ==========================================================================
@@ -91,6 +92,7 @@ urlpatterns = [
     path('salas/crear/', views.crear_sala, name='crear_sala'),
     path('salas/editar/<int:sala_cdgo>/', views.editar_sala, name='editar_sala'),
     path('salas/activar/<int:sala_cdgo>/', views.activar_sala, name='activar_sala'),
+    path('salas/eliminar/<int:sala_cdgo>/', views.eliminar_sala, name='eliminar_sala'),
     
     # ==========================================================================
     # HABILITACIÓN DE SALAS

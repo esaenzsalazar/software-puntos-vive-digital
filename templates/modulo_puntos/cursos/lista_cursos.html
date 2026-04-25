@@ -8,7 +8,8 @@
         <span class="eyebrow">Formación</span>
         <h1 class="page-title">Cursos y Talleres</h1>
         <p class="muted">Gestiona los cursos de aprendizaje del Punto Vive Digital</p>
-        <div class="page-hero__actions" style="margin-top:16px;">
+        <div class="page-hero__actions" style="margin-top:16px; display:flex; gap:8px;">
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn" style="background:#94a3b8; color:white;">← Volver al Panel</a>
             <a href="{% url 'modulo_puntos:crear_curso' %}" class="btn btn-primary">➕ Nuevo Curso</a>
         </div>
     </div>

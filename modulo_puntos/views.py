@@ -1603,7 +1603,7 @@ def crear_curso(request):
         return redirect('modulo_puntos:panel_control')
 
     pvd_id = request.session.get('pvd_activo_id')
-    if not pvd_id and not usuario_es_admin_tic(request.user):
+    if not pvd_id:
         messages.error(request, 'Debes seleccionar un Punto Vive Digital primero.')
         return redirect('modulo_puntos:seleccionar_pvd_view')
 
@@ -1814,7 +1814,7 @@ def crear_mantenimiento(request):
         return redirect('modulo_puntos:panel_control')
 
     pvd_id = request.session.get('pvd_activo_id')
-    if not pvd_id and not usuario_es_admin_tic(request.user):
+    if not pvd_id:
         messages.error(request, 'Debes seleccionar un Punto Vive Digital primero.')
         return redirect('modulo_puntos:seleccionar_pvd_view')
 
@@ -1908,7 +1908,7 @@ def registrar_apertura(request):
         return redirect('modulo_puntos:panel_control')
 
     pvd_id = request.session.get('pvd_activo_id')
-    if not pvd_id and not usuario_es_admin_tic(request.user):
+    if not pvd_id:
         messages.error(request, 'Debes seleccionar un Punto Vive Digital primero.')
         return redirect('modulo_puntos:seleccionar_pvd_view')
 

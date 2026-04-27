@@ -1,0 +1,42 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Editar Préstamo{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Inventario › Préstamos</span>
+        <h2 class="page-title">Editar préstamo</h2>
+        <p class="muted">
+            {% if prestamo.recurso %}{{ prestamo.recurso.tipo }}{% endif %}
+            — entregado el {{ prestamo.fecha_entrega|date:"d/m/Y H:i" }}
+        </p>
+    </div>
+
+    {% if form.errors %}
+        <div class="alert alert-error">Revisa los campos marcados antes de continuar.</div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="grid form-grid-2">
+            {% for field in form %}
+                <div {% if field.name == 'observaciones' %}class="span-full"{% endif %}>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ field.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="actions" style="justify-content:flex-end; margin-top:25px;">
+            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

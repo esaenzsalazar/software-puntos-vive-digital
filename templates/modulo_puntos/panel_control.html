@@ -70,16 +70,128 @@
 </div>
 
 {# ── Estadísticas globales ── #}
-<div class="content-section" style="margin-bottom: 8px;">
-    <div class="section-header"><h3 class="section-title">📊 Indicadores Globales del Sistema</h3></div>
-    <div class="stats-grid" style="margin-top:16px;">
-        <div class="stat-card stat-card--accent-blue"><h3>👥 Ciudadanos</h3><p class="stat-card__value">{{ total_ciudadanos }}</p></div>
-        <div class="stat-card stat-card--accent-emerald"><h3>🎯 Atenciones</h3><p class="stat-card__value">{{ atenciones_registradas }}</p></div>
-        <div class="stat-card stat-card--accent-amber"><h3>⭐ Satisfacción</h3><p class="stat-card__value">{{ total_satisfacciones }}</p></div>
-        <div class="stat-card stat-card--accent-violet"><h3>🛠️ Servicios</h3><p class="stat-card__value">{{ total_servicios }}</p></div>
-        <div class="stat-card stat-card--accent-rose"><h3>📦 Préstamos</h3><p class="stat-card__value">{{ total_prestamos }}</p></div>
+<div class="content-section" style="margin-bottom:8px;">
+    <div class="section-header">
+        <h3 class="section-title">Indicadores Globales del Sistema</h3>
+        <p class="muted" style="margin:4px 0 0 0; font-size:13px;">Totales acumulados en toda la plataforma</p>
+    </div>
+
+    {% comment %} Fila 1: métricas principales {% endcomment %}
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:16px;">
+
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#1d4ed8; margin-bottom:8px;">Ciudadanos</div>
+            <div style="font-size:2rem; font-weight:800; color:#1e3a5f; line-height:1;">{{ total_ciudadanos }}</div>
+            <div style="font-size:12px; color:#3b82f6; margin-top:6px;">registrados en el sistema</div>
+        </div>
+
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#15803d; margin-bottom:8px;">Atenciones</div>
+            <div style="font-size:2rem; font-weight:800; color:#14532d; line-height:1;">{{ atenciones_registradas }}</div>
+            <div style="font-size:12px; color:#16a34a; margin-top:6px;">atenciones registradas</div>
+        </div>
+
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#b45309; margin-bottom:8px;">Satisfacción</div>
+            <div style="font-size:2rem; font-weight:800; color:#78350f; line-height:1;">{{ total_satisfacciones }}</div>
+            <div style="font-size:12px; color:#d97706; margin-top:6px;">encuestas completadas</div>
+        </div>
+
+        <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6d28d9; margin-bottom:8px;">Servicios</div>
+            <div style="font-size:2rem; font-weight:800; color:#4c1d95; line-height:1;">{{ total_servicios }}</div>
+            <div style="font-size:12px; color:#7c3aed; margin-top:6px;">servicios prestados</div>
+        </div>
+
+    </div>
+
+    {% comment %} Fila 2: métricas secundarias {% endcomment %}
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:14px;">
+
+        <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
+            <div>
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#be123c; margin-bottom:4px;">Préstamos</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#881337; line-height:1;">{{ total_prestamos }}</div>
+            </div>
+        </div>
+
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
+            <div>
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#0369a1; margin-bottom:4px;">Recursos</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#0c4a6e; line-height:1;">{{ total_recursos }}</div>
+            </div>
+        </div>
+
+        <div style="background:#fdf4ff; border:1px solid #e9d5ff; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
+            <div>
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#7e22ce; margin-bottom:4px;">Cursos</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#4a044e; line-height:1;">{{ total_cursos }}</div>
+            </div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
+            <div>
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#475569; margin-bottom:4px;">PVDs activos</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#1e293b; line-height:1;">{{ total_pvds }}</div>
+            </div>
+        </div>
+
     </div>
 </div>
+
+{# ── Indicadores del PVD seleccionado ── #}
+{% if pvd_activo %}
+<div class="content-section" style="margin-bottom:8px;">
+    <div class="section-header">
+        <h3 class="section-title">{{ pvd_activo.nombre }}</h3>
+        <p class="muted" style="margin:4px 0 0 0; font-size:13px;">Indicadores específicos del PVD activo</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px;">
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #3b82f6; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#1d4ed8; margin-bottom:8px;">Ciudadanos</div>
+            <div style="font-size:2rem; font-weight:800; color:#1e3a5f; line-height:1;">{{ pvd_ciudadanos }}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:6px;">registrados en este PVD</div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#15803d; margin-bottom:8px;">Atenciones</div>
+            <div style="font-size:2rem; font-weight:800; color:#14532d; line-height:1;">{{ pvd_atenciones }}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:6px;">atenciones en este PVD</div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #8b5cf6; border-radius:10px; padding:18px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#6d28d9; margin-bottom:8px;">Cursos</div>
+            <div style="font-size:2rem; font-weight:800; color:#4c1d95; line-height:1;">{{ pvd_cursos }}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:6px;">cursos en este PVD</div>
+        </div>
+
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px;">
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #f59e0b; border-radius:10px; padding:16px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#b45309; margin-bottom:4px;">Salas</div>
+            <div style="font-size:1.6rem; font-weight:800; color:#78350f; line-height:1;">{{ pvd_salas }}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">salas registradas</div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #f43f5e; border-radius:10px; padding:16px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#be123c; margin-bottom:4px;">Habilitaciones</div>
+            <div style="font-size:1.6rem; font-weight:800; color:#881337; line-height:1;">{{ pvd_habilitaciones }}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">habilitaciones de sala</div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #64748b; border-radius:10px; padding:16px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#475569; margin-bottom:4px;">Mantenimientos</div>
+            <div style="font-size:1.6rem; font-weight:800; color:#1e293b; line-height:1;">{{ pvd_mantenimientos }}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">registros de mantenimiento</div>
+        </div>
+
+    </div>
+</div>
+{% endif %}
 
 {# ── 1. Administración del sistema ── #}
 <div class="content-section">

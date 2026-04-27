@@ -77,6 +77,7 @@ TIPO_RECURSO_CHOICES = [
     ('Impresora Láser', 'Impresora Láser'),
     ('Impresora de Inyección', 'Impresora de Inyección'),
     ('Computador de Mesa', 'Computador de Mesa'),
+    ('__otro__', 'Otro...'),
 ]
 
 # ==============================================================================
@@ -445,16 +446,22 @@ class PrestamoRecursoForm(forms.ModelForm):
 
 
 class RecursoForm(forms.ModelForm):
-    """
-    Formulario para registrar recursos/equipos del PVD.
-    """
+    tipo_personalizado = forms.CharField(
+        label='Nombre del recurso',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: Adaptador HDMI',
+        })
+    )
+
     class Meta:
         model = Recurso
         fields = ['tipo', 'estado']
         widgets = {
             'tipo': forms.Select(
                 choices=TIPO_RECURSO_CHOICES,
-                attrs={'class': 'form-control'}
+                attrs={'class': 'form-control', 'id': 'id_tipo'}
             ),
             'estado': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo')],
@@ -463,9 +470,30 @@ class RecursoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Inicializar estado como activo por defecto."""
         super().__init__(*args, **kwargs)
         self.fields['estado'].initial = 'A'
+
+        # Tipos base siempre presentes
+        base = ['Portátil', 'Video Beam', 'Televisor', 'Impresora Láser',
+                'Impresora de Inyección', 'Computador de Mesa']
+        # Tipos guardados en BD (incluye los creados con "Otro")
+        from .models import Recurso as RecursoModel
+        db_tipos = list(RecursoModel.objects.values_list('tipo', flat=True).distinct())
+        todos = sorted(set(base) | set(db_tipos))
+        choices = [('', '— Seleccione un tipo —')]
+        choices += [(t, t) for t in todos]
+        choices += [('__otro__', 'Otro...')]
+        self.fields['tipo'].widget.choices = choices
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('tipo') == '__otro__':
+            nombre = cleaned.get('tipo_personalizado', '').strip()
+            if not nombre:
+                self.add_error('tipo_personalizado', 'Escribe el nombre del nuevo recurso.')
+            else:
+                cleaned['tipo'] = nombre
+        return cleaned
 
 
 # ==============================================================================

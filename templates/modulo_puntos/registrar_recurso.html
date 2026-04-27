@@ -11,50 +11,72 @@
     </div>
 
     {% if form.errors %}
-        <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>
+        <div class="alert alert-error">Revisa los campos marcados antes de continuar.</div>
     {% endif %}
 
     <form method="POST">
         {% csrf_token %}
         <div class="grid form-grid-2">
-            {% for field in form %}
-                <div>
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
-                    </label>
-                    {{ field }}
-                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
-                </div>
-            {% endfor %}
+
+            {# Tipo de recurso (select) #}
+            <div>
+                <label for="id_tipo">
+                    Tipo de Recurso <span style="color:red;">*</span>
+                </label>
+                {{ form.tipo }}
+                {% if form.tipo.errors %}
+                    <span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.tipo.errors.0 }}</span>
+                {% endif %}
+            </div>
+
+            {# Estado #}
+            <div>
+                <label for="{{ form.estado.id_for_label }}">
+                    Estado <span style="color:red;">*</span>
+                </label>
+                {{ form.estado }}
+                {% if form.estado.errors %}
+                    <span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.estado.errors.0 }}</span>
+                {% endif %}
+            </div>
+
+            {# Campo "Otro" — se muestra solo cuando se selecciona Otro... #}
+            <div id="campo-otro" class="span-full" style="display:none;">
+                <label for="{{ form.tipo_personalizado.id_for_label }}">
+                    Nombre del recurso <span style="color:red;">*</span>
+                </label>
+                {{ form.tipo_personalizado }}
+                {% if form.tipo_personalizado.errors %}
+                    <span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.tipo_personalizado.errors.0 }}</span>
+                {% endif %}
+            </div>
+
         </div>
 
-        <div class="actions" style="justify-content: flex-end; margin-top: 25px;">
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn">Añadir Recurso</button>
+        <div class="actions" style="justify-content:flex-end; margin-top:25px;">
+            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Añadir Recurso</button>
         </div>
     </form>
 </div>
 
-{% block extra_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form[method="POST"]');
-    const tipoSelect = document.getElementById('id_tipo');
+(function () {
+    var select = document.getElementById('id_tipo');
+    var campoOtro = document.getElementById('campo-otro');
+    var inputOtro = document.getElementById('{{ form.tipo_personalizado.id_for_label }}');
 
-    if (tipoSelect) {
-        tipoSelect.addEventListener('change', function () {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Tipo de recurso');
-        });
+    function toggleOtro() {
+        var esOtro = select.value === '__otro__';
+        campoOtro.style.display = esOtro ? '' : 'none';
+        if (inputOtro) inputOtro.required = esOtro;
     }
 
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            let ok = true;
-            if (tipoSelect && !ValidacionPVD.validarYMostrar(tipoSelect, ValidacionPVD.validarRequerido, 'Tipo de recurso').valido) ok = false;
-            if (!ok) e.preventDefault();
-        });
-    }
-});
+    select.addEventListener('change', toggleOtro);
+
+    // Si hay error de validación y venía con Otro seleccionado, mostrar el campo
+    toggleOtro();
+})();
 </script>
-{% endblock %}
+
 {% endblock %}

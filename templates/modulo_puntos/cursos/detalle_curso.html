@@ -3,58 +3,97 @@
 {% block title %}{{ curso.nombre }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="page-hero">
-        <span class="eyebrow">Formación › Cursos</span>
-        <h1 class="page-title">{{ curso.nombre }}</h1>
-        <p class="muted">{{ curso.punto_vive_digital.nombre }} · {{ curso.get_modalidad_display }}</p>
-        <div class="page-hero__actions" style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
-            <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm">✏️ Editar</a>
-            <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm btn-primary">➕ Nueva Sesión</a>
-            <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">👤 Inscribir Ciudadano</a>
-            <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm btn-secondary">← Volver</a>
-        </div>
-    </div>
 
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px;">
-        <div class="stat-card">
-            <div class="stat-card__value">{{ curso.total_inscritos }}</div>
-            <div class="stat-card__label">Inscritos</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card__value">{{ sesiones.count }}</div>
-            <div class="stat-card__label">Sesiones</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card__value">{{ curso.fecha_inicio|date:"d/m/Y" }}</div>
-            <div class="stat-card__label">Inicio</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card__value">
-                {% if curso.estado == 'AC' %}<span class="badge badge--success">En curso</span>
-                {% elif curso.estado == 'PL' %}<span class="badge badge--warning">Planificado</span>
-                {% elif curso.estado == 'FI' %}<span class="badge" style="background:#e2e8f0;color:#475569;">Finalizado</span>
-                {% else %}<span class="badge badge--danger">Cancelado</span>{% endif %}
+{# ── Encabezado ── #}
+<div class="card" style="margin-bottom:20px;">
+    <div class="page-hero" style="padding-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+            <div>
+                <span class="eyebrow">Formación › Cursos</span>
+                <h1 class="page-title" style="margin-bottom:6px;">{{ curso.nombre }}</h1>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span class="muted">{{ curso.punto_vive_digital.nombre }}</span>
+                    <span style="color:#cbd5e1;">·</span>
+                    <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
+                        {{ curso.get_modalidad_display }}
+                    </span>
+                    {% if curso.estado == 'AC' %}
+                        <span class="badge badge--success">En curso</span>
+                    {% elif curso.estado == 'PL' %}
+                        <span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;">Planificado</span>
+                    {% elif curso.estado == 'FI' %}
+                        <span class="badge" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;">Finalizado</span>
+                    {% else %}
+                        <span class="badge badge--danger">Cancelado</span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="stat-card__label">Estado</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm">Editar</a>
+                <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn-primary btn--sm">+ Nueva Sesión</a>
+                <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">Inscribir Ciudadano</a>
+                <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm">← Volver</a>
+            </div>
         </div>
     </div>
 
-    {% if curso.descripcion %}
-    <p style="color:#374151; margin-bottom:24px;">{{ curso.descripcion }}</p>
-    {% endif %}
+    {# ── Métricas rápidas ── #}
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 18px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:6px;">Inscritos</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#1e3a5f;line-height:1;">{{ curso.total_inscritos }}</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 18px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin-bottom:6px;">Sesiones</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#14532d;line-height:1;">{{ sesiones.count }}</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#475569;margin-bottom:6px;">Inicio</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#1e293b;line-height:1.2;">{{ curso.fecha_inicio|date:"d/m/Y" }}</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#475569;margin-bottom:6px;">Fin</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#1e293b;line-height:1.2;">
+                {% if curso.fecha_fin %}{{ curso.fecha_fin|date:"d/m/Y" }}{% else %}<span class="muted">—</span>{% endif %}
+            </div>
+        </div>
+    </div>
 
-    <!-- SESIONES -->
-    <h2 style="font-size:18px; font-weight:600; margin-bottom:12px; border-bottom:1px solid var(--p-border); padding-bottom:8px;">
-        📅 Sesiones ({{ sesiones.count }})
-    </h2>
+    {# ── Información adicional ── #}
+    {% if curso.descripcion or curso.poblacion_objetivo or curso.registrado_por %}
+    <div style="display:grid; grid-template-columns:{% if curso.descripcion %}2fr{% endif %}{% if curso.poblacion_objetivo %} 1fr{% endif %}; gap:16px;">
+        {% if curso.descripcion %}
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px;">Descripción</div>
+            <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">{{ curso.descripcion }}</p>
+        </div>
+        {% endif %}
+        {% if curso.poblacion_objetivo %}
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px;">Población objetivo</div>
+            <p style="margin:0;color:#374151;font-size:14px;">{{ curso.poblacion_objetivo }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{# ── Sesiones ── #}
+<div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h2 style="margin:0;font-size:16px;font-weight:700;color:#1e293b;">Sesiones</h2>
+            <span class="muted" style="font-size:13px;">{{ sesiones.count }} sesión{{ sesiones.count|pluralize:"es" }} registrada{{ sesiones.count|pluralize:"s" }}</span>
+        </div>
+        <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn-primary btn--sm">+ Nueva Sesión</a>
+    </div>
 
     {% if sesiones %}
-    <div class="table-responsive" style="margin-bottom:32px;">
-        <table class="table table-striped">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th style="width:48px;">#</th>
                     <th>Tema</th>
                     <th>Fecha</th>
                     <th>Horario</th>
@@ -64,12 +103,16 @@
             <tbody>
                 {% for ses in sesiones %}
                 <tr>
-                    <td>{{ ses.numero_sesion }}</td>
-                    <td>{{ ses.tema }}</td>
+                    <td style="color:#94a3b8;font-size:13px;font-weight:600;">{{ ses.numero_sesion }}</td>
+                    <td><strong style="color:#1e293b;">{{ ses.tema }}</strong></td>
                     <td>{{ ses.fecha|date:"d/m/Y" }}</td>
-                    <td>{{ ses.hora_inicio|time:"H:i" }} – {{ ses.hora_fin|time:"H:i" }}</td>
+                    <td>
+                        <span style="font-variant-numeric:tabular-nums;">
+                            {{ ses.hora_inicio|time:"H:i" }} – {{ ses.hora_fin|time:"H:i" }}
+                        </span>
+                    </td>
                     <td class="text-center">
-                        <a href="{% url 'modulo_puntos:marcar_asistencia' ses.id %}" class="btn btn--sm">📋 Registrar</a>
+                        <a href="{% url 'modulo_puntos:marcar_asistencia' ses.id %}" class="btn btn--sm">Registrar asistencia</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -77,34 +120,47 @@
         </table>
     </div>
     {% else %}
-    <p class="muted" style="margin-bottom:24px;">Sin sesiones registradas aún.</p>
+    <div style="text-align:center;padding:32px 24px;background:#f8fafc;border-radius:8px;">
+        <p style="margin:0 0 12px;color:#64748b;font-size:14px;">No hay sesiones registradas aún.</p>
+        <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm">+ Agregar primera sesión</a>
+    </div>
     {% endif %}
+</div>
 
-    <!-- INSCRITOS -->
-    <h2 style="font-size:18px; font-weight:600; margin-bottom:12px; border-bottom:1px solid var(--p-border); padding-bottom:8px;">
-        👥 Inscritos ({{ inscripciones.count }})
-    </h2>
+{# ── Inscritos ── #}
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h2 style="margin:0;font-size:16px;font-weight:700;color:#1e293b;">Inscritos</h2>
+            <span class="muted" style="font-size:13px;">{{ inscripciones.count }} persona{{ inscripciones.count|pluralize:"s" }} inscrita{{ inscripciones.count|pluralize:"s" }}</span>
+        </div>
+        <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">+ Inscribir ciudadano</a>
+    </div>
 
     {% if inscripciones %}
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped table-hover">
             <thead>
                 <tr>
-                    <th>Ciudadano</th>
+                    <th>Nombre</th>
                     <th>Documento</th>
                     <th>Estado</th>
-                    <th>Fecha Inscripción</th>
+                    <th>Fecha de inscripción</th>
                 </tr>
             </thead>
             <tbody>
                 {% for ins in inscripciones %}
                 <tr>
-                    <td>{{ ins.ciudadano.get_nombre_completo }}</td>
-                    <td>{{ ins.ciudadano.numero_documento }}</td>
+                    <td><strong style="color:#1e293b;">{{ ins.ciudadano.get_nombre_completo }}</strong></td>
+                    <td style="color:#64748b;">{{ ins.ciudadano.numero_documento }}</td>
                     <td>
-                        {% if ins.estado == 'I' %}<span class="badge badge--success">Inscrito</span>
-                        {% elif ins.estado == 'C' %}<span class="badge" style="background:#e2e8f0;color:#475569;">Completado</span>
-                        {% else %}<span class="badge badge--danger">Retirado</span>{% endif %}
+                        {% if ins.estado == 'I' %}
+                            <span class="badge badge--success">Inscrito</span>
+                        {% elif ins.estado == 'C' %}
+                            <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">Completado</span>
+                        {% else %}
+                            <span class="badge badge--danger">Retirado</span>
+                        {% endif %}
                     </td>
                     <td>{{ ins.fecha_inscripcion|date:"d/m/Y" }}</td>
                 </tr>
@@ -113,7 +169,11 @@
         </table>
     </div>
     {% else %}
-    <p class="muted">Sin inscritos aún. <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}">Inscribir ciudadano</a></p>
+    <div style="text-align:center;padding:32px 24px;background:#f8fafc;border-radius:8px;">
+        <p style="margin:0 0 12px;color:#64748b;font-size:14px;">No hay personas inscritas aún.</p>
+        <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">+ Inscribir ciudadano</a>
+    </div>
     {% endif %}
 </div>
+
 {% endblock %}

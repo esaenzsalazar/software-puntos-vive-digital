@@ -1,0 +1,150 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Inventario de Recursos{% endblock %}
+
+{% block content %}
+
+{# ── Encabezado y resumen ── #}
+<div class="card" style="margin-bottom:24px;">
+    <div class="page-hero" style="padding-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+            <div>
+                <span class="eyebrow">Inventario</span>
+                <h1 class="page-title">Recursos del Punto</h1>
+                <p class="muted">{% if pvd %}{{ pvd.nombre }}{% else %}Todos los Puntos Vive Digital{% endif %}</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                {% if user.is_superuser %}
+                <a href="{% url 'modulo_puntos:crear_recurso' %}" class="btn btn-primary btn--sm">+ Nuevo recurso</a>
+                {% endif %}
+                <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn--sm">Exportar préstamos CSV</a>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap; padding-bottom:4px;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 24px;text-align:center;min-width:130px;">
+            <div style="font-size:26px;font-weight:700;color:#0f4a9b;">{{ recursos|length }}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;">Recursos totales</div>
+        </div>
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:14px 24px;text-align:center;min-width:130px;">
+            <div style="font-size:26px;font-weight:700;color:#854d0e;">{{ prestados_count }}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;">Prestados ahora</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 24px;text-align:center;min-width:130px;">
+            <div style="font-size:26px;font-weight:700;color:#166534;">{{ disponibles_count }}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;">Disponibles</div>
+        </div>
+    </div>
+</div>
+
+{% if recursos %}
+
+{# ── Filtro por tipo ── #}
+<div style="margin-bottom:20px;">
+    <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Filtrar por tipo</label>
+    <select id="filtro-tipo" onchange="filtrarRecursos()"
+            style="padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:220px;background:white;">
+        <option value="">Todos</option>
+        {% for tipo in tipos_disponibles %}
+            <option value="{{ tipo }}">{{ tipo }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+{# ── Bloques por recurso ── #}
+{% for recurso in recursos %}
+<div class="card recurso-card" data-tipo="{{ recurso.tipo }}" style="margin-bottom:20px;">
+
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <div>
+            <h3 style="margin:0; font-size:17px; font-weight:700; color:#1e293b;">{{ recurso.tipo }}</h3>
+            <span style="font-size:12px; color:#64748b;">
+                {{ recurso.total_prestamos }} préstamo{{ recurso.total_prestamos|pluralize:"s" }} en total
+            </span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            {% if recurso.estado == 'A' %}
+                <span class="badge badge--success">Activo</span>
+            {% else %}
+                <span class="badge" style="background:#f1f5f9;color:#475569;">Inactivo</span>
+            {% endif %}
+            {% if recurso.prestado_ahora %}
+                <span class="badge" style="background:#fef9c3;color:#854d0e;border:1px solid #fde047;">Prestado ahora</span>
+            {% else %}
+                <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">Disponible</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if recurso.todos_los_prestamos %}
+    <div class="table-responsive">
+        <table class="table table-striped" style="margin:0;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha de entrega</th>
+                    <th>Devolución programada</th>
+                    <th>Estado</th>
+                    <th>Observaciones</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prestamo in recurso.todos_los_prestamos %}
+                <tr>
+                    <td style="color:#94a3b8;font-size:12px;">{{ forloop.revcounter }}</td>
+                    <td>{{ prestamo.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if prestamo.fecha_devolucion %}
+                            {{ prestamo.fecha_devolucion|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="muted">No registrada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prestamo.ya_devuelto %}
+                            <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">Devuelto</span>
+                        {% else %}
+                            <span class="badge" style="background:#fef9c3;color:#854d0e;border:1px solid #fde047;">En préstamo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prestamo.observaciones %}{{ prestamo.observaciones }}{% else %}<span class="muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'modulo_puntos:editar_prestamo' prestamo.id %}" class="btn btn--sm" title="Editar préstamo">✏️ Editar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="margin:0;font-size:13px;">Sin préstamos registrados.</p>
+    {% endif %}
+
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card card--hint" style="text-align:center;padding:48px 24px;">
+    <h3 style="margin:0 0 8px 0;">No hay recursos registrados</h3>
+    <p class="muted">No se encontraron recursos para este Punto Vive Digital.</p>
+</div>
+{% endif %}
+
+<script>
+function filtrarRecursos() {
+    var tipo = document.getElementById('filtro-tipo').value;
+    document.querySelectorAll('.recurso-card').forEach(function(card) {
+        if (!tipo || card.dataset.tipo === tipo) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+</script>
+
+{% endblock %}

@@ -49,8 +49,10 @@ urlpatterns = [
     # ==========================================================================
     # GESTIÓN DE RECURSOS Y PRÉSTAMOS
     # ==========================================================================
-    path('registrar-recurso/', views.registrar_recurso, name='registrar_recurso'),
+    path('recursos/', views.lista_recursos, name='registrar_recurso'),
+    path('recursos/nuevo/', views.crear_recurso, name='crear_recurso'),
     path('registrar-prestamo/', views.registrar_prestamo, name='registrar_prestamo'),
+    path('prestamos/<int:prestamo_id>/editar/', views.editar_prestamo, name='editar_prestamo'),
     
     # ==========================================================================
     # REPORTES Y EXPORTACIÓN
@@ -101,6 +103,7 @@ urlpatterns = [
     path('habilitaciones/crear/', views.crear_habilitacion, name='crear_habilitacion'),
     path('habilitaciones/editar/<int:hab_id>/', views.editar_habilitacion, name='editar_habilitacion'),
     path('habilitaciones/cancelar/<int:hab_id>/', views.cancelar_habilitacion, name='cancelar_habilitacion'),
+    path('habilitaciones/eliminar/<int:hab_id>/', views.eliminar_habilitacion, name='eliminar_habilitacion'),
     path('salas/<int:sala_id>/agenda/', views.agenda_sala, name='agenda_sala'),
 
     # ==========================================================================

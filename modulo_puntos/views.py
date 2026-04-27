@@ -146,6 +146,9 @@ def panel_control(request):
         'total_satisfacciones': Satisfaccion.objects.count(),
         'total_servicios': Servicio.objects.count(),
         'total_prestamos': PrestamoRecurso.objects.count(),
+        'total_pvds': PuntoViveDigital.objects.count(),
+        'total_recursos': Recurso.objects.count(),
+        'total_cursos': Curso.objects.count(),
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
         'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
@@ -156,7 +159,15 @@ def panel_control(request):
     }
     pvd_id = request.session.get('pvd_activo_id')
     if pvd_id:
-        context['pvd_activo'] = PuntoViveDigital.objects.filter(pk=pvd_id, estado='A').first()
+        pvd_activo = PuntoViveDigital.objects.filter(pk=pvd_id, estado='A').first()
+        context['pvd_activo'] = pvd_activo
+        if pvd_activo:
+            context['pvd_ciudadanos']     = Ciudadano.objects.filter(punto_vive_digital_id=pvd_id).count()
+            context['pvd_atenciones']     = Atencion.objects.filter(punto_vive_digital_id=pvd_id).count()
+            context['pvd_salas']          = Sala.objects.filter(punto_vive_digital_id=pvd_id).count()
+            context['pvd_cursos']         = Curso.objects.filter(punto_vive_digital_id=pvd_id).count()
+            context['pvd_mantenimientos'] = MantenimientoEquipo.objects.filter(punto_vive_digital_id=pvd_id).count()
+            context['pvd_habilitaciones'] = HabilitacionSala.objects.filter(sala__punto_vive_digital_id=pvd_id).count()
     return render(request, 'modulo_puntos/panel_control.html', context)
 
 
@@ -482,22 +493,91 @@ def registrar_prestamo(request):
 
 
 @login_required(login_url='/login/')
-def registrar_recurso(request):
+def editar_prestamo(request, prestamo_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
+    prestamo = get_object_or_404(PrestamoRecurso, pk=prestamo_id)
+    form = PrestamoRecursoForm(request.POST or None, instance=prestamo)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            registrar_auditoria(
+                request, 'UPDATE', 'PrestamoRecurso', prestamo.pk,
+                f'Préstamo editado: {prestamo.recurso} – entrega {prestamo.fecha_entrega}'
+            )
+            messages.success(request, 'Préstamo actualizado correctamente.')
+            return redirect('modulo_puntos:registrar_recurso')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/editar_prestamo.html', {
+        'form': form,
+        'prestamo': prestamo,
+    })
+
+
+@login_required(login_url='/login/')
+def lista_recursos(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    pvd = PuntoViveDigital.objects.filter(pk=pvd_id).first() if pvd_id else None
+
+    from django.db.models import Prefetch
+    from django.utils import timezone
+
+    now = timezone.now()
+
+    recursos = list(
+        Recurso.objects.all()
+          .annotate(total_prestamos=Count('prestamorecurso'))
+          .prefetch_related(
+              Prefetch('prestamorecurso_set',
+                       queryset=PrestamoRecurso.objects.order_by('-fecha_entrega'),
+                       to_attr='todos_los_prestamos')
+          )
+          .order_by('tipo')
+    )
+
+    tipos_disponibles = sorted({r.tipo for r in recursos})
+
+    for recurso in recursos:
+        for p in recurso.todos_los_prestamos:
+            # Devuelto solo si la fecha de devolución ya pasó
+            p.ya_devuelto = p.fecha_devolucion is not None and p.fecha_devolucion <= now
+        ultimo = recurso.todos_los_prestamos[0] if recurso.todos_los_prestamos else None
+        recurso.prestado_ahora = ultimo is not None and not ultimo.ya_devuelto if ultimo else False
+
+    prestados_count = sum(1 for r in recursos if r.prestado_ahora)
+    disponibles_count = len(recursos) - prestados_count
+
+    return render(request, 'modulo_puntos/lista_recursos.html', {
+        'recursos': recursos,
+        'pvd': pvd,
+        'prestados_count': prestados_count,
+        'disponibles_count': disponibles_count,
+        'tipos_disponibles': tipos_disponibles,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_recurso(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Solo el superusuario puede registrar nuevos recursos.')
+        return redirect('modulo_puntos:registrar_recurso')
+
     form = RecursoForm(request.POST or None)
     if request.method == 'POST':
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, 'Recurso registrado correctamente en la base de datos.')
-                return redirect('modulo_puntos:panel_control')
-            except Exception as e:
-                messages.error(request, f'Error al guardar en BD: {e}')
-        else:
-            messages.error(request, 'No se pudo guardar el recurso. Revisa los datos ingresados.')
+            form.save()
+            registrar_auditoria(request, 'CREATE', 'Recurso', None, f'Nuevo recurso: {form.cleaned_data["tipo"]}')
+            messages.success(request, f'Recurso "{form.cleaned_data["tipo"]}" registrado correctamente.')
+            return redirect('modulo_puntos:registrar_recurso')
+        messages.error(request, 'Revisa los datos del formulario.')
 
     return render(request, 'modulo_puntos/registrar_recurso.html', {'form': form})
 
@@ -1468,10 +1548,6 @@ def editar_habilitacion(request, hab_id):
 
     hab = get_object_or_404(HabilitacionSala, pk=hab_id)
 
-    if hab.estado in ('F', 'X'):
-        messages.warning(request, 'No se puede editar una habilitación finalizada o cancelada.')
-        return redirect('modulo_puntos:lista_habilitaciones')
-
     pvd_id = request.session.get('pvd_activo_id')
     form = HabilitacionSalaForm(request.POST or None, instance=hab, pvd_id=pvd_id)
 
@@ -1513,6 +1589,25 @@ def cancelar_habilitacion(request, hab_id):
         f'Habilitación cancelada: {hab.sala.nombre} – {hab.fecha}'
     )
     messages.success(request, f'Habilitación de "{hab.sala.nombre}" cancelada.')
+    return redirect('modulo_puntos:lista_habilitaciones')
+
+
+@login_required(login_url='/login/')
+def eliminar_habilitacion(request, hab_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    hab = get_object_or_404(HabilitacionSala, pk=hab_id)
+    nombre_sala = hab.sala.nombre
+    fecha = hab.fecha
+    pk = hab.pk
+    hab.delete()
+    registrar_auditoria(
+        request, 'DELETE', 'HabilitacionSala', pk,
+        f'Habilitación eliminada: {nombre_sala} – {fecha}'
+    )
+    messages.success(request, f'Habilitación de "{nombre_sala}" eliminada.')
     return redirect('modulo_puntos:lista_habilitaciones')
 
 

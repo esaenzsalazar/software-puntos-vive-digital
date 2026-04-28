@@ -1,5 +1,5 @@
-import csv
 import random
+from io import BytesIO
 from datetime import datetime, date as date_type, time as time_type
 from django.http import HttpResponse
 from django.contrib import messages
@@ -89,6 +89,24 @@ def login_usuario(request):
             login(request, user)
             messages.success(request, 'Inicio de sesión correcto.')
             if usuario_necesita_seleccionar_pvd(user):
+                from django.utils import timezone
+                try:
+                    profile = user.pvd_profile
+                    if profile.punto_asignado_id and not profile.pvd_temporal_id:
+                        pvd = profile.punto_asignado
+                        if pvd.estado == 'A':
+                            request.session['pvd_activo_id'] = pvd.pk
+                            request.session['pvd_nombre'] = pvd.nombre
+                            hoy = timezone.localdate()
+                            ahora = timezone.localtime().time()
+                            RegistroApertura.objects.get_or_create(
+                                punto_vive_digital=pvd, fecha=hoy,
+                                defaults={'hora_apertura': ahora, 'registrado_por': user}
+                            )
+                            messages.success(request, f'Trabajando en: {pvd.nombre}')
+                            return redirect(next_url)
+                except UserProfile.DoesNotExist:
+                    pass
                 return redirect('modulo_puntos:seleccionar_pvd_view')
             return redirect(next_url)
         messages.error(request, 'Usuario o contraseña incorrectos.')
@@ -97,6 +115,18 @@ def login_usuario(request):
 
 
 def logout_usuario(request):
+    # Cierre automático: registrar hora de cierre en el apertura de hoy
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and request.user.is_authenticated:
+        from django.utils import timezone
+        hoy = timezone.localdate()
+        ahora = timezone.localtime().time()
+        RegistroApertura.objects.filter(
+            punto_vive_digital_id=pvd_id,
+            fecha=hoy,
+            hora_cierre__isnull=True,
+        ).update(hora_cierre=ahora)
+
     logout(request)
     return redirect('modulo_puntos:login')
 
@@ -175,14 +205,56 @@ def panel_control(request):
 
 @login_required(login_url='/login/')
 def seleccionar_pvd_view(request):
-    pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+    if usuario_necesita_seleccionar_pvd(request.user):
+        try:
+            profile = request.user.pvd_profile
+            if profile.punto_asignado_id:
+                pvd_ids = [profile.punto_asignado_id]
+                if profile.pvd_temporal_id:
+                    pvd_ids.append(profile.pvd_temporal_id)
+                pvds = PuntoViveDigital.objects.filter(pk__in=pvd_ids, estado='A').order_by('nombre')
+            else:
+                pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+        except UserProfile.DoesNotExist:
+            pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+    else:
+        pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
     return render(request, 'modulo_puntos/seleccionar_pvd.html', {'pvds': pvds})
 
 
 @login_required(login_url='/login/')
 def seleccionar_pvd(request, pvd_cdgo):
+    from django.utils import timezone
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo, estado='A')
+
+    if usuario_necesita_seleccionar_pvd(request.user):
+        try:
+            profile = request.user.pvd_profile
+            if profile.punto_asignado_id:
+                pvd_ids_permitidos = [profile.punto_asignado_id]
+                if profile.pvd_temporal_id:
+                    pvd_ids_permitidos.append(profile.pvd_temporal_id)
+                if pvd_cdgo not in pvd_ids_permitidos:
+                    messages.error(request, 'No tienes permiso para acceder a ese Punto Vive Digital.')
+                    return redirect('modulo_puntos:seleccionar_pvd_view')
+        except UserProfile.DoesNotExist:
+            pass
+
     request.session['pvd_activo_id'] = pvd.pk
+    request.session['pvd_nombre'] = pvd.nombre
+
+    # Apertura automática: crear registro si no existe uno para hoy en este PVD
+    hoy = timezone.localdate()
+    ahora = timezone.localtime().time()
+    RegistroApertura.objects.get_or_create(
+        punto_vive_digital=pvd,
+        fecha=hoy,
+        defaults={
+            'hora_apertura': ahora,
+            'registrado_por': request.user,
+        }
+    )
+
     messages.success(request, f'Trabajando en: {pvd.nombre}')
     return redirect('modulo_puntos:panel_control')
 
@@ -487,7 +559,10 @@ def registrar_prestamo(request):
             except Exception as e:
                 messages.error(request, f'Error al guardar en BD: {e}')
         else:
-            messages.error(request, 'No se pudo guardar el préstamo. Revisa los datos ingresados.')
+            if form.non_field_errors():
+                messages.error(request, form.non_field_errors()[0])
+            else:
+                messages.error(request, 'Revisa los campos del formulario.')
 
     return render(request, 'modulo_puntos/registrar_prestamo.html', {'form': form})
 
@@ -516,6 +591,34 @@ def editar_prestamo(request, prestamo_id):
         'form': form,
         'prestamo': prestamo,
     })
+
+
+@login_required(login_url='/login/')
+def devolver_prestamo(request, prestamo_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    if request.method != 'POST':
+        return redirect('modulo_puntos:registrar_recurso')
+
+    from django.utils import timezone
+    prestamo = get_object_or_404(PrestamoRecurso, pk=prestamo_id)
+    now = timezone.now()
+
+    # Solo actuar si aún está en préstamo
+    if prestamo.fecha_devolucion is None or prestamo.fecha_devolucion > now:
+        prestamo.fecha_devolucion = now
+        prestamo.save(update_fields=['fecha_devolucion'])
+        registrar_auditoria(
+            request, 'UPDATE', 'PrestamoRecurso', prestamo.pk,
+            f'Devolución anticipada registrada: {prestamo.recurso} a las {now.strftime("%d/%m/%Y %H:%M")}'
+        )
+        messages.success(request, f'Devolución de "{prestamo.recurso}" registrada a las {now.strftime("%H:%M")}.')
+    else:
+        messages.info(request, 'Este préstamo ya figura como devuelto.')
+
+    return redirect('modulo_puntos:registrar_recurso')
 
 
 @login_required(login_url='/login/')
@@ -624,14 +727,57 @@ def registrar_servicio(request):
     return render(request, 'modulo_puntos/registrar_servicio.html', {'form': form})
 
 
-# ── EXPORTACIÓN CSV ────────────────────────────────────────────────────────────
+# ── EXPORTACIÓN XLSX ───────────────────────────────────────────────────────────
 
-def _csv_response(filename_base):
-    response = HttpResponse(content_type='text/csv')
+def _xlsx_response(filename_base, wb):
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
-    response['Content-Disposition'] = f'attachment; filename="{filename_base}_{fecha_actual}.csv"'
-    response.write('﻿'.encode('utf8'))
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename_base}_{fecha_actual}.xlsx"'
     return response
+
+
+def _crear_hoja(titulo, headers, filas):
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = titulo[:31]
+
+    cabecera_fondo = PatternFill(start_color='0B1220', end_color='0B1220', fill_type='solid')
+    cabecera_fuente = Font(bold=True, color='FFFFFF', size=10)
+    fila_par = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
+
+    for col, texto in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=texto)
+        cell.font = cabecera_fuente
+        cell.fill = cabecera_fondo
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    ws.row_dimensions[1].height = 30
+
+    for row_idx, fila in enumerate(filas, 2):
+        for col_idx, valor in enumerate(fila, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=valor)
+            cell.alignment = Alignment(vertical='center')
+            if row_idx % 2 == 0:
+                cell.fill = fila_par
+
+    ws.freeze_panes = 'A2'
+
+    for col in ws.columns:
+        max_len = max(
+            (len(str(c.value)) for c in col if c.value is not None),
+            default=8,
+        )
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 45)
+
+    return wb
 
 
 @login_required(login_url='/login/')
@@ -640,50 +786,42 @@ def exportar_atenciones_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    response = _csv_response('Reporte_Atenciones_PVD')
-    writer = csv.writer(response)
-    writer.writerow([
-        'ID Atención', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado Atención',
+    headers = [
+        'ID Atención', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado',
         'Documento Ciudadano', 'Nombre Completo', 'Género', 'Etnia',
-        'Discapacidad', 'Detalle Discapacidad', 'Barrio', 'Dirección', 'Vereda / Corregimiento',
-        'Admin PVD a Cargo', 'Observaciones'
-    ])
-
-    atenciones = Atencion.objects.select_related('ciudadano', 'operador').order_by('-fecha', '-hora_inicio')
+        'Discapacidad', 'Detalle Discapacidad', 'Barrio', 'Dirección',
+        'Vereda / Corregimiento', 'Admin PVD a Cargo', 'Observaciones',
+    ]
     estado_dict = dict(Atencion.ESTADO_CHOICES)
-
-    for atencion in atenciones:
-        if atencion.ciudadano:
-            c = atencion.ciudadano
-            doc_ciu = c.numero_documento
-            nom_ciu = f"{c.primer_nombre or ''} {c.primer_apellido or ''}".strip()
-            gen_ciu = c.get_genero_display()
-            etnia_ciu = c.etnia or 'N/A'
-            discap_ciu = 'Sí' if c.tiene_discapacidad else 'No'
-            desc_discap_ciu = c.descripcion_discapacidad or 'N/A'
-            barrio_ciu = c.barrio or 'N/A'
-            dir_ciu = c.direccion or 'N/A'
-            rural_ciu = c.zona_rural or 'N/A'
+    filas = []
+    for a in Atencion.objects.select_related('ciudadano', 'operador').order_by('-fecha', '-hora_inicio'):
+        c = a.ciudadano
+        if c:
+            doc = c.numero_documento or ''
+            nom = f"{c.primer_nombre or ''} {c.primer_apellido or ''}".strip()
+            gen = c.get_genero_display()
+            etnia = c.etnia or ''
+            discap = 'Sí' if c.tiene_discapacidad else 'No'
+            desc_discap = c.descripcion_discapacidad or ''
+            barrio = c.barrio or ''
+            direccion = c.direccion or ''
+            rural = c.zona_rural or ''
         else:
-            doc_ciu = nom_ciu = gen_ciu = etnia_ciu = discap_ciu = desc_discap_ciu = barrio_ciu = dir_ciu = rural_ciu = 'N/A'
-
-        if atencion.operador:
-            u = atencion.operador
-            operador_info = u.get_full_name() or u.username
-        else:
-            operador_info = 'N/A'
-
-        estado_display = estado_dict.get(atencion.estado, atencion.estado)
-
-        writer.writerow([
-            atencion.pk, atencion.fecha, atencion.hora_inicio,
-            atencion.hora_fin or 'N/A', estado_display,
-            doc_ciu, nom_ciu, gen_ciu, etnia_ciu, discap_ciu, desc_discap_ciu,
-            barrio_ciu, dir_ciu, rural_ciu, operador_info,
-            atencion.observaciones or 'Sin observaciones'
+            doc = nom = gen = etnia = discap = desc_discap = barrio = direccion = rural = ''
+        operador = a.operador.get_full_name() or a.operador.username if a.operador else ''
+        filas.append([
+            a.pk,
+            str(a.fecha),
+            str(a.hora_inicio),
+            str(a.hora_fin) if a.hora_fin else '',
+            estado_dict.get(a.estado, a.estado),
+            doc, nom, gen, etnia, discap, desc_discap,
+            barrio, direccion, rural, operador,
+            a.observaciones or '',
         ])
 
-    return response
+    wb = _crear_hoja('Atenciones', headers, filas)
+    return _xlsx_response('Reporte_Atenciones_PVD', wb)
 
 
 @login_required(login_url='/login/')
@@ -692,26 +830,41 @@ def exportar_ciudadanos_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    response = _csv_response('Reporte_Ciudadanos_PVD')
-    writer = csv.writer(response)
-    writer.writerow([
-        'ID', 'Tipo doc.', 'Número doc.', 'Nombres', 'Apellidos', 'Fecha nacimiento', 'Género', 'Etnia',
-        'Nivel educativo', 'Ocupación', 'Discapacidad', 'Descripción discapacidad', 'Dirección', 'Barrio',
-        'Zona rural', 'Estrato', 'Estado', 'Email', 'Teléfono'
-    ])
+    headers = [
+        'ID', 'Tipo Documento', 'Número Documento',
+        'Primer Nombre', 'Segundo Nombre', 'Primer Apellido', 'Segundo Apellido',
+        'Fecha Nacimiento', 'Género', 'Etnia', 'Nivel Educativo', 'Ocupación',
+        'Discapacidad', 'Descripción Discapacidad',
+        'Dirección', 'Barrio', 'Zona Rural', 'Estrato', 'Estado', 'Email', 'Teléfono',
+    ]
+    filas = []
     for c in Ciudadano.objects.all().order_by('-pk'):
-        writer.writerow([
-            c.pk, c.tipo_documento, c.numero_documento,
-            f"{c.primer_nombre or ''} {c.segundo_nombre or ''}".strip(),
-            f"{c.primer_apellido or ''} {c.segundo_apellido or ''}".strip(),
-            c.fecha_nacimiento, c.get_genero_display(), c.etnia or '',
-            c.nivel_educativo or '', c.ocupacion or '',
+        filas.append([
+            c.pk,
+            c.tipo_documento or '',
+            c.numero_documento or '',
+            c.primer_nombre or '',
+            c.segundo_nombre or '',
+            c.primer_apellido or '',
+            c.segundo_apellido or '',
+            str(c.fecha_nacimiento) if c.fecha_nacimiento else '',
+            c.get_genero_display(),
+            c.etnia or '',
+            c.nivel_educativo or '',
+            c.ocupacion or '',
             'Sí' if c.tiene_discapacidad else 'No',
             c.descripcion_discapacidad or '',
-            c.direccion or '', c.barrio or '', c.zona_rural or '',
-            c.estrato, c.get_estado_display(), c.correo, c.telefono
+            c.direccion or '',
+            c.barrio or '',
+            c.zona_rural or '',
+            c.estrato,
+            c.get_estado_display(),
+            c.correo or '',
+            c.telefono or '',
         ])
-    return response
+
+    wb = _crear_hoja('Ciudadanos', headers, filas)
+    return _xlsx_response('Reporte_Ciudadanos_PVD', wb)
 
 
 @login_required(login_url='/login/')
@@ -720,26 +873,33 @@ def exportar_servicios_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    response = _csv_response('Reporte_Servicios_PVD')
-    writer = csv.writer(response)
-    writer.writerow([
-        'ID servicio', 'ID atención', 'Fecha atención', 'Documento ciudadano', 'Nombre ciudadano',
-        'Nombre servicio', 'Descripción', 'Tipo servicio', 'Requiere equipo', 'Estado servicio'
-    ])
-    qs = Servicio.objects.select_related('atencion', 'atencion__ciudadano').order_by('-pk')
-    for s in qs:
+    headers = [
+        'ID Servicio', 'ID Atención', 'Fecha Atención',
+        'Documento Ciudadano', 'Nombre Ciudadano',
+        'Nombre Servicio', 'Descripción', 'Tipo Servicio', 'Requiere Equipo', 'Estado',
+    ]
+    filas = []
+    for s in Servicio.objects.select_related('atencion', 'atencion__ciudadano').order_by('-pk'):
         atn = s.atencion
-        fecha_atn = atn.fecha if atn else ''
+        fecha_atn = str(atn.fecha) if atn else ''
         doc = nom = ''
         if atn and atn.ciudadano:
-            doc = atn.ciudadano.numero_documento
+            doc = atn.ciudadano.numero_documento or ''
             nom = f"{atn.ciudadano.primer_nombre or ''} {atn.ciudadano.primer_apellido or ''}".strip()
-        writer.writerow([
-            s.pk, atn.pk if atn else '', fecha_atn, doc, nom,
-            s.nombre, s.descripcion or '', s.tipo,
-            s.get_requiere_equipo_display(), s.get_estado_display()
+        filas.append([
+            s.pk,
+            atn.pk if atn else '',
+            fecha_atn,
+            doc, nom,
+            s.nombre,
+            s.descripcion or '',
+            s.tipo,
+            s.get_requiere_equipo_display(),
+            s.get_estado_display(),
         ])
-    return response
+
+    wb = _crear_hoja('Servicios', headers, filas)
+    return _xlsx_response('Reporte_Servicios_PVD', wb)
 
 
 @login_required(login_url='/login/')
@@ -748,28 +908,34 @@ def exportar_satisfaccion_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    response = _csv_response('Reporte_Satisfaccion_PVD')
-    writer = csv.writer(response)
-    writer.writerow([
-        'ID satisfacción', 'ID atención', 'Fecha atención', 'Estado atención', 'Documento ciudadano',
-        'Nombre ciudadano', 'Calificación', 'Comentario', 'Fecha registro satisfacción'
-    ])
-    qs = Satisfaccion.objects.select_related('atencion', 'atencion__ciudadano').order_by('-pk')
+    headers = [
+        'ID', 'ID Atención', 'Fecha Atención', 'Estado Atención',
+        'Documento Ciudadano', 'Nombre Ciudadano',
+        'Calificación (1-5)', 'Comentario', 'Fecha de Registro',
+    ]
     estado_atn = dict(Atencion.ESTADO_CHOICES)
-    for sat in qs:
+    filas = []
+    for sat in Satisfaccion.objects.select_related('atencion', 'atencion__ciudadano').order_by('-pk'):
         atn = sat.atencion
         doc = nom = fecha_atn = est_atn = ''
         if atn:
             fecha_atn = str(atn.fecha)
             est_atn = estado_atn.get(atn.estado, atn.estado)
             if atn.ciudadano:
-                doc = atn.ciudadano.numero_documento
+                doc = atn.ciudadano.numero_documento or ''
                 nom = f"{atn.ciudadano.primer_nombre or ''} {atn.ciudadano.primer_apellido or ''}".strip()
-        writer.writerow([
-            sat.pk, atn.pk if atn else '', fecha_atn, est_atn, doc, nom,
-            sat.calificacion, sat.comentario or '', sat.fecha
+        filas.append([
+            sat.pk,
+            atn.pk if atn else '',
+            fecha_atn, est_atn,
+            doc, nom,
+            sat.calificacion,
+            sat.comentario or '',
+            str(sat.fecha),
         ])
-    return response
+
+    wb = _crear_hoja('Satisfaccion', headers, filas)
+    return _xlsx_response('Reporte_Satisfaccion_PVD', wb)
 
 
 @login_required(login_url='/login/')
@@ -778,17 +944,27 @@ def exportar_prestamos_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    response = _csv_response('Reporte_Prestamos_PVD')
-    writer = csv.writer(response)
-    writer.writerow([
-        'ID préstamo', 'Tipo recurso', 'Fecha entrega', 'Fecha devolución', 'Observaciones', 'Estado'
-    ])
+    headers = [
+        'ID Préstamo', 'Tipo Recurso', 'Código Recurso',
+        'Fecha de Entrega', 'Fecha de Devolución', 'Observaciones', 'Estado',
+    ]
+    filas = []
     for p in PrestamoRecurso.objects.select_related('recurso').order_by('-pk'):
         tipo = p.recurso.tipo if p.recurso else ''
-        dev = p.fecha_devolucion or ''
+        codigo = p.recurso.codigo or '' if p.recurso else ''
         estado = 'Activo (sin devolución)' if not p.fecha_devolucion else 'Devuelto'
-        writer.writerow([p.pk, tipo, p.fecha_entrega, dev, p.observaciones or '', estado])
-    return response
+        filas.append([
+            p.pk,
+            tipo,
+            codigo,
+            str(p.fecha_entrega),
+            str(p.fecha_devolucion) if p.fecha_devolucion else '',
+            p.observaciones or '',
+            estado,
+        ])
+
+    wb = _crear_hoja('Prestamos', headers, filas)
+    return _xlsx_response('Reporte_Prestamos_PVD', wb)
 
 
 # ── AYUDA ──────────────────────────────────────────────────────────────────────
@@ -1143,7 +1319,6 @@ def eliminar_sala(request, sala_cdgo):
 
 @login_required(login_url='/login/')
 def lista_permisos_roles(request):
-    """Matriz de permisos por rol. Superusuario y Admin TIC: Admin TIC y Admin PVD."""
     es_superusuario = request.user.is_superuser
     es_admin_tic = not es_superusuario and usuario_es_admin_tic(request.user)
 
@@ -1154,7 +1329,7 @@ def lista_permisos_roles(request):
     roles = [('admin_tic', 'Administrador TIC'), ('admin_pvd', 'Administrador PVD')]
     usuarios_con_permisos = User.objects.filter(
         groups__name__in=['Administrador TIC', 'Administrador PVD']
-    ).distinct().order_by('username')
+    ).distinct().order_by('last_name', 'first_name', 'username')
 
     permisos = PermisoDefinicion.objects.filter(activo=True).order_by('categoria', 'nombre')
 
@@ -1180,24 +1355,24 @@ def lista_permisos_roles(request):
         messages.success(request, 'Permisos de roles actualizados correctamente.')
         return redirect('modulo_puntos:lista_permisos_roles')
 
-    asignaciones = set(
-        PermisoRol.objects.values_list('permiso_id', 'rol')
-    )
+    asignaciones = set(PermisoRol.objects.values_list('permiso_id', 'rol'))
 
-    categorias = {}
-    for permiso in permisos:
-        cat = permiso.categoria
-        if cat not in categorias:
-            categorias[cat] = []
-        celdas = []
-        for rol_codigo, _ in roles:
-            marcado = (permiso.pk, rol_codigo) in asignaciones
-            celdas.append((f'perm_{permiso.pk}_{rol_codigo}', marcado))
-        categorias[cat].append({'permiso': permiso, 'celdas': celdas})
+    roles_data = []
+    for rol_codigo, rol_nombre in roles:
+        categorias = {}
+        for permiso in permisos:
+            cat = permiso.categoria
+            if cat not in categorias:
+                categorias[cat] = []
+            categorias[cat].append({
+                'permiso': permiso,
+                'marcado': (permiso.pk, rol_codigo) in asignaciones,
+                'field_name': f'perm_{permiso.pk}_{rol_codigo}',
+            })
+        roles_data.append({'codigo': rol_codigo, 'nombre': rol_nombre, 'categorias': categorias})
 
     return render(request, 'modulo_puntos/permisos/lista_roles.html', {
-        'categorias': categorias,
-        'roles': roles,
+        'roles_data': roles_data,
         'usuarios_con_permisos': usuarios_con_permisos,
         'es_superusuario': es_superusuario,
     })
@@ -1576,7 +1751,11 @@ def cancelar_habilitacion(request, hab_id):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    hab = get_object_or_404(HabilitacionSala, pk=hab_id)
+    try:
+        hab = HabilitacionSala.objects.get(pk=hab_id)
+    except HabilitacionSala.DoesNotExist:
+        messages.warning(request, 'La habilitación ya no existe.')
+        return redirect('modulo_puntos:lista_habilitaciones')
 
     if hab.estado in ('F', 'X'):
         messages.warning(request, 'Esta habilitación ya está finalizada o cancelada.')
@@ -1598,7 +1777,11 @@ def eliminar_habilitacion(request, hab_id):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    hab = get_object_or_404(HabilitacionSala, pk=hab_id)
+    try:
+        hab = HabilitacionSala.objects.get(pk=hab_id)
+    except HabilitacionSala.DoesNotExist:
+        messages.warning(request, 'La habilitación ya no existe.')
+        return redirect('modulo_puntos:lista_habilitaciones')
     nombre_sala = hab.sala.nombre
     fecha = hab.fecha
     pk = hab.pk
@@ -2058,4 +2241,79 @@ def editar_apertura(request, apertura_id):
         'titulo': f'Editar Registro — {apertura.fecha}',
         'accion': 'editar',
         'apertura': apertura,
+    })
+
+
+# ── ACCESOS TEMPORALES ─────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def accesos_temporales(request):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('modulo_puntos:panel_control')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        pvd_id = request.POST.get('pvd_id') or None
+        campo = request.POST.get('campo', 'pvd_temporal')
+
+        try:
+            usuario_objetivo = User.objects.get(pk=user_id, groups__name='Administrador PVD')
+        except User.DoesNotExist:
+            messages.error(request, 'Usuario no encontrado.')
+            return redirect('modulo_puntos:accesos_temporales')
+
+        profile, _ = UserProfile.objects.get_or_create(
+            usuario=usuario_objetivo,
+            defaults={'rol': 'admin_pvd'}
+        )
+
+        nombre_usuario = usuario_objetivo.get_full_name() or usuario_objetivo.username
+
+        if campo == 'punto_asignado':
+            if pvd_id:
+                try:
+                    pvd = PuntoViveDigital.objects.get(pk=pvd_id)
+                    profile.punto_asignado = pvd
+                    profile.save(update_fields=['punto_asignado'])
+                    messages.success(request, f'PVD asignado a {nombre_usuario}: {pvd.nombre}')
+                except PuntoViveDigital.DoesNotExist:
+                    messages.error(request, 'PVD no encontrado.')
+            else:
+                profile.punto_asignado = None
+                profile.save(update_fields=['punto_asignado'])
+                messages.success(request, f'PVD permanente de {nombre_usuario} eliminado.')
+        else:
+            if pvd_id:
+                try:
+                    pvd = PuntoViveDigital.objects.get(pk=pvd_id, estado='A')
+                    profile.pvd_temporal = pvd
+                    profile.save(update_fields=['pvd_temporal'])
+                    messages.success(request, f'Acceso temporal a "{pvd.nombre}" otorgado a {nombre_usuario}.')
+                except PuntoViveDigital.DoesNotExist:
+                    messages.error(request, 'PVD no encontrado o inactivo.')
+            else:
+                nombre_pvd = profile.pvd_temporal.nombre if profile.pvd_temporal else '—'
+                profile.pvd_temporal = None
+                profile.save(update_fields=['pvd_temporal'])
+                messages.success(request, f'Acceso temporal de {nombre_usuario} a "{nombre_pvd}" revocado.')
+
+        registrar_auditoria(
+            request, 'UPDATE', 'UserProfile', profile.pk,
+            f'{request.user.username} modificó acceso PVD de {nombre_usuario}'
+        )
+        return redirect('modulo_puntos:accesos_temporales')
+
+    admins_pvd = (
+        User.objects
+        .filter(groups__name='Administrador PVD')
+        .select_related('pvd_profile__punto_asignado', 'pvd_profile__pvd_temporal')
+        .distinct()
+        .order_by('last_name', 'first_name', 'username')
+    )
+    pvds_activos = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+
+    return render(request, 'modulo_puntos/accesos_temporales.html', {
+        'admins_pvd': admins_pvd,
+        'pvds_activos': pvds_activos,
     })

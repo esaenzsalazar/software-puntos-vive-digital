@@ -7,10 +7,7 @@
     <div class="page-hero">
         <span class="eyebrow">Operación Diaria</span>
         <h1 class="page-title">Registro de Apertura / Cierre</h1>
-        <p class="muted">Control diario de horarios del Punto Vive Digital</p>
-        <div class="page-hero__actions" style="margin-top:16px;">
-            <a href="{% url 'modulo_puntos:registrar_apertura' %}" class="btn btn-primary">➕ Registrar Hoy</a>
-        </div>
+        <p class="muted">Los registros se generan automáticamente al ingresar y cerrar sesión en cada PVD.</p>
     </div>
 
     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
@@ -35,8 +32,6 @@
                     <th>Cierre</th>
                     <th>Horas</th>
                     <th>Registrado por</th>
-                    <th>Observaciones</th>
-                    <th class="text-center">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -54,21 +49,16 @@
                         {% endif %}
                     </td>
                     <td>{{ ap.registrado_por.get_full_name|default:ap.registrado_por.username|default:"—" }}</td>
-                    <td style="max-width:200px;">{{ ap.observaciones|truncatechars:60|default:"—" }}</td>
-                    <td class="text-center">
-                        <a href="{% url 'modulo_puntos:editar_apertura' ap.id %}" class="btn btn--sm" title="Editar">✏️</a>
-                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <div class="card card--hint" style="text-align:center; padding:40px;">
+    <div class="empty-state">
         <p style="font-size:48px; margin:0 0 16px 0;">🕐</p>
         <h3 style="margin:0 0 8px 0;">Sin registros de apertura</h3>
-        <p class="muted">Registra el horario de apertura y cierre de hoy.</p>
-        <a href="{% url 'modulo_puntos:registrar_apertura' %}" class="btn" style="margin-top:16px;">Registrar hoy</a>
+        <p class="muted">Los registros aparecerán aquí automáticamente cuando inicies sesión en un PVD.</p>
     </div>
     {% endif %}
 </div>

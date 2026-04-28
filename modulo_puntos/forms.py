@@ -439,10 +439,30 @@ class PrestamoRecursoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Inicializar campo de recurso como opcional."""
         super().__init__(*args, **kwargs)
         self.fields['recurso'].required = False
         self.fields['recurso'].empty_label = '--- Seleccione un recurso ---'
+
+    def clean(self):
+        from django.db.models import Q
+        from django.utils import timezone
+        cleaned_data = super().clean()
+        recurso = cleaned_data.get('recurso')
+        if recurso:
+            now = timezone.now()
+            activos = PrestamoRecurso.objects.filter(
+                recurso=recurso
+            ).filter(
+                Q(fecha_devolucion__isnull=True) | Q(fecha_devolucion__gt=now)
+            )
+            if self.instance.pk:
+                activos = activos.exclude(pk=self.instance.pk)
+            if activos.exists():
+                raise forms.ValidationError(
+                    f'"{recurso}" ya está en préstamo y no ha sido devuelto. '
+                    'Debe registrar su devolución antes de prestarlo nuevamente.'
+                )
+        return cleaned_data
 
 
 class RecursoForm(forms.ModelForm):
@@ -457,12 +477,16 @@ class RecursoForm(forms.ModelForm):
 
     class Meta:
         model = Recurso
-        fields = ['tipo', 'estado']
+        fields = ['tipo', 'codigo', 'estado']
         widgets = {
             'tipo': forms.Select(
                 choices=TIPO_RECURSO_CHOICES,
                 attrs={'class': 'form-control', 'id': 'id_tipo'}
             ),
+            'codigo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: LAP-001',
+            }),
             'estado': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}

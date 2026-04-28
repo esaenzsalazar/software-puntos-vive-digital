@@ -58,7 +58,12 @@
 
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
         <div>
-            <h3 style="margin:0; font-size:17px; font-weight:700; color:#1e293b;">{{ recurso.tipo }}</h3>
+            <h3 style="margin:0; font-size:17px; font-weight:700; color:#1e293b;">
+                {{ recurso.tipo }}
+                {% if recurso.codigo %}
+                    <span style="font-size:13px;font-weight:500;color:#64748b;margin-left:6px;">[{{ recurso.codigo }}]</span>
+                {% endif %}
+            </h3>
             <span style="font-size:12px; color:#64748b;">
                 {{ recurso.total_prestamos }} préstamo{{ recurso.total_prestamos|pluralize:"s" }} en total
             </span>
@@ -113,7 +118,18 @@
                         {% if prestamo.observaciones %}{{ prestamo.observaciones }}{% else %}<span class="muted">—</span>{% endif %}
                     </td>
                     <td class="text-center">
-                        <a href="{% url 'modulo_puntos:editar_prestamo' prestamo.id %}" class="btn btn--sm" title="Editar préstamo">✏️ Editar</a>
+                        <div class="cell-actions">
+                            <a href="{% url 'modulo_puntos:editar_prestamo' prestamo.id %}" class="btn btn-secondary btn--sm">Editar</a>
+                            {% if not prestamo.ya_devuelto %}
+                            <form method="POST" action="{% url 'modulo_puntos:devolver_prestamo' prestamo.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn--sm"
+                                        onclick="return confirm('¿Confirmar devolución ahora?')">
+                                    Devuelto
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

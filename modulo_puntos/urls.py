@@ -53,6 +53,7 @@ urlpatterns = [
     path('recursos/nuevo/', views.crear_recurso, name='crear_recurso'),
     path('registrar-prestamo/', views.registrar_prestamo, name='registrar_prestamo'),
     path('prestamos/<int:prestamo_id>/editar/', views.editar_prestamo, name='editar_prestamo'),
+    path('prestamos/<int:prestamo_id>/devolver/', views.devolver_prestamo, name='devolver_prestamo'),
     
     # ==========================================================================
     # REPORTES Y EXPORTACIÓN
@@ -139,6 +140,11 @@ urlpatterns = [
     path('aperturas/', views.lista_aperturas, name='lista_aperturas'),
     path('aperturas/registrar/', views.registrar_apertura, name='registrar_apertura'),
     path('aperturas/<int:apertura_id>/editar/', views.editar_apertura, name='editar_apertura'),
+
+    # ==========================================================================
+    # ACCESOS TEMPORALES (Superusuario / Admin TIC)
+    # ==========================================================================
+    path('accesos-temporales/', views.accesos_temporales, name='accesos_temporales'),
 
     # ==========================================================================
     # AYUDA Y SOPORTE

@@ -29,6 +29,18 @@
                 {% endif %}
             </div>
 
+            {# Código del recurso #}
+            <div>
+                <label for="{{ form.codigo.id_for_label }}">
+                    Código del recurso
+                </label>
+                {{ form.codigo }}
+                <span style="font-size:12px;color:#64748b;display:block;margin-top:4px;">Identificador único del equipo (ej: LAP-001). Opcional.</span>
+                {% if form.codigo.errors %}
+                    <span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.codigo.errors.0 }}</span>
+                {% endif %}
+            </div>
+
             {# Estado #}
             <div>
                 <label for="{{ form.estado.id_for_label }}">

@@ -4,377 +4,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Puntos Vive Digital{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Variables de color para mantener consistencia profesional */
-        :root {
-            --primary-color: #0f4a9b; /* Azul institucional */
-            --primary-hover: #0a336e;
-            --bg-body: #f4f7f9; /* Gris muy claro para no cansar la vista */
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --card-bg: #ffffff;
-            --border-radius: 12px;
-            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-            --transition: all 0.3s ease;
-        }
+    <meta name="theme-color" content="#0b1220">
+    <title>{% block title %}Puntos Vive Digital — Bugalagrande{% endblock %}</title>
 
-        * {
-            box-sizing: border-box;
-        }
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-        body {
-            margin: 0;
-            font-family: 'Inter', Arial, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            line-height: 1.6;
-        }
-
-        /* NAVBAR: Elegante, oscura y fija */
-        .navbar {
-            background: linear-gradient(90deg, #0f172a, #1e3a8a);
-            color: white;
-            padding: 16px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .navbar h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .navbar .menu {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            flex-wrap: wrap;
-        }
-
-        .navbar a {
-            color: #e2e8f0;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: var(--transition);
-            padding: 8px 12px;
-            border-radius: 6px;
-        }
-
-        .navbar a:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px 40px 20px;
-        }
-
-        /* TARJETAS: Blancas, limpias y con sombra suave */
-        .card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md);
-            padding: 30px;
-            margin-bottom: 30px;
-            width: 100%;
-            border: 1px solid rgba(0,0,0,0.03);
-        }
-
-        /* GRID Y TARJETAS DE MENU (Métricas) */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            width: 100%;
-        }
-
-        .menu-card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 24px;
-            box-shadow: var(--shadow-sm);
-            border-top: 4px solid var(--primary-color);
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            transition: var(--transition);
-        }
-
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .menu-card h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            color: var(--text-main);
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .menu-card p {
-            color: var(--text-muted);
-            font-size: 15px;
-            margin-bottom: 8px;
-            margin-top: 0;
-        }
-
-        /* BOTONES: Modernos y con efectos */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-color);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 15px;
-            text-align: center;
-            width: fit-content;
-            max-width: 100%;
-            transition: var(--transition);
-            box-shadow: 0 2px 4px rgba(15, 74, 155, 0.2);
-        }
-
-        .btn:hover {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(15, 74, 155, 0.3);
-        }
-
-        .btn-secondary {
-            background: #cbd5e1;
-            color: #334155;
-            box-shadow: none;
-        }
-
-        .btn-secondary:hover {
-            background: #94a3b8;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        /* FORMULARIOS */
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: var(--text-main);
-        }
-
-        .form-control,
-        input[type="text"],
-        input[type="email"],
-        input[type="password"],
-        input[type="date"],
-        input[type="time"],
-        input[type="datetime-local"],
-        input[type="number"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 15px;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 20px;
-            transition: var(--transition);
-            background-color: #f8fafc;
-            color: var(--text-main);
-        }
-
-        .form-control:focus,
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(15, 74, 155, 0.15);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        .form-check-input {
-            transform: scale(1.2);
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        /* TEXTOS DE APOYO Y ALERTAS */
-        .page-title {
-            margin-top: 0;
-            color: var(--text-main);
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-
-        .muted {
-            color: var(--text-muted);
-            font-size: 16px;
-            margin-top: 0;
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 24px;
-        }
-
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-        }
-
-        .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-        .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-
-        /* ========================================= */
-        /* NUEVOS ESTILOS PARA TABLAS PROFESIONALES  */
-        /* ========================================= */
-        .table-responsive {
-            overflow-x: auto;
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            min-width: 800px;
-        }
-
-        .table th, .table td {
-            padding: 16px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: middle;
-        }
-
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 700;
-            color: #475569;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #cbd5e1;
-        }
-
-        .table tbody tr {
-            transition: background-color 0.2s;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f1f5f9;
-        }
-
-        .table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* ETIQUETAS (BADGES) PARA ESTADOS */
-        .badge {
-            padding: 6px 12px;
-            border-radius: 9999px;
-            font-size: 12px;
-            font-weight: 700;
-            display: inline-block;
-            text-align: center;
-        }
-        .badge-success { background-color: #dcfce7; color: #166534; }
-        .badge-warning { background-color: #fef9c3; color: #854d0e; }
-        .badge-danger { background-color: #fee2e2; color: #991b1b; }
-        .badge-info { background-color: #e0f2fe; color: #075985; }
-
-        /* RESPONSIVE DESIGN */
-        @media (max-width: 992px) {
-            .navbar { padding: 14px 20px; }
-            .container { margin: 24px auto; }
-            .grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-        }
-
-        @media (max-width: 768px) {
-            .navbar { flex-direction: column; align-items: center; padding: 16px; }
-            .navbar .menu { width: 100%; justify-content: center; margin-top: 12px; gap: 10px; }
-            .navbar a { font-size: 14px; padding: 6px 10px; }
-            .container { margin: 16px auto; padding: 0 16px 24px 16px; }
-            .card { padding: 20px; border-radius: 12px; }
-            .page-title { font-size: 24px; }
-            .grid { grid-template-columns: 1fr; gap: 16px; }
-            .menu-card { min-height: auto; padding: 20px; }
-            .actions { flex-direction: column; width: 100%; }
-            .btn { width: 100%; text-align: center; }
-        }
-
-        @media (max-width: 480px) {
-            .navbar h1 { font-size: 20px; }
-            .navbar .menu { flex-direction: column; width: 100%; gap: 6px; }
-            .navbar a { width: 100%; text-align: center; background: rgba(255,255,255,0.05); }
-            .form-control, input, select, textarea { font-size: 16px; padding: 10px; }
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/pvd-theme.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
-<body>
-    {% if user.is_authenticated %}
-    <div class="navbar">
-        <h1>Puntos Vive Digital</h1>
-        <div class="menu">
-            <a href="{% url 'modulo_puntos:panel_control' %}">Panel</a>
-            <a href="{% url 'modulo_puntos:perfil_usuario' %}">Mi perfil</a>
-            <a href="{% url 'modulo_puntos:logout' %}">Cerrar sesión</a>
-        </div>
-    </div>
-    {% endif %}
+<body class="page-app">
 
-    <div class="container">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
+{% if user.is_authenticated %}
+<div class="app-shell">
+
+    {# ===== SIDEBAR ===== #}
+    <aside class="app-sidebar" id="appSidebar" aria-label="Navegación principal">
+        <a href="{% url 'modulo_puntos:panel_control' %}" class="sidebar-brand">
+            <span class="sidebar-brand__logo">PVD</span>
+            <span class="sidebar-brand__text">
+                <span class="sidebar-brand__title">Puntos Vive Digital</span>
+                <span class="sidebar-brand__sub">Bugalagrande · Valle</span>
+            </span>
+        </a>
+
+        {% if request.session.pvd_nombre %}
+        <div class="sidebar-pvd">
+            <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="sidebar-pvd__btn" title="Cambiar de PVD">
+                <span class="dot" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="4"/></svg>
+                </span>
+                <span class="sidebar-pvd__main">
+                    <span class="sidebar-pvd__name">{{ request.session.pvd_nombre }}</span>
+                    <span class="sidebar-pvd__hint">Cambiar de PVD</span>
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+            </a>
+        </div>
         {% endif %}
 
-        {% block content %}{% endblock %}
-    </div>
-    <script src="{% static 'js/validaciones.js' %}"></script>
-    <script src="{% static 'js/validacion-forms.js' %}"></script>
-    {% block extra_scripts %}{% endblock %}
+        <nav class="sidebar-nav" aria-label="Secciones">
+            {% with current=request.resolver_match.url_name %}
+
+            <div class="sidebar-group">
+                <div class="sidebar-group__label">Principal</div>
+                <div class="sidebar-group__items">
+                    <a href="{% url 'modulo_puntos:panel_control' %}" class="sidebar-link {% if current == 'panel_control' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+                        <span class="sidebar-link__label">Panel de control</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-group__label">Atención</div>
+                <div class="sidebar-group__items">
+                    <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="sidebar-link {% if current == 'consultar_ciudadanos' or current == 'editar_ciudadano' or current == 'historial_ciudadano' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                        <span class="sidebar-link__label">Ciudadanos</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:registrar_ciudadano' %}" class="sidebar-link {% if current == 'registrar_ciudadano' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>
+                        <span class="sidebar-link__label">Registrar ciudadano</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="sidebar-link {% if current == 'registrar_atencion' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                        <span class="sidebar-link__label">Atenciones</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="sidebar-link {% if current == 'registrar_servicio' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                        <span class="sidebar-link__label">Servicios</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:registrar_satisfaccion' %}" class="sidebar-link {% if current == 'registrar_satisfaccion' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/></svg></span>
+                        <span class="sidebar-link__label">Satisfacción</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-group__label">Recursos y salas</div>
+                <div class="sidebar-group__items">
+                    <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="sidebar-link {% if current == 'registrar_recurso' or current == 'crear_recurso' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                        <span class="sidebar-link__label">Recursos</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="sidebar-link {% if current == 'registrar_prestamo' or current == 'editar_prestamo' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span>
+                        <span class="sidebar-link__label">Préstamos</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:lista_salas' %}" class="sidebar-link {% if current == 'lista_salas' or current == 'crear_sala' or current == 'editar_sala' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+                        <span class="sidebar-link__label">Salas</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:lista_habilitaciones' %}" class="sidebar-link {% if current == 'lista_habilitaciones' or current == 'crear_habilitacion' or current == 'editar_habilitacion' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                        <span class="sidebar-link__label">Habilitaciones</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:lista_mantenimientos' %}" class="sidebar-link {% if current == 'lista_mantenimientos' or current == 'crear_mantenimiento' or current == 'editar_mantenimiento' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                        <span class="sidebar-link__label">Mantenimientos</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-group__label">Operación</div>
+                <div class="sidebar-group__items">
+                    <a href="{% url 'modulo_puntos:lista_aperturas' %}" class="sidebar-link {% if current == 'lista_aperturas' or current == 'registrar_apertura' or current == 'editar_apertura' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                        <span class="sidebar-link__label">Aperturas</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:lista_cursos' %}" class="sidebar-link {% if current == 'lista_cursos' or current == 'crear_curso' or current == 'detalle_curso' or current == 'editar_curso' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+                        <span class="sidebar-link__label">Cursos</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-group">
+                <div class="sidebar-group__label">Gestión</div>
+                <div class="sidebar-group__items">
+                    <a href="{% url 'modulo_puntos:reportes' %}" class="sidebar-link {% if current == 'reportes' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+                        <span class="sidebar-link__label">Reportes</span>
+                    </a>
+                    {% if nav_super %}
+                    <a href="{% url 'modulo_puntos:lista_pvd' %}" class="sidebar-link {% if current == 'lista_pvd' or current == 'crear_pvd' or current == 'editar_pvd' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                        <span class="sidebar-link__label">Puntos PVD</span>
+                    </a>
+                    {% endif %}
+                    {% if nav_tic %}
+                    <a href="{% url 'modulo_puntos:lista_permisos_roles' %}" class="sidebar-link {% if current == 'lista_permisos_roles' or current == 'crear_permiso' or current == 'editar_permiso' or current == 'permisos_usuario' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                        <span class="sidebar-link__label">Permisos</span>
+                    </a>
+                    <a href="{% url 'modulo_puntos:accesos_temporales' %}" class="sidebar-link {% if current == 'accesos_temporales' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></span>
+                        <span class="sidebar-link__label">Accesos temporales</span>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'modulo_puntos:ayuda' %}" class="sidebar-link {% if current == 'ayuda' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+                        <span class="sidebar-link__label">Ayuda</span>
+                    </a>
+                </div>
+            </div>
+
+            {% endwith %}
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <span class="sidebar-user__avatar">{{ user.username|slice:":1"|upper }}</span>
+                <span class="sidebar-user__main">
+                    <span class="sidebar-user__name">{{ user.get_full_name|default:user.username }}</span>
+                    <span class="sidebar-user__role">
+                        {% if nav_super %}Superusuario{% elif es_admin_tic_only %}Administrador TIC{% elif es_admin_pvd_only %}Administrador PVD{% else %}Sin rol{% endif %}
+                    </span>
+                </span>
+                <a href="{% url 'modulo_puntos:logout' %}" class="sidebar-user__logout" title="Cerrar sesión">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+    {# ===== TOPBAR ===== #}
+    <header class="app-topbar" role="banner">
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-controls="appSidebar" aria-expanded="false">
+            <span class="nav-toggle__bar"></span>
+            <span class="nav-toggle__bar"></span>
+            <span class="nav-toggle__bar"></span>
+        </button>
+
+        <nav class="crumbs" aria-label="Breadcrumb">
+            {% block breadcrumbs %}
+                <a href="{% url 'modulo_puntos:panel_control' %}" class="crumbs__item">Panel</a>
+                <span class="crumbs__sep" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                </span>
+                <span class="crumbs__item is-current">{% block breadcrumb_current %}{% endblock %}</span>
+            {% endblock %}
+        </nav>
+
+        <div class="topbar-search" role="search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" placeholder="Buscar ciudadano, atención…" aria-label="Buscar" id="globalSearch">
+            <span class="topbar-search__kbd">⌘K</span>
+        </div>
+
+        <div class="topbar-actions">
+            <a href="{% url 'modulo_puntos:perfil_usuario' %}" class="icon-btn" title="Mi perfil">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </a>
+            <a href="{% url 'modulo_puntos:logout' %}" class="icon-btn" title="Cerrar sesión">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </a>
+        </div>
+    </header>
+
+    {# ===== MAIN ===== #}
+    <main class="app-main" id="mainContent">
+        <div class="container main-stack">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+                        <span>{{ message }}</span>
+                        <button type="button" class="alert-close" aria-label="Cerrar" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+{% endif %}
+
+<script>
+(function(){
+    var toggle = document.getElementById('navToggle');
+    var sidebar = document.getElementById('appSidebar');
+    var backdrop = document.getElementById('sidebarBackdrop');
+    function openSb(){ if(sidebar){sidebar.classList.add('is-open');backdrop.classList.add('is-open');toggle.setAttribute('aria-expanded','true');} }
+    function closeSb(){ if(sidebar){sidebar.classList.remove('is-open');backdrop.classList.remove('is-open');toggle.setAttribute('aria-expanded','false');} }
+    if(toggle) toggle.addEventListener('click', function(){ sidebar.classList.contains('is-open')?closeSb():openSb(); });
+    if(backdrop) backdrop.addEventListener('click', closeSb);
+
+    document.querySelectorAll('.alert-success, .alert-info').forEach(function(el){
+        setTimeout(function(){ if(el.parentNode) el.remove(); }, 6000);
+    });
+
+    document.addEventListener('keydown', function(e){
+        if((e.metaKey||e.ctrlKey) && e.key==='k'){
+            var input = document.getElementById('globalSearch');
+            if(input){ e.preventDefault(); input.focus(); }
+        }
+    });
+
+    var search = document.getElementById('globalSearch');
+    if(search){
+        search.addEventListener('keydown', function(e){
+            if(e.key==='Enter' && this.value.trim()){
+                window.location.href = "{% url 'modulo_puntos:consultar_ciudadanos' %}?q=" + encodeURIComponent(this.value.trim());
+            }
+        });
+    }
+
+    // Prevenir doble envío en formularios
+    document.addEventListener('submit', function(e){
+        var form = e.target;
+        // data-confirm en el botón que disparó el submit
+        var trigger = form.querySelector('button[type="submit"]:focus, button[data-confirm]');
+        if(trigger && trigger.dataset.confirm){
+            if(!confirm(trigger.dataset.confirm)){
+                e.preventDefault();
+                return;
+            }
+        }
+        // Deshabilitar todos los botones submit del form para evitar doble envío
+        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function(btn){
+            btn.disabled = true;
+            if(btn.dataset.confirm) return; // iconos pequeños, no cambiar texto
+            var orig = btn.innerHTML;
+            btn.innerHTML = '<span style="opacity:.7">Procesando…</span>';
+            // re-habilitar si el servidor devuelve error (popstate / bfcache)
+            window.addEventListener('pageshow', function(){ btn.disabled = false; btn.innerHTML = orig; }, {once:true});
+        });
+    }, true);
+})();
+</script>
+
+<script src="{% static 'js/validaciones.js' %}"></script>
+<script src="{% static 'js/validacion-forms.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+{% block extra_js %}{% endblock %}
 </body>
 </html>

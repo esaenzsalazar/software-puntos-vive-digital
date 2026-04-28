@@ -13,7 +13,8 @@
       "Bash(where catdoc *)",
       "Bash(where soffice *)",
       "Bash(where libreoffice *)",
-      "Bash(antiword *)"
+      "Bash(antiword *)",
+      "Bash(pip install *)"
     ]
   }
 }

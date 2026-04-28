@@ -4,14 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1220">
     <title>{% block title %}Puntos Vive Digital{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/pvd-theme.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}page-auth{% endblock %}">
     {% if messages %}
-        <div style="max-width: 600px; margin: 20px auto;">
+        <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: min(520px, calc(100% - 40px));">
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
                     <strong>{{ message }}</strong>
@@ -22,5 +25,6 @@
     {% endif %}
 
     {% block content %}{% endblock %}
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

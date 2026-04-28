@@ -109,6 +109,11 @@ class Recurso(models.Model):
         null=True, blank=True, verbose_name='Punto Vive Digital'
     )
     tipo = models.CharField(max_length=64, verbose_name='Tipo de Recurso')
+    codigo = models.CharField(
+        max_length=64, null=True, blank=True, unique=True,
+        verbose_name='Código del recurso',
+        help_text='Identificador único del equipo (ej: LAP-001). Opcional.'
+    )
     estado = models.CharField(max_length=1, choices=ESTADO_CHOICES, verbose_name='Estado')
 
     class Meta:
@@ -118,7 +123,9 @@ class Recurso(models.Model):
         verbose_name_plural = 'Recursos'
 
     def __str__(self):
-        return f"Recurso: {self.tipo}"
+        if self.codigo:
+            return f"{self.tipo} [{self.codigo}]"
+        return self.tipo
 
 
 class PrestamoRecurso(models.Model):
@@ -274,6 +281,12 @@ class UserProfile(models.Model):
     punto_asignado = models.ForeignKey(
         'PuntoViveDigital', on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name='PVD Asignado'
+    )
+    pvd_temporal = models.ForeignKey(
+        'PuntoViveDigital', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='accesos_temporales',
+        verbose_name='PVD Temporal',
     )
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='admin_pvd', verbose_name='Rol del Usuario')
 

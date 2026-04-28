@@ -117,20 +117,21 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'modulo_puntos:agenda_sala' hab.sala.id %}" class="btn btn--sm" title="Ver agenda">📆</a>
-                            <a href="{% url 'modulo_puntos:editar_habilitacion' hab.id %}" class="btn btn--sm" title="Editar">✏️</a>
+                        <div class="cell-actions">
+                            <a href="{% url 'modulo_puntos:agenda_sala' hab.sala.id %}" class="btn btn-secondary btn--sm" title="Ver agenda">📆</a>
+                            <a href="{% url 'modulo_puntos:editar_habilitacion' hab.id %}" class="btn btn-secondary btn--sm" title="Editar">✏️</a>
                             {% if hab.estado not in "FX" %}
-                                <a href="{% url 'modulo_puntos:cancelar_habilitacion' hab.id %}"
-                                   class="btn btn--sm"
-                                   title="Cancelar"
-                                   onclick="return confirm('¿Cancelar esta habilitación?')">🚫</a>
+                            <form method="POST" action="{% url 'modulo_puntos:cancelar_habilitacion' hab.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary btn--sm" title="Cancelar"
+                                        data-confirm="¿Cancelar esta habilitación?">🚫</button>
+                            </form>
                             {% endif %}
-                            <a href="{% url 'modulo_puntos:eliminar_habilitacion' hab.id %}"
-                               class="btn btn--sm"
-                               style="color:#dc2626;"
-                               title="Eliminar"
-                               onclick="return confirm('¿Eliminar esta habilitación definitivamente? Esta acción no se puede deshacer.')">🗑️</a>
+                            <form method="POST" action="{% url 'modulo_puntos:eliminar_habilitacion' hab.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm" style="color:#dc2626;" title="Eliminar"
+                                        data-confirm="¿Eliminar esta habilitación? Esta acción no se puede deshacer.">🗑️</button>
+                            </form>
                         </div>
                     </td>
                 </tr>

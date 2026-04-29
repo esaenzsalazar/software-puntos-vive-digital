@@ -4,100 +4,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - Puntos Vive Digital</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body style="background:#f3f4f6;min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;font-family:'Inter',sans-serif;">
-    <div style="background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);max-width:420px;width:92%;overflow:hidden;">
+    <meta name="theme-color" content="#0b1220">
+    <title>Acceso · Puntos Vive Digital — Bugalagrande</title>
 
-        <!-- Header con logos -->
-        <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:32px 24px;text-align:center;">
-            <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:16px;">
-                <img src="{% static 'img/logo-alcaldia.png' %}" alt="Alcaldía de Bugalagrande" style="height:60px;width:auto;object-fit:contain;">
-                <div style="width:1px;height:50px;background:rgba(255,255,255,0.3);"></div>
-                <img src="{% static 'img/logo-pvd.png' %}" alt="Punto Vive Digital" style="height:60px;width:auto;object-fit:contain;">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'css/pvd-theme.css' %}">
+
+    <style>
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #0f172a;
+            background: #f1f5f9;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .login-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1.05fr 1fr;
+        }
+
+        .login-brand {
+            position: relative;
+            color: #fff;
+            padding: 48px 56px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            background:
+                radial-gradient(1200px 600px at -10% -20%, rgba(59,130,246,0.45), transparent 60%),
+                radial-gradient(900px 500px at 110% 110%, rgba(16,185,129,0.30), transparent 55%),
+                linear-gradient(160deg, #0b1220 0%, #0f1e3d 50%, #1e3a8a 100%);
+        }
+
+        .login-brand::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+            background-size: 22px 22px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .login-brand > * { position: relative; z-index: 1; }
+
+        .brand-top { display: flex; align-items: center; gap: 18px; }
+        .brand-logos {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 10px 14px;
+            border-radius: 14px;
+        }
+        .brand-logos img { height: 44px; width: auto; display: block; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35)); }
+        .brand-logos__sep { width: 1px; height: 32px; background: rgba(255,255,255,0.2); }
+        .brand-org { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.75); }
+
+        .brand-body { max-width: 520px; }
+        .brand-eyebrow {
+            display: inline-block;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #93c5fd;
+            background: rgba(147,197,253,0.12);
+            border: 1px solid rgba(147,197,253,0.25);
+            padding: 6px 12px; border-radius: 999px; margin-bottom: 22px;
+        }
+        .brand-headline { font-size: clamp(28px, 3.2vw, 44px); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 18px; }
+        .brand-headline span { background: linear-gradient(90deg, #93c5fd, #6ee7b7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .brand-lead { font-size: 16px; line-height: 1.65; color: rgba(255,255,255,0.78); margin: 0 0 28px; max-width: 460px; }
+
+        .brand-features { display: grid; gap: 12px; margin-bottom: 28px; }
+        .brand-feature { display: flex; gap: 12px; align-items: flex-start; color: rgba(255,255,255,0.85); font-size: 14.5px; }
+        .brand-feature__icon {
+            flex: 0 0 28px; height: 28px; border-radius: 8px;
+            background: rgba(147,197,253,0.18); border: 1px solid rgba(147,197,253,0.3);
+            display: grid; place-items: center; color: #bfdbfe;
+        }
+        .brand-feature strong { color: #fff; font-weight: 600; }
+
+        .brand-stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            padding: 18px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+        }
+        .brand-stat__value { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+        .brand-stat__label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+        .brand-footer { font-size: 12px; color: rgba(255,255,255,0.55); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+        .login-panel { display: flex; align-items: center; justify-content: center; padding: 48px 32px; background: #f8fafc; }
+        .login-card {
+            width: 100%; max-width: 440px;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 36px 32px;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 24px 48px -24px rgba(15,23,42,0.18);
+        }
+        .login-card__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #2563eb; margin-bottom: 6px; }
+        .login-card h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px; color: #0f172a; }
+        .login-card__sub { color: #64748b; font-size: 14.5px; margin: 0 0 26px; line-height: 1.55; }
+
+        .field { margin-bottom: 16px; }
+        .field label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; }
+        .input-wrap { position: relative; display: flex; align-items: center; }
+        .input-wrap__icon { position: absolute; left: 14px; color: #94a3b8; pointer-events: none; }
+        .input-wrap input {
+            width: 100%; font-family: inherit; font-size: 15px; color: #0f172a;
+            background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px;
+            padding: 12px 14px 12px 42px;
+            transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .input-wrap input:focus { outline: none; border-color: #2563eb; background: #fff; box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+        .input-wrap__toggle { position: absolute; right: 8px; background: transparent; border: 0; cursor: pointer; color: #64748b; padding: 6px; border-radius: 6px; }
+        .input-wrap__toggle:hover { background: #f1f5f9; color: #0f172a; }
+
+        .field-row { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 22px; font-size: 13px; }
+        .checkbox { display: inline-flex; align-items: center; gap: 8px; color: #475569; cursor: pointer; user-select: none; }
+        .checkbox input { accent-color: #2563eb; width: 16px; height: 16px; }
+        .field-row a { color: #2563eb; text-decoration: none; font-weight: 600; }
+        .field-row a:hover { text-decoration: underline; }
+
+        .btn-login {
+            width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            background: linear-gradient(180deg, #2563eb, #1d4ed8); color: #fff; border: 0;
+            border-radius: 10px; padding: 13px 20px; font-size: 15px; font-weight: 600; cursor: pointer;
+            box-shadow: 0 6px 16px -6px rgba(37,99,235,0.55);
+            transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+        }
+        .btn-login:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(37,99,235,0.6); }
+        .btn-login:active { transform: translateY(0); filter: brightness(.97); }
+
+        .login-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 14px; color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+        .login-divider::before, .login-divider::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; }
+
+        .login-help { text-align: center; font-size: 13px; color: #64748b; line-height: 1.5; }
+        .login-help a { color: #2563eb; font-weight: 600; text-decoration: none; }
+        .login-help a:hover { text-decoration: underline; }
+
+        .login-alerts { margin-bottom: 18px; }
+        .alert { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 10px; border: 1px solid transparent; line-height: 1.45; }
+        .alert-error, .alert-danger { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        .alert-success { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .alert-warning { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+        .alert-info    { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+
+        @media (max-width: 980px) {
+            .login-shell { grid-template-columns: 1fr; }
+            .login-brand { padding: 32px 28px; min-height: auto; }
+            .brand-features { display: none; }
+            .brand-stats { grid-template-columns: repeat(3, 1fr); }
+            .brand-headline { font-size: 26px; }
+            .brand-lead { font-size: 14.5px; }
+            .login-panel { padding: 32px 20px; }
+        }
+        @media (max-width: 480px) {
+            .login-brand { padding: 24px 20px; }
+            .login-card { padding: 28px 22px; border-radius: 14px; }
+            .brand-stats { grid-template-columns: 1fr 1fr; }
+            .brand-stat:last-child { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<main class="login-shell">
+
+    <section class="login-brand" aria-hidden="false">
+        <div class="brand-top">
+            <div class="brand-logos">
+                <img src="{% static 'img/logo-alcaldia.png' %}" alt="Alcaldía de Bugalagrande">
+                <span class="brand-logos__sep" aria-hidden="true"></span>
+                <img src="{% static 'img/logo-pvd.png' %}" alt="Puntos Vive Digital">
             </div>
-            <h1 style="margin:0 0 4px;font-size:20px;font-weight:600;color:white;">Puntos Vive Digital</h1>
-            <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);">Bugalagrande - Valle del Cauca</p>
+            <div class="brand-org">
+                Alcaldía de Bugalagrande<br>
+                Gobernación del Valle del Cauca
+            </div>
         </div>
 
-        <!-- Formulario -->
-        <div style="padding:32px 28px;">
-            <h2 style="margin:0 0 24px;font-size:18px;font-weight:600;color:#111827;text-align:center;">Iniciar Sesión</h2>
+        <div class="brand-body">
+            <span class="brand-eyebrow">Plataforma institucional</span>
+            <h1 class="brand-headline">
+                Gestión integral de los <span>Puntos Vive Digital</span> del municipio.
+            </h1>
+            <div class="brand-stats">
+                <div class="brand-stat">
+                    <div class="brand-stat__value">2</div>
+                    <div class="brand-stat__label">Puntos activos</div>
+                </div>
+                <div class="brand-stat">
+                    <div class="brand-stat__value">24/7</div>
+                    <div class="brand-stat__label">Disponible</div>
+                </div>
+                <div class="brand-stat">
+                    <div class="brand-stat__value">100%</div>
+                    <div class="brand-stat__label">En línea</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="brand-footer">
+            <span>© {% now "Y" %} Alcaldía de Bugalagrande</span>
+            <span>Puntos Vive Digital</span>
+        </div>
+    </section>
+
+    <section class="login-panel">
+        <div class="login-card">
+            <div class="login-card__eyebrow">Acceso seguro</div>
+            <h1>Bienvenido de vuelta</h1>
+            <p class="login-card__sub">Ingresa con tu usuario institucional para continuar al sistema.</p>
 
             {% if messages %}
-            {% for message in messages %}
-            <div style="background:{% if message.tags == 'error' %}#fef2f2{% elif message.tags == 'info' %}#eff6ff{% else %}#f0fdf4{% endif %};border:1px solid {% if message.tags == 'error' %}#fecaca{% elif message.tags == 'info' %}#bfdbfe{% else %}#bbf7d0{% endif %};color:{% if message.tags == 'error' %}#991b1b{% elif message.tags == 'info' %}#1e40af{% else %}#166534{% endif %};padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px;">{{ message }}</div>
-            {% endfor %}
+                <div class="login-alerts">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }}">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
 
-            <form method="POST">
-                {% csrf_token %}
-                
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Usuario</label>
-                    <input type="text" name="username" id="username-input" required 
-                           style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;"
-                           placeholder="Ingrese su usuario" autofocus>
+            {% if form.errors or form.non_field_errors %}
+                <div class="login-alerts">
+                    <div class="alert alert-error">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Usuario o contraseña incorrectos. Verifica tus datos e intenta nuevamente.</span>
+                    </div>
                 </div>
-                
-                <div style="margin-bottom:24px;">
-                    <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#374151;">Contraseña</label>
-                    <div style="position:relative;">
-                        <input type="password" name="password" id="password-input" required
-                               style="width:100%;padding:10px 40px 10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;"
-                               placeholder="Ingrese su contraseña">
-                        <button type="button" id="toggle-password"
-                                onclick="togglePassword()"
-                                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#6b7280;line-height:1;display:flex;align-items:center;"
-                                title="Mostrar contraseña">
-                            <svg id="icon-eye" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            <svg id="icon-eye-off" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                                <line x1="1" y1="1" x2="23" y2="23"/>
-                            </svg>
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="field">
+                    <label for="id_username">Usuario</label>
+                    <div class="input-wrap">
+                        <span class="input-wrap__icon" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                        <input type="text" id="id_username" name="username" required autofocus autocomplete="username" placeholder="Ej. jlopez">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="id_password">Contraseña</label>
+                    <div class="input-wrap">
+                        <span class="input-wrap__icon" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </span>
+                        <input type="password" id="id_password" name="password" required autocomplete="current-password" placeholder="••••••••">
+                        <button type="button" class="input-wrap__toggle" id="togglePass" aria-label="Mostrar contraseña">
+                            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
                 </div>
-                
-                <button type="submit" style="display:block;width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;" 
-                        onmouseover="this.style.background='#1d4edn8'" onmouseout="this.style.background='#2563eb'">
-                    Ingresar al Sistema
-                </button>
-            </form>
-            
-        </div>
 
-        <!-- Footer -->
-        <div style="background:#f9fafb;padding:16px 28px;text-align:center;border-top:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:11px;color:#6b7280;line-height:1.6;">
-                © 2026 Puntos Vive Digital — Bugalagrande<br>
-                Software de apoyo a la gestión TIC
+                <div class="field-row">
+                    <label class="checkbox">
+                        <input type="checkbox" name="remember"> Recordar mi sesión
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    Entrar al sistema
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+
+            <div class="login-divider">o</div>
+
+            <p class="login-help">
+                ¿Problemas para acceder? Comunícate con el administrador del sistema.
             </p>
         </div>
-    </div>
+    </section>
+
+</main>
+
 <script>
-function togglePassword() {
-    var input = document.getElementById('password-input');
-    var iconEye = document.getElementById('icon-eye');
-    var iconEyeOff = document.getElementById('icon-eye-off');
-    var btn = document.getElementById('toggle-password');
-    if (input.type === 'password') {
-        input.type = 'text';
-        iconEye.style.display = 'none';
-        iconEyeOff.style.display = 'block';
-        btn.title = 'Ocultar contraseña';
-    } else {
-        input.type = 'password';
-        iconEye.style.display = 'block';
-        iconEyeOff.style.display = 'none';
-        btn.title = 'Mostrar contraseña';
-    }
-}
+(function(){
+    var btn = document.getElementById('togglePass');
+    var input = document.getElementById('id_password');
+    var icon = document.getElementById('eyeIcon');
+    if (!btn || !input) return;
+    btn.addEventListener('click', function(){
+        var isPass = input.type === 'password';
+        input.type = isPass ? 'text' : 'password';
+        btn.setAttribute('aria-label', isPass ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        icon.innerHTML = isPass
+            ? '<path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+            : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    });
+})();
 </script>
+
 </body>
 </html>

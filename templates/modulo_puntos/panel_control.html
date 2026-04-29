@@ -293,14 +293,6 @@
             </div>
         </div>
 
-        <div class="menu-card">
-            <h3>⏱️ Apertura / Cierre</h3>
-            <p>Historial de horarios de operación de los puntos.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_aperturas' %}">Ver Registros</a>
-            </div>
-        </div>
-
     </div>
 </div>
 
@@ -349,10 +341,18 @@
         </div>
 
         <div class="menu-card">
-            <h3>🔐 Permisos</h3>
-            <p>Gestionar permisos de usuarios Admin TIC y Admin PVD.</p>
+            <h3>🔐 Permisos del Sistema</h3>
+            <p>Ver y editar la matriz de permisos por rol.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
+            </div>
+        </div>
+
+        <div class="menu-card menu-card--featured">
+            <h3>🔑 Delegar Permisos a Admin PVD</h3>
+            <p>Otorga o revoca permisos específicos a los administradores de cada Punto Vive Digital.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:permisos_ofitic' %}">Gestionar Delegaciones</a>
             </div>
         </div>
 
@@ -372,13 +372,6 @@
             </div>
         </div>
 
-        <div class="menu-card">
-            <h3>⏱️ Apertura / Cierre</h3>
-            <p>Consultar horarios de operación de los puntos.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_aperturas' %}">Ver Registros</a>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -446,14 +439,6 @@
             </div>
         </div>
 
-        <div class="menu-card">
-            <h3>⏱️ Apertura / Cierre</h3>
-            <p>Registrar el horario diario de apertura y cierre del punto.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_aperturas' %}">Ver Registros</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_apertura' %}">Registrar Hoy</a>
-            </div>
-        </div>
     </div>
 </div>
 

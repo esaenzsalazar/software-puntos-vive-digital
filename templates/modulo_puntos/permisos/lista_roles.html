@@ -14,9 +14,6 @@
                     Los cambios aplican a <strong>todos</strong> los usuarios de ese rol.
                 </p>
             </div>
-            {% if es_superusuario %}
-            <a href="{% url 'modulo_puntos:crear_permiso' %}" class="btn btn--sm">+ Nuevo permiso</a>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -69,6 +66,56 @@
         {% endfor %}
     </div>
 
+    {# ── Sección: Permisos que Admin TIC puede delegar (solo superusuario) ── #}
+    {% if es_superusuario and delegables_data is not None %}
+    <div class="card" style="margin-top:16px;">
+        <div style="padding:16px 24px 14px; border-bottom:1px solid #e2e8f0; background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%); border-radius:12px 12px 0 0;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-size:24px;">🔑</span>
+                <div>
+                    <h2 style="margin:0; font-size:16px; font-weight:700; color:#fff;">
+                        Permisos que el Admin TIC puede delegar a Admin PVD
+                    </h2>
+                    <p style="margin:4px 0 0; font-size:13px; color:#94a3b8;">
+                        Marca aquí cuáles permisos el Admin TIC tendrá autorización de otorgar o revocar
+                        individualmente a cada Admin PVD. Esta configuración la controla solo el Superusuario.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div style="padding:16px 24px;">
+            {% if delegables_data %}
+                {% for categoria, permisos_cat in delegables_data.items %}
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#9ca3af; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #f1f5f9;">
+                        {{ categoria }}
+                    </div>
+                    {% for permiso in permisos_cat %}
+                    <label style="display:flex; align-items:flex-start; gap:12px; padding:9px 12px; border-radius:8px; cursor:pointer; transition:background 0.15s;"
+                           onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="delegable_{{ permiso.pk }}"
+                            {% if permiso.delegable_por_ofitic %}checked{% endif %}
+                            style="width:16px; height:16px; accent-color:#0f172a; cursor:pointer; flex-shrink:0; margin-top:3px;">
+                        <span style="flex:1;">
+                            <span style="font-size:14px; font-weight:500; color:#111827;">{{ permiso.nombre }}</span>
+                            {% if permiso.delegable_por_ofitic %}
+                            <span style="margin-left:8px; font-size:11px; font-weight:600; background:#dcfce7; color:#16a34a; padding:2px 7px; border-radius:20px;">Delegable activo</span>
+                            {% endif %}
+                            {% if permiso.descripcion %}
+                            <br><small class="muted" style="font-size:12px;">{{ permiso.descripcion }}</small>
+                            {% endif %}
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="muted" style="text-align:center; padding:24px 0;">No hay permisos activos definidos.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div style="display:flex; justify-content:flex-end; margin-top:14px;">
         <button type="submit" class="btn btn-primary">💾 Guardar cambios</button>
     </div>
@@ -79,9 +126,27 @@
     <p style="font-size:48px; margin:0 0 16px;">🔐</p>
     <h3 style="margin:0 0 8px;">No hay permisos definidos todavía</h3>
     <p class="muted">Los permisos permiten controlar qué puede hacer cada tipo de usuario.</p>
-    {% if es_superusuario %}
-    <a href="{% url 'modulo_puntos:crear_permiso' %}" class="btn" style="margin-top:16px;">+ Crear primer permiso</a>
-    {% endif %}
+</div>
+{% endif %}
+
+{# ── Acceso rápido a delegación (solo admin TIC, no superusuario) ── #}
+{% if not es_superusuario %}
+<div class="card" style="margin-top:16px; border:2px solid #0f172a;">
+    <div style="padding:20px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <span style="font-size:36px;">🔑</span>
+        <div style="flex:1; min-width:200px;">
+            <h3 style="margin:0 0 4px; font-size:16px; font-weight:700; color:#0f172a;">
+                Delegación de Permisos a Admin PVD
+            </h3>
+            <p class="muted" style="margin:0; font-size:13px;">
+                Otorga o revoca permisos específicos a los administradores de cada Punto Vive Digital.
+                Solo puedes delegar los permisos que el Superusuario habilitó para ello.
+            </p>
+        </div>
+        <a href="{% url 'modulo_puntos:permisos_ofitic' %}" class="btn btn-primary" style="flex-shrink:0;">
+            Gestionar delegaciones →
+        </a>
+    </div>
 </div>
 {% endif %}
 

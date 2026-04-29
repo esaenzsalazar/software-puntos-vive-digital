@@ -111,7 +111,6 @@ urlpatterns = [
     # MÓDULO PERMISOS (Solo Superusuario / Ofitic según vista)
     # ==========================================================================
     path('permisos/', views.lista_permisos_roles, name='lista_permisos_roles'),
-    path('permisos/crear/', views.crear_permiso, name='crear_permiso'),
     path('permisos/editar/<int:permiso_id>/', views.editar_permiso, name='editar_permiso'),
     path('permisos/usuario/<int:user_id>/', views.permisos_usuario, name='permisos_usuario'),
     path('permisos/ofitic/', views.vista_permisos_ofitic, name='permisos_ofitic'),
@@ -135,12 +134,6 @@ urlpatterns = [
     path('mantenimientos/<int:mant_id>/editar/', views.editar_mantenimiento, name='editar_mantenimiento'),
 
     # ==========================================================================
-    # APERTURA / CIERRE
-    # ==========================================================================
-    path('aperturas/', views.lista_aperturas, name='lista_aperturas'),
-    path('aperturas/registrar/', views.registrar_apertura, name='registrar_apertura'),
-    path('aperturas/<int:apertura_id>/editar/', views.editar_apertura, name='editar_apertura'),
-
     # ==========================================================================
     # ACCESOS TEMPORALES (Superusuario / Admin TIC)
     # ==========================================================================

@@ -14,7 +14,13 @@
       "Bash(where soffice *)",
       "Bash(where libreoffice *)",
       "Bash(antiword *)",
-      "Bash(pip install *)"
+      "Bash(pip install *)",
+      "Bash(C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\pip.exe install *)",
+      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\pip.exe\" install openpyxl)",
+      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\manage.py\" migrate)",
+      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\manage.py\" check 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('C:/Users/USER/software-puntos-vive-digital/modulo_puntos/context_processors.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('C:/Users/USER/software-puntos-vive-digital/modulo_puntos/context_processors.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }

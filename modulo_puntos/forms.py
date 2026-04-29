@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
-    Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo, RegistroApertura,
+    Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo,
 )
 
 # ==============================================================================
@@ -1096,34 +1096,3 @@ class MantenimientoEquipoForm(forms.ModelForm):
             'acciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Acciones tomadas o recomendaciones...'}),
         }
 
-
-# ==============================================================================
-# REGISTRO DE APERTURA / CIERRE
-# ==============================================================================
-
-class RegistroAperturaForm(forms.ModelForm):
-    class Meta:
-        model = RegistroApertura
-        fields = ['fecha', 'hora_apertura', 'hora_cierre', 'observaciones']
-        labels = {
-            'fecha': 'Fecha *',
-            'hora_apertura': 'Hora de Apertura *',
-            'hora_cierre': 'Hora de Cierre (opcional)',
-            'observaciones': 'Observaciones',
-        }
-        widgets = {
-            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'hora_apertura': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'hora_cierre': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Novedades del día, incidentes, etc.'}),
-        }
-
-    def clean(self):
-        cleaned = super().clean()
-        ha = cleaned.get('hora_apertura')
-        hc = cleaned.get('hora_cierre')
-        if ha and hc and hc <= ha:
-            self.add_error('hora_cierre', 'La hora de cierre debe ser posterior a la de apertura.')
-        return cleaned
-
-        return cleaned_data

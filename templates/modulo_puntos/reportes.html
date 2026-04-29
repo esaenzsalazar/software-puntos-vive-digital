@@ -3,43 +3,43 @@
 {% block title %}Reportes{% endblock %}
 
 {% block content %}
+
+{# ── Cabecera + Filtro + Exportar ── #}
 <div class="card">
     <div class="page-hero">
         <span class="eyebrow">Analítica</span>
         <h2 class="page-title">Reportes e indicadores</h2>
-        <p class="muted">Consolidados por tipo de servicio, perfiles de usuarios y variables para informes institucionales. Las exportaciones son archivos CSV compatibles con Excel.</p>
-    </div>
-    <div class="actions" style="margin-top: 8px;">
-        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al inicio</a>
+        <p class="muted">Consolidados por tipo de servicio, perfiles de usuarios y variables para informes institucionales.</p>
     </div>
 
-    <form method="GET" style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; padding:16px; background:var(--bg-alt,#f8fafc); border-radius:8px;">
-        <div>
-            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Desde</label>
-            <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}" style="max-width:160px;">
+    <form method="GET" class="rpt-filter-bar">
+        <div class="rpt-filter-field">
+            <label class="rpt-filter-label">Desde</label>
+            <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
         </div>
-        <div>
-            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Hasta</label>
-            <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}" style="max-width:160px;">
+        <div class="rpt-filter-field">
+            <label class="rpt-filter-label">Hasta</label>
+            <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
         </div>
-        <div style="display:flex; gap:8px;">
-            <button type="submit" class="btn btn--sm btn-primary">Filtrar</button>
+        <div style="display:flex; gap:8px; align-self:flex-end;">
+            <button type="submit" class="btn btn--sm">Filtrar</button>
             {% if fecha_desde or fecha_hasta %}
             <a href="{% url 'modulo_puntos:reportes' %}" class="btn btn--sm btn-secondary">✕ Quitar filtro</a>
             {% endif %}
         </div>
         {% if fecha_desde or fecha_hasta %}
-        <span style="font-size:13px; color:#0369a1; align-self:flex-end;">
-            📅 Mostrando atenciones y servicios
+        <span class="rpt-filter-notice">
+            📅 Filtrando
             {% if fecha_desde %}desde {{ fecha_desde }}{% endif %}
             {% if fecha_hasta %}hasta {{ fecha_hasta }}{% endif %}
         </span>
         {% endif %}
     </form>
-    <details class="export-panel">
-        <summary class="export-panel__summary">Descargar datos (CSV para Excel)</summary>
+
+    <details class="export-panel" style="margin-top:12px;">
+        <summary class="export-panel__summary">↓ Descargar datos (Excel / CSV)</summary>
         <div class="export-panel__body">
-            <p class="muted" style="margin: 0 0 12px 0; font-size: 13px;">Selecciona el conjunto de datos a exportar.</p>
+            <p class="muted" style="margin:0 0 12px; font-size:13px;">Selecciona el conjunto de datos a exportar.</p>
             <div class="export-panel__grid">
                 <a href="{% url 'modulo_puntos:exportar_atenciones_csv' %}" class="btn btn-success btn--sm">Atenciones</a>
                 <a href="{% url 'modulo_puntos:exportar_ciudadanos_csv' %}" class="btn btn-success btn--sm">Ciudadanos</a>
@@ -51,165 +51,219 @@
     </details>
 </div>
 
-<div class="stats-grid content-section">
+{# ── KPIs ── #}
+<div class="stats-grid" style="margin-top:16px;">
     <div class="stat-card stat-card--accent-blue">
-        <h3>Ciudadanos</h3>
+        <h3>Ciudadanos registrados</h3>
         <p class="stat-card__value">{{ total_ciudadanos }}</p>
-        <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ ciudadanos_activos }}</p>
+        <p class="muted" style="font-size:12px; margin-top:6px;">Activos: {{ ciudadanos_activos }}</p>
     </div>
     <div class="stat-card stat-card--accent-emerald">
         <h3>Atenciones</h3>
         <p class="stat-card__value">{{ total_atenciones }}</p>
-        <p class="muted" style="font-size: 13px; margin-top: 8px;">Pend. {{ atenciones_pendientes }} · Fin. {{ atenciones_finalizadas }} · Canc. {{ atenciones_canceladas }}</p>
+        <p class="muted" style="font-size:12px; margin-top:6px;">
+            Pend.&nbsp;{{ atenciones_pendientes }} &nbsp;·&nbsp;
+            Fin.&nbsp;{{ atenciones_finalizadas }} &nbsp;·&nbsp;
+            Canc.&nbsp;{{ atenciones_canceladas }}
+        </p>
     </div>
     <div class="stat-card stat-card--accent-amber">
-        <h3>Servicios</h3>
+        <h3>Servicios registrados</h3>
         <p class="stat-card__value">{{ total_servicios }}</p>
     </div>
     <div class="stat-card stat-card--accent-rose">
         <h3>Préstamos</h3>
         <p class="stat-card__value">{{ total_prestamos }}</p>
-        <p class="muted" style="font-size: 13px; margin-top: 8px;">Activos: {{ prestamos_activos }}</p>
+        <p class="muted" style="font-size:12px; margin-top:6px;">Activos: {{ prestamos_activos }}</p>
     </div>
-    <div class="stat-card">
+    <div class="stat-card stat-card--accent-violet">
         <h3>Satisfacción promedio</h3>
-        <p class="stat-card__value">{% if satisfaccion_promedio %}{{ satisfaccion_promedio|floatformat:2 }}{% else %}0.00{% endif %}</p>
+        <p class="stat-card__value">
+            {% if satisfaccion_promedio %}{{ satisfaccion_promedio|floatformat:1 }}{% else %}—{% endif %}
+        </p>
+        <p class="muted" style="font-size:12px; margin-top:6px;">sobre 5.0</p>
     </div>
 </div>
 
-<div class="card">
-    <h3>Perfil de usuarios — Género</h3>
-    {% if ciudadanos_por_genero %}
-        <div class="grid">
+{# ── Cuerpo principal: perfil + actividad ── #}
+<div class="rpt-layout" style="margin-top:16px;">
+
+    {# ── Columna izquierda: Perfil de ciudadanos ── #}
+    <div class="card rpt-profile-card">
+        <div class="rpt-card-header">
+            <span style="font-size:18px;">👤</span>
+            <div>
+                <h3 style="margin:0; font-size:15px; font-weight:700;">Perfil de ciudadanos</h3>
+                <p class="muted" style="margin:2px 0 0; font-size:12px;">Distribución demográfica registrada</p>
+            </div>
+        </div>
+
+        {# Género #}
+        <div class="rpt-section">
+            <div class="rpt-section__title">Género</div>
             {% for item in ciudadanos_por_genero %}
-                <div class="menu-card">
-                    <h3>{{ item.etiqueta }}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
-                </div>
+            <div class="rpt-row">
+                <span class="rpt-row__label">{{ item.etiqueta }}</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill" style="width:{% widthratio item.total total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ item.total }}</span>
+            </div>
+            {% empty %}
+            <p class="rpt-empty">Sin datos</p>
             {% endfor %}
         </div>
-    {% else %}
-        <p class="muted">Sin datos.</p>
-    {% endif %}
-</div>
 
-<div class="card">
-    <h3>Perfil de usuarios — Discapacidad</h3>
-    <div class="grid">
-        <div class="menu-card">
-            <h3>Con discapacidad declarada</h3>
-            <p class="tile-value">{{ ciudadanos_con_discapacidad }}</p>
+        {# Discapacidad #}
+        <div class="rpt-section">
+            <div class="rpt-section__title">Discapacidad</div>
+            <div class="rpt-row">
+                <span class="rpt-row__label">Con discapacidad</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--rose" style="width:{% widthratio ciudadanos_con_discapacidad total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ ciudadanos_con_discapacidad }}</span>
+            </div>
+            <div class="rpt-row" style="border-bottom:none;">
+                <span class="rpt-row__label">Sin discapacidad</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill" style="width:{% widthratio ciudadanos_sin_discapacidad total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ ciudadanos_sin_discapacidad }}</span>
+            </div>
         </div>
-        <div class="menu-card">
-            <h3>Sin discapacidad declarada</h3>
-            <p class="tile-value">{{ ciudadanos_sin_discapacidad }}</p>
+
+        {# Estrato #}
+        <div class="rpt-section">
+            <div class="rpt-section__title">Estrato socioeconómico</div>
+            {% for item in ciudadanos_por_estrato %}
+            <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                <span class="rpt-row__label">Estrato {{ item.ciu_estrato }}</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--amber" style="width:{% widthratio item.total total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ item.total }}</span>
+            </div>
+            {% empty %}
+            <p class="rpt-empty">Sin datos</p>
+            {% endfor %}
+        </div>
+
+        {# Etnia #}
+        <div class="rpt-section">
+            <div class="rpt-section__title">Etnia (principales)</div>
+            {% for item in ciudadanos_por_etnia %}
+            <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                <span class="rpt-row__label">{{ item.etnia }}</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--violet" style="width:{% widthratio item.total total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ item.total }}</span>
+            </div>
+            {% empty %}
+            <p class="rpt-empty">Sin datos</p>
+            {% endfor %}
+        </div>
+
+        {# Nivel educativo #}
+        <div class="rpt-section">
+            <div class="rpt-section__title">Nivel educativo</div>
+            {% for item in ciudadanos_por_nvleduc %}
+            <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                <span class="rpt-row__label">{{ item.nivel_educativo }}</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill" style="width:{% widthratio item.total total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ item.total }}</span>
+            </div>
+            {% empty %}
+            <p class="rpt-empty">Sin datos</p>
+            {% endfor %}
+        </div>
+
+        {# Ocupación #}
+        <div class="rpt-section" style="border-bottom:none; padding-bottom:4px;">
+            <div class="rpt-section__title">Ocupación (principales)</div>
+            {% for item in ciudadanos_por_ocupacion %}
+            <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                <span class="rpt-row__label">{{ item.ocupacion }}</span>
+                {% if total_ciudadanos %}
+                <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--emerald" style="width:{% widthratio item.total total_ciudadanos 100 %}%"></div></div>
+                {% endif %}
+                <span class="rpt-row__val">{{ item.total }}</span>
+            </div>
+            {% empty %}
+            <p class="rpt-empty">Sin datos</p>
+            {% endfor %}
         </div>
     </div>
-</div>
 
-<div class="card">
-    <h3>Perfil de usuarios — Estrato</h3>
-    {% if ciudadanos_por_estrato %}
-        <div class="grid">
-            {% for item in ciudadanos_por_estrato %}
-                <div class="menu-card">
-                    <h3>Estrato {{ item.ciu_estrato }}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
+    {# ── Columna derecha: Actividad ── #}
+    <div class="rpt-activity-col">
+
+        {# Atenciones por mes #}
+        <div class="card">
+            <div class="rpt-card-header">
+                <span style="font-size:18px;">📅</span>
+                <div>
+                    <h3 style="margin:0; font-size:15px; font-weight:700;">Atenciones por mes</h3>
+                    <p class="muted" style="margin:2px 0 0; font-size:12px;">Últimos registros disponibles</p>
                 </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="muted">Sin datos.</p>
-    {% endif %}
-</div>
-
-<div class="card">
-    <h3>Perfil de usuarios — Etnia (principales)</h3>
-    {% if ciudadanos_por_etnia %}
-        <div class="grid">
-            {% for item in ciudadanos_por_etnia %}
-                <div class="menu-card">
-                    <h3>{{ item.etnia }}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
+            </div>
+            <div class="rpt-section" style="border-top:none; padding-top:0; border-bottom:none; padding-bottom:4px;">
+                {% for item in atenciones_por_mes %}
+                <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                    <span class="rpt-row__label">
+                        {% if item.mes %}{{ item.mes|date:"M Y" }}{% else %}Sin fecha{% endif %}
+                    </span>
+                    {% if total_atenciones %}
+                    <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--emerald" style="width:{% widthratio item.total total_atenciones 100 %}%"></div></div>
+                    {% endif %}
+                    <span class="rpt-row__val">{{ item.total }}</span>
                 </div>
-            {% endfor %}
+                {% empty %}
+                <p class="rpt-empty">Sin atenciones registradas</p>
+                {% endfor %}
+            </div>
         </div>
-    {% else %}
-        <p class="muted">Sin datos.</p>
-    {% endif %}
-</div>
 
-<div class="card">
-    <h3>Perfil de usuarios — Nivel educativo</h3>
-    {% if ciudadanos_por_nvleduc %}
-        <div class="grid">
-            {% for item in ciudadanos_por_nvleduc %}
-                <div class="menu-card">
-                    <h3>{{ item.nivel_educativo }}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
+        {# Servicios por tipo #}
+        <div class="card">
+            <div class="rpt-card-header">
+                <span style="font-size:18px;">🛠️</span>
+                <div>
+                    <h3 style="margin:0; font-size:15px; font-weight:700;">Servicios por tipo</h3>
+                    <p class="muted" style="margin:2px 0 0; font-size:12px;">Distribución de servicios prestados</p>
                 </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="muted">Sin datos.</p>
-    {% endif %}
-</div>
-
-<div class="card">
-    <h3>Perfil de usuarios — Ocupación (principales)</h3>
-    {% if ciudadanos_por_ocupacion %}
-        <div class="grid">
-            {% for item in ciudadanos_por_ocupacion %}
-                <div class="menu-card">
-                    <h3>{{ item.ocupacion }}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
+            </div>
+            <div class="rpt-section" style="border-top:none; padding-top:0; border-bottom:none; padding-bottom:4px;">
+                {% for item in servicios_por_tipo %}
+                <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                    <span class="rpt-row__label">{{ item.tipo }}</span>
+                    {% if total_servicios %}
+                    <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--amber" style="width:{% widthratio item.total total_servicios 100 %}%"></div></div>
+                    {% endif %}
+                    <span class="rpt-row__val">{{ item.total }}</span>
                 </div>
-            {% endfor %}
+                {% empty %}
+                <p class="rpt-empty">Sin servicios registrados</p>
+                {% endfor %}
+            </div>
         </div>
-    {% else %}
-        <p class="muted">Sin datos.</p>
-    {% endif %}
-</div>
 
-<div class="card">
-    <h3>Atenciones por mes (últimos registros)</h3>
-    {% if atenciones_por_mes %}
-        <div class="grid">
-            {% for item in atenciones_por_mes %}
-                <div class="menu-card">
-                    <h3>{% if item.mes %}{{ item.mes|date:"Y-m" }}{% else %}Sin fecha{% endif %}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
+        {# Atenciones por Admin PVD #}
+        <div class="card">
+            <div class="rpt-card-header">
+                <span style="font-size:18px;">🧑‍💼</span>
+                <div>
+                    <h3 style="margin:0; font-size:15px; font-weight:700;">Atenciones por Admin PVD</h3>
+                    <p class="muted" style="margin:2px 0 0; font-size:12px;">Cantidad de atenciones registradas por usuario</p>
                 </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="muted">No hay atenciones registradas.</p>
-    {% endif %}
-</div>
-
-<div class="card">
-    <h3>Servicios por tipo</h3>
-    {% if servicios_por_tipo %}
-        <div class="grid">
-            {% for item in servicios_por_tipo %}
-                <div class="menu-card">
-                    <h3>{{ item.tipo }}</h3>
-                    <p class="tile-value">{{ item.total }}</p>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="muted">No hay servicios registrados.</p>
-    {% endif %}
-</div>
-
-<div class="card">
-    <h3>Atenciones por Admin PVD</h3>
-    {% if atenciones_por_admin %}
-        <div class="grid">
-            {% for item in atenciones_por_admin %}
-                <div class="menu-card">
-                    <h3>
+            </div>
+            <div class="rpt-section" style="border-top:none; padding-top:0; border-bottom:none; padding-bottom:4px;">
+                {% for item in atenciones_por_admin %}
+                <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                    <span class="rpt-row__label">
                         {% if item.operador__first_name or item.operador__last_name %}
                             {{ item.operador__first_name }} {{ item.operador__last_name }}
                         {% elif item.operador__username %}
@@ -217,45 +271,180 @@
                         {% else %}
                             Sin admin asignado
                         {% endif %}
-                    </h3>
-                    <p class="tile-value">{{ item.total }}</p>
+                    </span>
+                    {% if total_atenciones %}
+                    <div class="rpt-bar"><div class="rpt-bar__fill" style="width:{% widthratio item.total total_atenciones 100 %}%"></div></div>
+                    {% endif %}
+                    <span class="rpt-row__val">{{ item.total }}</span>
                 </div>
-            {% endfor %}
+                {% empty %}
+                <p class="rpt-empty">Sin datos</p>
+                {% endfor %}
+            </div>
         </div>
-    {% else %}
-        <p class="muted">No hay atenciones registradas.</p>
-    {% endif %}
+
+    </div>
 </div>
 
-<div class="card">
-    <h3>Últimas atenciones</h3>
-    {% if atenciones_recientes %}
-        <div class="grid">
-            {% for atencion in atenciones_recientes %}
-                <div class="menu-card">
-                    <h3>Atención #{{ atencion.id }}</h3>
-                    <p><strong>Fecha:</strong> {{ atencion.fecha }}</p>
-                    <p><strong>Hora:</strong> {{ atencion.hora_inicio }}</p>
-                    <p><strong>Ciudadano:</strong>
+{# ── Últimas atenciones ── #}
+<div class="card" style="margin-top:16px;">
+    <div class="rpt-card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:0;">
+        <span style="font-size:18px;">🕓</span>
+        <div>
+            <h3 style="margin:0; font-size:15px; font-weight:700;">Últimas atenciones</h3>
+            <p class="muted" style="margin:2px 0 0; font-size:12px;">Registros más recientes del sistema</p>
+        </div>
+    </div>
+    <div class="table-responsive" style="border:none; border-radius:0; margin-top:0;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Ciudadano</th>
+                    <th>Admin PVD</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for atencion in atenciones_recientes %}
+                <tr>
+                    <td style="font-variant-numeric:tabular-nums; color:#6b7280; font-size:12px;">#{{ atencion.id }}</td>
+                    <td>{{ atencion.fecha }}</td>
+                    <td style="font-variant-numeric:tabular-nums;">{{ atencion.hora_inicio }}</td>
+                    <td>
                         {% if atencion.ciudadano %}
                             {{ atencion.ciudadano.get_nombre_completo }}
                         {% else %}
-                            Sin ciudadano
+                            <span class="muted">Sin ciudadano</span>
                         {% endif %}
-                    </p>
-                    <p><strong>Admin PVD:</strong>
+                    </td>
+                    <td>
                         {% if atencion.operador %}
                             {{ atencion.operador.get_full_name|default:atencion.operador.username }}
                         {% else %}
-                            Sin asignar
+                            <span class="muted">Sin asignar</span>
                         {% endif %}
-                    </p>
-                    <p><strong>Estado:</strong> {{ atencion.get_estado_display }}</p>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="muted">No hay atenciones registradas.</p>
-    {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if atencion.estado == 'F' %}badge-success{% elif atencion.estado == 'C' %}badge-danger{% else %}badge-warning{% endif %}">
+                            {{ atencion.get_estado_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align:center; padding:32px 16px; color:#9ca3af;">
+                        No hay atenciones registradas.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<style>
+/* ── Filtro ── */
+.rpt-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: var(--p-bg);
+    border: 1px solid var(--p-border);
+    border-radius: 8px;
+}
+.rpt-filter-field { display: flex; flex-direction: column; gap: 4px; }
+.rpt-filter-label { font-size: 12px; font-weight: 600; color: var(--p-text-secondary); }
+.rpt-filter-notice { font-size: 12px; color: #0369a1; align-self: flex-end; }
+
+/* ── Layout principal ── */
+.rpt-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+.rpt-activity-col { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Cabecera de card ── */
+.rpt-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px 20px 14px;
+}
+
+/* ── Secciones internas ── */
+.rpt-section {
+    padding: 12px 20px 10px;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 0;
+}
+.rpt-section__title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #9ca3af;
+    margin-bottom: 8px;
+}
+
+/* ── Fila de dato ── */
+.rpt-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f8fafc;
+}
+.rpt-row--last,
+.rpt-row:last-child { border-bottom: none; }
+.rpt-row__label {
+    flex: 1;
+    font-size: 13px;
+    color: #374151;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rpt-row__val {
+    min-width: 30px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+/* ── Mini barra ── */
+.rpt-bar {
+    width: 72px;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.rpt-bar__fill          { height: 100%; background: #3b82f6; border-radius: 3px; min-width: 2px; }
+.rpt-bar__fill--emerald { background: #10b981; }
+.rpt-bar__fill--amber   { background: #f59e0b; }
+.rpt-bar__fill--rose    { background: #f43f5e; }
+.rpt-bar__fill--violet  { background: #8b5cf6; }
+
+.rpt-empty { font-size: 13px; color: #9ca3af; margin: 4px 0 6px; }
+
+@media (max-width: 860px) {
+    .rpt-layout { grid-template-columns: 1fr; }
+    .rpt-bar { width: 100px; }
+}
+</style>
+
 {% endblock %}

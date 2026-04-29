@@ -9,7 +9,7 @@ from .models import (
     AuditoriaAccion, UserProfile, Sala, HabilitacionSala,
     PermisoDefinicion, PermisoRol, PermisoUsuario,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
-    MantenimientoEquipo, RegistroApertura,
+    MantenimientoEquipo,
 )
 
 
@@ -287,11 +287,3 @@ class MantenimientoEquipoAdmin(admin.ModelAdmin):
     ordering = ('-fecha',)
     list_select_related = ('punto_vive_digital', 'realizado_por')
 
-
-@admin.register(RegistroApertura)
-class RegistroAperturaAdmin(admin.ModelAdmin):
-    list_display = ('punto_vive_digital', 'fecha', 'hora_apertura', 'hora_cierre', 'registrado_por')
-    list_filter = ('punto_vive_digital', 'fecha')
-    search_fields = ('observaciones',)
-    ordering = ('-fecha',)
-    list_select_related = ('punto_vive_digital', 'registrado_por')

@@ -300,11 +300,29 @@
 {# PANEL ADMIN TIC #}
 {# ============================================================================ #}
 {% elif es_admin_tic_only %}
+
+{# ── Selección de PVD para Admin TIC ── #}
+<div class="content-section" style="margin-bottom: 8px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>
+            <strong style="font-size:14px; color:#1e293b;">PVD activo para módulos operacionales:</strong>
+            {% if pvd_activo %}
+                <span class="badge badge-success" style="margin-left:8px;">{{ pvd_activo.nombre }}</span>
+                <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm btn-secondary" style="margin-left:10px;">Cambiar</a>
+            {% else %}
+                <span class="badge badge-warning" style="margin-left:8px;">Sin PVD seleccionado — se muestran datos globales</span>
+                <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left:10px;">Seleccionar PVD</a>
+            {% endif %}
+        </div>
+        <span style="font-size:12px; color:#64748b;">El Admin TIC puede operar en cualquier PVD sin restricciones.</span>
+    </div>
+</div>
+
 <div class="content-section">
     <div class="section-header">
         <h3 class="section-title">🖥️ Funciones de Admin TIC</h3>
     </div>
-    
+
     <div class="grid" style="margin-top: 24px;">
         <div class="menu-card">
             <h3>👥 Ciudadanos</h3>

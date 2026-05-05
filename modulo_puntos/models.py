@@ -222,6 +222,35 @@ class Servicio(models.Model):
         return self.nombre
 
 
+class ModuloHabilitado(models.Model):
+    MODULOS_DISPONIBLES = [
+        ('atencion_ciudadana', 'Atención ciudadana'),
+        ('recursos_salas', 'Recursos y Salas'),
+        ('cursos_talleres', 'Cursos y Talleres'),
+        ('mantenimiento', 'Mantenimiento de equipos'),
+        ('reportes', 'Reportes y exportaciones'),
+    ]
+
+    punto_vive_digital = models.ForeignKey(
+        'PuntoViveDigital', on_delete=models.CASCADE,
+        related_name='modulos_habilitados',
+        verbose_name='Punto Vive Digital'
+    )
+    modulo = models.CharField(max_length=32, choices=MODULOS_DISPONIBLES, verbose_name='Módulo')
+    habilitado = models.BooleanField(default=True, verbose_name='Habilitado')
+    fecha_habilitacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de habilitación')
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_modulos_habilitados'
+        unique_together = [('punto_vive_digital', 'modulo')]
+        verbose_name = 'Módulo Habilitado'
+        verbose_name_plural = 'Módulos Habilitados'
+
+    def __str__(self):
+        return f"{self.get_modulo_display()} — {self.punto_vive_digital.nombre}"
+
+
 class Satisfaccion(models.Model):
     atencion = models.ForeignKey(
         'Atencion', models.PROTECT,

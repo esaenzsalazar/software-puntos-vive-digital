@@ -2,7 +2,7 @@
 Contexto global para navegación según permisos (contrato PVD / roles).
 Proporciona variables de contexto disponibles en todos los templates.
 """
-from .models import PuntoViveDigital
+from .models import PuntoViveDigital, ModuloHabilitado
 from django.urls import reverse, NoReverseMatch
 
 # (label, parent_label, parent_url_name)
@@ -138,6 +138,8 @@ def pvd_navigation(request):
         'bc_parent_label': bc_parent_label,
         'bc_parent_url': bc_parent_url,
         'topbar_actions': [],
+        'restringir_modulos': False,
+        'modulos_pvd_activo': set(),
     }
 
     u = request.user
@@ -174,6 +176,17 @@ def pvd_navigation(request):
     ctx['pvds_disponibles'] = list(
         PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
     )
+
+    # Restricción de módulos: solo aplica para Admin PVD con PVD activo seleccionado.
+    # Superusuario y Admin TIC ven todo sin restricción.
+    if ctx.get('es_admin_pvd_only') and ctx.get('pvd_activo'):
+        ctx['restringir_modulos'] = True
+        ctx['modulos_pvd_activo'] = set(
+            ModuloHabilitado.objects.filter(
+                punto_vive_digital=ctx['pvd_activo'],
+                habilitado=True
+            ).values_list('modulo', flat=True)
+        )
 
     # Resolver acciones del topbar para la página actual
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])

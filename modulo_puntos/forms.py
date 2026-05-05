@@ -8,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import (
-    Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
+    Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo,
 )
@@ -410,6 +410,79 @@ class ServicioForm(forms.ModelForm):
         self.fields['estado'].initial = 'A'
 
 
+MODULOS_WIZARD_CHOICES = [
+    ('atencion_ciudadana', 'Atención ciudadana'),
+    ('recursos_salas', 'Recursos y Salas'),
+    ('cursos_talleres', 'Cursos y Talleres'),
+    ('mantenimiento', 'Mantenimiento de equipos'),
+    ('reportes', 'Reportes y exportaciones'),
+]
+
+MODULOS_INFO = [
+    {
+        'codigo': 'atencion_ciudadana',
+        'label': 'Atención ciudadana',
+        'icono': '👥',
+        'descripcion': 'Registro y seguimiento de atenciones a la comunidad.',
+        'incluye': ['Ciudadanos', 'Registrar ciudadano', 'Atenciones', 'Servicios', 'Satisfacción'],
+    },
+    {
+        'codigo': 'recursos_salas',
+        'label': 'Recursos y Salas',
+        'icono': '💼',
+        'descripcion': 'Inventario de equipos, préstamos y gestión de salas.',
+        'incluye': ['Recursos', 'Préstamos de recursos', 'Salas', 'Habilitación de salas'],
+    },
+    {
+        'codigo': 'cursos_talleres',
+        'label': 'Cursos y Talleres',
+        'icono': '📚',
+        'descripcion': 'Formación ciudadana, sesiones, inscripciones y asistencia.',
+        'incluye': ['Cursos', 'Sesiones', 'Inscripciones', 'Control de asistencia'],
+    },
+    {
+        'codigo': 'mantenimiento',
+        'label': 'Mantenimiento de equipos',
+        'icono': '🔧',
+        'descripcion': 'Registro de mantenimientos preventivos y correctivos.',
+        'incluye': ['Mantenimiento preventivo', 'Mantenimiento correctivo'],
+    },
+    {
+        'codigo': 'reportes',
+        'label': 'Reportes y exportaciones',
+        'icono': '📊',
+        'descripcion': 'Estadísticas, indicadores y exportación de datos a Excel.',
+        'incluye': ['Panel de reportes', 'Exportación a Excel', 'Indicadores KPI'],
+    },
+]
+
+
+class ModulosHabilitadosForm(forms.Form):
+    modulos = forms.MultipleChoiceField(
+        choices=MODULOS_WIZARD_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label='Módulos funcionales de este PVD',
+        error_messages={'required': 'Debes habilitar al menos un módulo funcional para este PVD.'}
+    )
+
+
+class AsignarAdminPVDForm(forms.Form):
+    admin_a_cargo = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        label='Administrador PVD a cargo',
+        empty_label='— Sin asignación (se puede cambiar después) —',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['admin_a_cargo'].queryset = User.objects.filter(
+            groups__name='Administrador PVD'
+        ).order_by('first_name', 'last_name', 'username')
+
+
 class PrestamoRecursoForm(forms.ModelForm):
     """
     Formulario para registrar préstamos de recursos.
@@ -728,15 +801,16 @@ class PuntoViveDigitalForm(forms.ModelForm):
             'admin_a_cargo': forms.Select(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, wizard=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['telefono'].required = True
-        # Filtrar solo usuarios del grupo Administrador PVD
         self.fields['admin_a_cargo'].queryset = User.objects.filter(
             groups__name='Administrador PVD'
         ).order_by('first_name', 'last_name', 'username')
         self.fields['admin_a_cargo'].empty_label = '— Sin asignación (se puede cambiar después) —'
         self.fields['admin_a_cargo'].required = False
+        if wizard:
+            del self.fields['admin_a_cargo']
 
     def clean_nombre(self):
         nombre = self.cleaned_data.get('nombre')

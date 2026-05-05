@@ -1,0 +1,167 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Módulos — {{ pvd.nombre }}{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Administración · {{ pvd.nombre }}</span>
+        <h1 class="page-title">{% if desde_wizard %}Nuevo Punto Vive Digital{% else %}Módulos habilitados{% endif %}</h1>
+        <p class="muted">Configura qué módulos funcionales tendrá este PVD</p>
+    </div>
+
+    {% if desde_wizard %}
+    <div class="wizard-stepper">
+        <div class="wizard-step wizard-step--done">
+            <div class="wizard-step__bubble">✓</div>
+            <div class="wizard-step__label">Datos del PVD</div>
+        </div>
+        <div class="wizard-step__line wizard-step__line--done"></div>
+        <div class="wizard-step wizard-step--active">
+            <div class="wizard-step__bubble">2</div>
+            <div class="wizard-step__label">Módulos</div>
+        </div>
+        <div class="wizard-step__line"></div>
+        <div class="wizard-step wizard-step--pending">
+            <div class="wizard-step__bubble">3</div>
+            <div class="wizard-step__label">Administrador</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST" id="form-modulos">
+        {% csrf_token %}
+        <input type="hidden" name="desde_wizard" value="{% if desde_wizard %}1{% else %}0{% endif %}">
+
+        <p style="margin-bottom: 8px; color: #374151; font-size: 14px;">
+            Selecciona los <strong>módulos funcionales</strong> que este PVD tendrá disponibles.
+            {% if desde_wizard %}<strong>Debes habilitar al menos uno para continuar.</strong>{% endif %}
+        </p>
+        <p style="margin-bottom: 20px; color: #64748b; font-size: 13px;">
+            Cada módulo agrupa las funciones relacionadas que el administrador del PVD podrá gestionar.
+            Puedes cambiar esta configuración en cualquier momento.
+        </p>
+
+        {% if form.modulos.errors %}
+        <div id="form-error-msg" style="margin-bottom: 16px; padding: 12px 16px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; color: #991b1b; font-weight: 600;">
+            {{ form.modulos.errors }}
+        </div>
+        {% else %}
+        <div id="form-error-msg" style="display:none; margin-bottom: 16px; padding: 12px 16px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; color: #991b1b; font-weight: 600;"></div>
+        {% endif %}
+
+        <div class="modulos-grid">
+            {% for modulo in modulos_info %}
+            <label class="modulo-card {% if modulo.codigo in checked_modulos %}modulo-card--checked{% endif %}"
+                   for="mod_{{ modulo.codigo }}">
+                <input type="checkbox" name="modulos" value="{{ modulo.codigo }}"
+                       id="mod_{{ modulo.codigo }}"
+                       {% if modulo.codigo in checked_modulos %}checked{% endif %}
+                       onchange="toggleModulo(this)">
+
+                <div class="modulo-card__header">
+                    <span class="modulo-card__icono">{{ modulo.icono }}</span>
+                    <div class="modulo-card__check-badge">✓ Habilitado</div>
+                </div>
+
+                <div class="modulo-card__title">{{ modulo.label }}</div>
+                <p class="modulo-card__desc">{{ modulo.descripcion }}</p>
+
+                <div class="modulo-card__funciones">
+                    <span class="funciones-label">Incluye:</span>
+                    <div class="funciones-lista">
+                        {% for fn in modulo.incluye %}
+                        <span class="funcion-tag">{{ fn }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+
+        <div class="seleccion-info" id="seleccion-info" style="margin-top: 16px; padding: 10px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 13px; color: #0369a1; display: none;">
+            <strong id="seleccion-count">0</strong> módulo(s) seleccionado(s)
+        </div>
+
+        <div class="actions" style="margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">
+                {% if desde_wizard %}Siguiente: Administrador →{% else %}💾 Guardar módulos{% endif %}
+            </button>
+            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="btn btn-secondary">
+                {% if desde_wizard %}Saltar todos los pasos{% else %}Cancelar{% endif %}
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.wizard-stepper { display: flex; align-items: center; justify-content: center; margin: 0 0 28px 0; padding: 20px 0; border-bottom: 1px solid var(--p-border, #e2e8f0); }
+.wizard-step { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.wizard-step__bubble { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; border: 2px solid #cbd5e1; background: #f8fafc; color: #94a3b8; }
+.wizard-step__label { font-size: 12px; color: #94a3b8; font-weight: 500; white-space: nowrap; }
+.wizard-step__line { flex: 1; height: 2px; background: #e2e8f0; margin: 0 10px; min-width: 40px; margin-bottom: 22px; }
+.wizard-step__line--done { background: #10b981; }
+.wizard-step--active .wizard-step__bubble { background: var(--primary-color, #1e40af); border-color: var(--primary-color, #1e40af); color: #fff; }
+.wizard-step--active .wizard-step__label { color: var(--primary-color, #1e40af); font-weight: 700; }
+.wizard-step--done .wizard-step__bubble { background: #10b981; border-color: #10b981; color: #fff; }
+.wizard-step--done .wizard-step__label { color: #059669; font-weight: 600; }
+.wizard-step--pending .wizard-step__bubble { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+
+/* Grid de módulos */
+.modulos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+.modulo-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; background: #f8fafc; transition: border-color .15s, background .15s, box-shadow .15s; position: relative; }
+.modulo-card input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.modulo-card:hover { border-color: var(--primary-color, #1e40af); background: #eff6ff; box-shadow: 0 2px 8px rgba(30,64,175,.1); }
+.modulo-card--checked { border-color: #10b981; background: #f0fdf4; }
+.modulo-card--checked:hover { border-color: #059669; background: #dcfce7; }
+
+.modulo-card__header { display: flex; align-items: center; justify-content: space-between; }
+.modulo-card__icono { font-size: 30px; line-height: 1; }
+.modulo-card__check-badge { display: none; background: #10b981; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px; letter-spacing: .3px; }
+.modulo-card--checked .modulo-card__check-badge { display: block; }
+
+.modulo-card__title { font-size: 15px; font-weight: 700; color: #1e293b; margin: 2px 0 0; }
+.modulo-card--checked .modulo-card__title { color: #166534; }
+.modulo-card__desc { font-size: 12px; color: #64748b; margin: 0; line-height: 1.5; }
+.modulo-card--checked .modulo-card__desc { color: #374151; }
+
+.modulo-card__funciones { margin-top: 4px; }
+.funciones-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 6px; }
+.funciones-lista { display: flex; flex-wrap: wrap; gap: 4px; }
+.funcion-tag { font-size: 11px; background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.modulo-card--checked .funcion-tag { background: #bbf7d0; color: #166534; }
+
+@media (max-width: 640px) { .modulos-grid { grid-template-columns: 1fr; } }
+</style>
+
+{% block extra_scripts %}
+<script>
+function toggleModulo(checkbox) {
+    const card = checkbox.closest('.modulo-card');
+    card.classList.toggle('modulo-card--checked', checkbox.checked);
+    actualizarContador();
+}
+
+function actualizarContador() {
+    const checked = document.querySelectorAll('input[name="modulos"]:checked');
+    const info = document.getElementById('seleccion-info');
+    document.getElementById('seleccion-count').textContent = checked.length;
+    info.style.display = checked.length > 0 ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', actualizarContador);
+
+document.getElementById('form-modulos').addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('input[name="modulos"]:checked');
+    if (checked.length === 0) {
+        e.preventDefault();
+        const err = document.getElementById('form-error-msg');
+        err.textContent = 'Debes habilitar al menos un módulo funcional para continuar.';
+        err.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

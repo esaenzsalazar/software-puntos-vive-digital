@@ -23,7 +23,11 @@
       "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('C:/Users/USER/software-puntos-vive-digital/modulo_puntos/context_processors.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py check 2>&1)",
       "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py seed_demo 2>&1)",
-      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py seed_demo)"
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py seed_demo)",
+      "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py migrate)",
+      "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py check)",
+      "Bash('.\\\\entorno\\\\Scripts\\\\python.exe' -c ' *)",
+      "Bash('.\\\\entorno\\\\Scripts\\\\python.exe' manage.py shell -c ' *)"
     ]
   }
 }

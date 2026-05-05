@@ -87,6 +87,8 @@ urlpatterns = [
     path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
     path('pvd/eliminar/<int:pvd_cdgo>/', views.eliminar_pvd, name='eliminar_pvd'),
     path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
+    path('pvd/<int:pvd_id>/servicios/', views.wizard_servicios_pvd, name='wizard_servicios_pvd'),
+    path('pvd/<int:pvd_id>/admin/', views.wizard_asignar_admin_pvd, name='wizard_asignar_admin_pvd'),
     path('configuracion/roles/', views.gestionar_roles, name='gestionar_roles'),
     # ==========================================================================
     # GESTIÓN DE SALAS

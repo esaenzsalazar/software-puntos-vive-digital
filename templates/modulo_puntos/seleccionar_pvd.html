@@ -17,7 +17,30 @@
         </div>
     </div>
 
-    {% if pvds %}
+    {% if sin_asignacion %}
+    {# ── Admin PVD sin PVD asignado: pantalla de bloqueo ── #}
+    <div class="empty-state" style="border-top: 6px solid #f59e0b;">
+        <div class="empty-state__icon">🔒</div>
+        <h3 class="empty-state__title" style="color:#92400e;">Sin Punto Vive Digital asignado</h3>
+        <p class="empty-state__message">
+            Tu cuenta aún no tiene un Punto Vive Digital asignado.<br>
+            <strong>Contacta al Administrador TIC</strong> para que te asigne el PVD en el que trabajarás.
+        </p>
+        <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:16px 20px; margin:0 auto 24px auto; max-width:480px; text-align:left;">
+            <p style="margin:0 0 6px 0; font-size:14px; color:#78350f; font-weight:600;">¿Qué hacer?</p>
+            <ol style="margin:0; padding-left:18px; font-size:13px; color:#92400e; line-height:1.8;">
+                <li>Comunícate con el Administrador TIC de tu municipio.</li>
+                <li>El Admin TIC irá a <strong>Accesos Temporales</strong> y te asignará el PVD correspondiente.</li>
+                <li>Una vez asignado, cierra sesión y vuelve a ingresar.</li>
+            </ol>
+        </div>
+        <a href="{% url 'modulo_puntos:logout' %}" class="btn-back" style="display:inline-block; margin-top:8px;">
+            ← Cerrar sesión
+        </a>
+    </div>
+
+    {% elif pvds %}
+    {# ── Lista de PVDs disponibles ── #}
     <div class="pvd-list">
         {% for pvd in pvds %}
         <div class="pvd-item-card" onclick="window.location.href='{% url 'modulo_puntos:seleccionar_pvd' pvd.id %}'" style="cursor: pointer;">
@@ -46,16 +69,14 @@
         </div>
         {% endfor %}
     </div>
+
     {% else %}
+    {# ── Sin PVDs activos disponibles (superuser / TIC sin PVDs creados) ── #}
     <div class="empty-state">
         <div class="empty-state__icon">🏢</div>
         <h3 class="empty-state__title">No hay Puntos Vive Digital disponibles</h3>
         <p class="empty-state__message">
-            {% if nav_pvd %}
-                No tienes un PVD asignado. Contacta a un Administrador TIC para que te asigne uno.
-            {% else %}
-                Contacta a un Administrador TIC para crear el primer PVD.
-            {% endif %}
+            Contacta a un Administrador TIC para crear el primer PVD.
         </p>
         {% if nav_tic %}
         <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn btn-primary">

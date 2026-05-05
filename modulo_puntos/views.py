@@ -12,7 +12,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 
 from .models import (
-    Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso,
+    Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso,
     Recurso, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
@@ -20,10 +20,11 @@ from .models import (
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
+    ModulosHabilitadosForm, AsignarAdminPVDForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
     CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
-    MantenimientoEquipoForm,
+    MantenimientoEquipoForm, MODULOS_INFO,
 )
 from .utils import registrar_auditoria, tiene_permiso
 
@@ -186,6 +187,8 @@ def panel_control(request):
 
 @login_required(login_url='/login/')
 def seleccionar_pvd_view(request):
+    sin_asignacion = False
+
     if usuario_necesita_seleccionar_pvd(request.user):
         try:
             profile = request.user.pvd_profile
@@ -195,12 +198,19 @@ def seleccionar_pvd_view(request):
                     pvd_ids.append(profile.pvd_temporal_id)
                 pvds = PuntoViveDigital.objects.filter(pk__in=pvd_ids, estado='A').order_by('nombre')
             else:
-                pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+                # Admin PVD sin PVD asignado: bloquear, no mostrar lista
+                pvds = PuntoViveDigital.objects.none()
+                sin_asignacion = True
         except UserProfile.DoesNotExist:
-            pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+            pvds = PuntoViveDigital.objects.none()
+            sin_asignacion = True
     else:
         pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
-    return render(request, 'modulo_puntos/seleccionar_pvd.html', {'pvds': pvds})
+
+    return render(request, 'modulo_puntos/seleccionar_pvd.html', {
+        'pvds': pvds,
+        'sin_asignacion': sin_asignacion,
+    })
 
 
 @login_required(login_url='/login/')
@@ -210,15 +220,18 @@ def seleccionar_pvd(request, pvd_cdgo):
     if usuario_necesita_seleccionar_pvd(request.user):
         try:
             profile = request.user.pvd_profile
-            if profile.punto_asignado_id:
-                pvd_ids_permitidos = [profile.punto_asignado_id]
-                if profile.pvd_temporal_id:
-                    pvd_ids_permitidos.append(profile.pvd_temporal_id)
-                if pvd_cdgo not in pvd_ids_permitidos:
-                    messages.error(request, 'No tienes permiso para acceder a ese Punto Vive Digital.')
-                    return redirect('modulo_puntos:seleccionar_pvd_view')
+            if not profile.punto_asignado_id:
+                messages.error(request, 'No tienes ningún Punto Vive Digital asignado. Contacta al Administrador TIC.')
+                return redirect('modulo_puntos:seleccionar_pvd_view')
+            pvd_ids_permitidos = [profile.punto_asignado_id]
+            if profile.pvd_temporal_id:
+                pvd_ids_permitidos.append(profile.pvd_temporal_id)
+            if pvd_cdgo not in pvd_ids_permitidos:
+                messages.error(request, 'No tienes permiso para acceder a ese Punto Vive Digital.')
+                return redirect('modulo_puntos:seleccionar_pvd_view')
         except UserProfile.DoesNotExist:
-            pass
+            messages.error(request, 'No tienes ningún Punto Vive Digital asignado. Contacta al Administrador TIC.')
+            return redirect('modulo_puntos:seleccionar_pvd_view')
 
     request.session['pvd_activo_id'] = pvd.pk
     request.session['pvd_nombre'] = pvd.nombre
@@ -539,6 +552,9 @@ def editar_prestamo(request, prestamo_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'inventario.editar_prestamo'):
+        messages.error(request, 'No tienes permiso para editar préstamos.')
+        return redirect('modulo_puntos:registrar_recurso')
 
     prestamo = get_object_or_404(PrestamoRecurso, pk=prestamo_id)
     form = PrestamoRecursoForm(request.POST or None, instance=prestamo)
@@ -1119,7 +1135,9 @@ def lista_pvd(request):
     if not usuario_es_admin_tic(request.user):
         messages.error(request, 'No tienes permisos para gestionar PVDs.')
         return redirect('modulo_puntos:panel_control')
-    pvds = PuntoViveDigital.objects.all().order_by('nombre')
+    pvds = PuntoViveDigital.objects.annotate(
+        total_modulos_habilitados=Count('modulos_habilitados', filter=Q(modulos_habilitados__habilitado=True))
+    ).order_by('nombre')
     puede_eliminar_pvd = tiene_permiso(request.user, 'infraestructura.eliminar_pvd')
     return render(request, 'modulo_puntos/lista_pvd.html', {
         'pvds': pvds,
@@ -1133,26 +1151,118 @@ def crear_pvd(request):
         messages.error(request, 'No tienes permisos para crear PVDs.')
         return redirect('modulo_puntos:panel_control')
 
-    form = PuntoViveDigitalForm(request.POST or None)
+    form = PuntoViveDigitalForm(request.POST or None, wizard=True)
     if request.method == 'POST':
         if form.is_valid():
             pvd = form.save()
-
             Sala.objects.get_or_create(
                 punto_vive_digital=pvd,
                 nombre='Sala Principal',
                 defaults={'descripcion': 'Sala principal del PVD', 'estado': 'A'}
             )
-
             registrar_auditoria(request, 'CREATE', 'PuntoViveDigital', pvd.pk, f'PVD creado: {pvd.nombre}')
-            messages.success(request, f'PVD "{pvd.nombre}" creado correctamente.')
-            return redirect('modulo_puntos:lista_pvd')
+            messages.success(request, f'Paso 1 completado. Ahora configura los servicios de "{pvd.nombre}".')
+            return redirect(reverse('modulo_puntos:wizard_servicios_pvd', args=[pvd.pk]) + '?w=1')
         messages.error(request, 'Revisa los datos del formulario.')
 
     return render(request, 'modulo_puntos/form_pvd.html', {
         'form': form,
-        'titulo': 'Crear Punto Vive Digital',
+        'titulo': 'Nuevo Punto Vive Digital',
         'accion': 'crear',
+        'wizard': True,
+        'wizard_paso': 1,
+    })
+
+
+@login_required(login_url='/login/')
+def wizard_servicios_pvd(request, pvd_id):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    desde_wizard = request.GET.get('w', '0') == '1'
+
+    modulos_actuales = list(
+        pvd.modulos_habilitados.filter(habilitado=True).values_list('modulo', flat=True)
+    )
+    initial = {'modulos': modulos_actuales}
+    form = ModulosHabilitadosForm(request.POST or None, initial=initial)
+
+    if request.method == 'POST':
+        desde_wizard_post = request.POST.get('desde_wizard', '0') == '1'
+        if form.is_valid():
+            modulos_sel = form.cleaned_data['modulos']
+            pvd.modulos_habilitados.update(habilitado=False)
+            for cod in modulos_sel:
+                ModuloHabilitado.objects.update_or_create(
+                    punto_vive_digital=pvd,
+                    modulo=cod,
+                    defaults={'habilitado': True}
+                )
+            registrar_auditoria(
+                request, 'UPDATE', 'ModuloHabilitado', pvd.pk,
+                f'Módulos configurados para "{pvd.nombre}": {", ".join(modulos_sel)}'
+            )
+            if desde_wizard_post:
+                messages.success(request, 'Paso 2 completado. Ahora asigna el administrador.')
+                return redirect('modulo_puntos:wizard_asignar_admin_pvd', pvd_id=pvd.pk)
+            messages.success(request, f'Módulos de "{pvd.nombre}" actualizados correctamente.')
+            return redirect('modulo_puntos:lista_pvd')
+
+    checked_modulos = (
+        request.POST.getlist('modulos') if request.method == 'POST'
+        else modulos_actuales
+    )
+    return render(request, 'modulo_puntos/wizard_servicios_pvd.html', {
+        'form': form,
+        'pvd': pvd,
+        'wizard_paso': 2,
+        'desde_wizard': desde_wizard,
+        'checked_modulos': checked_modulos,
+        'modulos_info': MODULOS_INFO,
+    })
+
+
+@login_required(login_url='/login/')
+def wizard_asignar_admin_pvd(request, pvd_id):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    form = AsignarAdminPVDForm(request.POST or None, initial={'admin_a_cargo': pvd.admin_a_cargo})
+
+    if request.method == 'POST':
+        if form.is_valid():
+            admin = form.cleaned_data['admin_a_cargo']
+            pvd.admin_a_cargo = admin
+            pvd.save(update_fields=['admin_a_cargo'])
+
+            if admin:
+                perfil, _ = UserProfile.objects.get_or_create(
+                    usuario=admin,
+                    defaults={'rol': 'admin_pvd'}
+                )
+                if not perfil.punto_asignado:
+                    perfil.punto_asignado = pvd
+                    perfil.save(update_fields=['punto_asignado'])
+
+            nombre_admin = admin.get_full_name() or admin.username if admin else 'sin administrador'
+            registrar_auditoria(
+                request, 'UPDATE', 'PuntoViveDigital', pvd.pk,
+                f'Admin asignado a "{pvd.nombre}": {nombre_admin}'
+            )
+            if admin:
+                messages.success(request, f'PVD "{pvd.nombre}" configurado. Administrador: {nombre_admin}.')
+            else:
+                messages.success(request, f'PVD "{pvd.nombre}" configurado sin administrador asignado.')
+            return redirect('modulo_puntos:lista_pvd')
+
+    return render(request, 'modulo_puntos/wizard_asignar_admin_pvd.html', {
+        'form': form,
+        'pvd': pvd,
+        'wizard_paso': 3,
     })
 
 
@@ -1218,6 +1328,9 @@ def lista_salas(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'salas.ver'):
+        messages.error(request, 'No tienes permiso para ver salas.')
+        return redirect('modulo_puntos:panel_control')
 
     es_admin_tic = usuario_es_admin_tic(request.user) or request.user.is_superuser
     puede_eliminar = tiene_permiso(request.user, 'infraestructura.eliminar_sala')
@@ -1251,6 +1364,9 @@ def crear_sala(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'salas.crear'):
+        messages.error(request, 'No tienes permiso para crear salas.')
+        return redirect('modulo_puntos:lista_salas')
 
     pvd_id = request.session.get('pvd_activo_id')
     initial = {}
@@ -1278,6 +1394,9 @@ def editar_sala(request, sala_cdgo):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'salas.editar'):
+        messages.error(request, 'No tienes permiso para editar salas.')
+        return redirect('modulo_puntos:lista_salas')
 
     sala = get_object_or_404(Sala, pk=sala_cdgo)
     form = SalaForm(request.POST or None, instance=sala)
@@ -1302,6 +1421,9 @@ def activar_sala(request, sala_cdgo):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'salas.editar'):
+        messages.error(request, 'No tienes permiso para cambiar el estado de salas.')
+        return redirect('modulo_puntos:lista_salas')
 
     sala = get_object_or_404(Sala, pk=sala_cdgo)
     sala.estado = 'I' if sala.estado == 'A' else 'A'
@@ -1641,6 +1763,9 @@ def lista_habilitaciones(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'habilitaciones.ver'):
+        messages.error(request, 'No tienes permiso para ver habilitaciones de sala.')
+        return redirect('modulo_puntos:panel_control')
 
     pvd_id = request.session.get('pvd_activo_id')
     fecha_filtro = request.GET.get('fecha', '')
@@ -1687,6 +1812,9 @@ def crear_habilitacion(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'habilitaciones.crear'):
+        messages.error(request, 'No tienes permiso para crear habilitaciones.')
+        return redirect('modulo_puntos:lista_habilitaciones')
 
     pvd_id = request.session.get('pvd_activo_id')
     sala_inicial = request.GET.get('sala_id')
@@ -1729,6 +1857,9 @@ def editar_habilitacion(request, hab_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'habilitaciones.editar'):
+        messages.error(request, 'No tienes permiso para editar habilitaciones.')
+        return redirect('modulo_puntos:lista_habilitaciones')
 
     hab = get_object_or_404(HabilitacionSala, pk=hab_id)
 
@@ -1759,6 +1890,9 @@ def cancelar_habilitacion(request, hab_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'habilitaciones.cancelar'):
+        messages.error(request, 'No tienes permiso para cancelar habilitaciones.')
+        return redirect('modulo_puntos:lista_habilitaciones')
 
     try:
         hab = HabilitacionSala.objects.get(pk=hab_id)
@@ -1785,6 +1919,9 @@ def eliminar_habilitacion(request, hab_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'habilitaciones.eliminar'):
+        messages.error(request, 'No tienes permiso para eliminar habilitaciones.')
+        return redirect('modulo_puntos:lista_habilitaciones')
 
     try:
         hab = HabilitacionSala.objects.get(pk=hab_id)
@@ -1860,6 +1997,9 @@ def lista_cursos(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.ver'):
+        messages.error(request, 'No tienes permiso para ver cursos.')
+        return redirect('modulo_puntos:panel_control')
 
     pvd_id = request.session.get('pvd_activo_id')
     es_admin_tic = usuario_es_admin_tic(request.user)
@@ -1888,6 +2028,9 @@ def crear_curso(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.crear'):
+        messages.error(request, 'No tienes permiso para crear cursos.')
+        return redirect('modulo_puntos:lista_cursos')
 
     pvd_id = request.session.get('pvd_activo_id')
     if not pvd_id:
@@ -1920,6 +2063,9 @@ def editar_curso(request, curso_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.editar'):
+        messages.error(request, 'No tienes permiso para editar cursos.')
+        return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
     form = CursoForm(request.POST or None, instance=curso)
@@ -1945,6 +2091,9 @@ def detalle_curso(request, curso_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.ver'):
+        messages.error(request, 'No tienes permiso para ver cursos.')
+        return redirect('modulo_puntos:panel_control')
 
     curso = get_object_or_404(Curso.objects.select_related('punto_vive_digital', 'registrado_por'), pk=curso_id)
     sesiones = curso.sesiones.order_by('numero_sesion')
@@ -1962,6 +2111,9 @@ def crear_sesion_curso(request, curso_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.sesiones'):
+        messages.error(request, 'No tienes permiso para gestionar sesiones de cursos.')
+        return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
     ultimo_num = curso.sesiones.aggregate(max_n=Max('numero_sesion'))['max_n'] or 0
@@ -1990,6 +2142,9 @@ def inscribir_ciudadano(request, curso_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.inscribir'):
+        messages.error(request, 'No tienes permiso para inscribir ciudadanos en cursos.')
+        return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
     inscritos_ids = InscripcionCurso.objects.filter(curso=curso).values_list('ciudadano_id', flat=True)
@@ -2022,6 +2177,9 @@ def marcar_asistencia(request, sesion_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.asistencia'):
+        messages.error(request, 'No tienes permiso para registrar asistencia.')
+        return redirect('modulo_puntos:lista_cursos')
 
     sesion = get_object_or_404(SesionCurso.objects.select_related('curso'), pk=sesion_id)
     inscritos = InscripcionCurso.objects.filter(
@@ -2071,6 +2229,9 @@ def lista_mantenimientos(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'mantenimiento.ver'):
+        messages.error(request, 'No tienes permiso para ver mantenimientos.')
+        return redirect('modulo_puntos:panel_control')
 
     pvd_id = request.session.get('pvd_activo_id')
     es_admin_tic = usuario_es_admin_tic(request.user)
@@ -2099,6 +2260,9 @@ def crear_mantenimiento(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'mantenimiento.crear'):
+        messages.error(request, 'No tienes permiso para registrar mantenimientos.')
+        return redirect('modulo_puntos:lista_mantenimientos')
 
     pvd_id = request.session.get('pvd_activo_id')
     if not pvd_id:
@@ -2132,6 +2296,9 @@ def editar_mantenimiento(request, mant_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'mantenimiento.editar'):
+        messages.error(request, 'No tienes permiso para editar mantenimientos.')
+        return redirect('modulo_puntos:lista_mantenimientos')
 
     mant = get_object_or_404(MantenimientoEquipo, pk=mant_id)
     form = MantenimientoEquipoForm(request.POST or None, instance=mant)

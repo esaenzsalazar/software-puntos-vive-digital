@@ -20,7 +20,10 @@
       "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\manage.py\" migrate)",
       "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\manage.py\" check 2>&1)",
       "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('C:/Users/USER/software-puntos-vive-digital/modulo_puntos/context_processors.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
-      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('C:/Users/USER/software-puntos-vive-digital/modulo_puntos/context_processors.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "PowerShell(& \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\entorno\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('C:/Users/USER/software-puntos-vive-digital/modulo_puntos/context_processors.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py check 2>&1)",
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py seed_demo 2>&1)",
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py seed_demo)"
     ]
   }
 }

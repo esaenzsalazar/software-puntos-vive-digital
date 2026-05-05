@@ -738,6 +738,33 @@ class PuntoViveDigitalForm(forms.ModelForm):
         self.fields['admin_a_cargo'].empty_label = '— Sin asignación (se puede cambiar después) —'
         self.fields['admin_a_cargo'].required = False
 
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre')
+        if nombre:
+            qs = PuntoViveDigital.objects.filter(nombre__iexact=nombre.strip())
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise ValidationError(
+                    f'Ya existe un PVD con el nombre "{nombre.strip()}". '
+                    'Cada Punto Vive Digital debe tener un nombre único.'
+                )
+        return nombre.strip() if nombre else nombre
+
+    def clean_direccion(self):
+        direccion = self.cleaned_data.get('direccion')
+        if direccion:
+            qs = PuntoViveDigital.objects.filter(direccion__iexact=direccion.strip())
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                pvd_existente = qs.first()
+                raise ValidationError(
+                    f'Esta dirección ya está registrada en el PVD "{pvd_existente.nombre}". '
+                    'Verifica que no estés creando un punto duplicado.'
+                )
+        return direccion.strip() if direccion else direccion
+
     def clean_telefono(self):
         tlfno = self.cleaned_data.get('telefono')
         if not tlfno:
@@ -755,6 +782,14 @@ class PuntoViveDigitalForm(forms.ModelForm):
         if correo:
             if not re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', correo):
                 raise ValidationError('El formato del correo electrónico no es válido.')
+            qs = PuntoViveDigital.objects.filter(correo__iexact=correo.strip())
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                pvd_existente = qs.first()
+                raise ValidationError(
+                    f'Este correo ya está registrado en el PVD "{pvd_existente.nombre}".'
+                )
         return correo
 
 

@@ -1,0 +1,183 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Servicios Personalizados{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Administración global</span>
+        <h1 class="page-title">✨ Servicios Personalizados</h1>
+        <p class="muted">Todos los servicios creados por los PVDs — ítems, usos activos e historial.</p>
+    </div>
+</div>
+
+{# ── KPIs globales ── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:6px;">Servicios</div>
+        <div style="font-size:2rem;font-weight:800;color:#1e3a5f;line-height:1;">{{ total_servicios }}</div>
+        <div style="font-size:11px;color:#3b82f6;margin-top:4px;">en todos los PVDs</div>
+    </div>
+    <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:16px 20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6d28d9;margin-bottom:6px;">Tipos de ítem</div>
+        <div style="font-size:2rem;font-weight:800;color:#4c1d95;line-height:1;">{{ total_items }}</div>
+        <div style="font-size:11px;color:#7c3aed;margin-top:4px;">ítems activos</div>
+    </div>
+    <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;padding:16px 20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#be123c;margin-bottom:6px;">Usos activos ahora</div>
+        <div style="font-size:2rem;font-weight:800;color:#881337;line-height:1;">{{ total_activos }}</div>
+        <div style="font-size:11px;color:#f43f5e;margin-top:4px;">registros abiertos</div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin-bottom:6px;">Historial</div>
+        <div style="font-size:2rem;font-weight:800;color:#14532d;line-height:1;">{{ total_historial }}</div>
+        <div style="font-size:11px;color:#16a34a;margin-top:4px;">finalizados / cancelados</div>
+    </div>
+</div>
+
+{# ── Filtro por PVD ── #}
+<div class="content-section" style="padding:14px 20px;">
+    <form method="get" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">Filtrar por PVD:</label>
+        <select name="pvd" class="form-control" style="width:auto;min-width:220px;" onchange="this.form.submit()">
+            <option value="">— Todos los PVDs —</option>
+            {% for pvd in pvds %}
+            <option value="{{ pvd.pk }}" {% if pvd_filtro == pvd.pk|stringformat:"s" %}selected{% endif %}>{{ pvd.nombre }}</option>
+            {% endfor %}
+        </select>
+        {% if pvd_filtro %}
+        <a href="{% url 'modulo_puntos:lista_servicios_custom' %}" class="btn btn-secondary btn--sm">✕ Ver todos</a>
+        {% endif %}
+    </form>
+</div>
+
+{# ── Tabla de servicios ── #}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title">
+            📋 Servicios
+            {% if pvd_filtro_obj %}<span style="font-size:13px;font-weight:400;color:#64748b;">— {{ pvd_filtro_obj.nombre }}</span>{% endif %}
+        </h3>
+    </div>
+
+    {% if not servicios %}
+    <div style="text-align:center;padding:48px 20px;color:#94a3b8;">
+        <div style="font-size:48px;margin-bottom:12px;">✨</div>
+        <p style="font-size:14px;margin:0;">No hay servicios personalizados{% if pvd_filtro_obj %} para {{ pvd_filtro_obj.nombre }}{% endif %}.</p>
+    </div>
+    {% else %}
+    <div class="table-responsive" style="margin-top:12px;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>PVD</th>
+                    <th>Servicio</th>
+                    <th>Estado</th>
+                    <th style="text-align:center;">Ítems</th>
+                    <th style="text-align:center;">🔴 Activos</th>
+                    <th style="text-align:center;">📜 Total usos</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for svc in servicios %}
+                <tr>
+                    <td>
+                        <span style="font-size:12px;font-weight:600;color:#1d4ed8;background:#eff6ff;padding:2px 8px;border-radius:20px;white-space:nowrap;">
+                            {{ svc.punto_vive_digital.nombre }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:22px;line-height:1;">{{ svc.icono }}</span>
+                            <div>
+                                <div style="font-weight:600;color:#1e293b;">{{ svc.nombre }}</div>
+                                {% if svc.descripcion %}<div style="font-size:12px;color:#64748b;">{{ svc.descripcion }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge {% if svc.habilitado %}badge-success{% else %}badge-warning{% endif %}">
+                            {% if svc.habilitado %}Habilitado{% else %}Deshabilitado{% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align:center;font-weight:700;color:#6d28d9;">{{ svc.total_items }}</td>
+                    <td style="text-align:center;">
+                        {% if svc.registros_activos > 0 %}
+                        <span style="font-weight:700;color:#dc2626;background:#fff1f2;padding:2px 10px;border-radius:20px;">{{ svc.registros_activos }}</span>
+                        {% else %}
+                        <span style="color:#94a3b8;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:center;color:#475569;">{{ svc.total_registros }}</td>
+                    <td>
+                        <a href="{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}" class="btn btn--sm">Gestionar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{# ── Usos activos ahora (todos o filtrados por PVD) ── #}
+{% if registros_activos %}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title" style="color:#dc2626;">
+            🔴 Usos activos ahora
+            {% if pvd_filtro_obj %}<span style="font-size:13px;font-weight:400;color:#64748b;">— {{ pvd_filtro_obj.nombre }}</span>{% endif %}
+        </h3>
+    </div>
+    <div class="table-responsive" style="margin-top:12px;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>PVD</th>
+                    <th>Servicio</th>
+                    <th>Ítem</th>
+                    <th>Persona</th>
+                    <th>Desde</th>
+                    <th>Devolver antes de</th>
+                    <th>Notas</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registros_activos %}
+                <tr>
+                    <td style="font-size:12px;white-space:nowrap;">{{ reg.item.servicio.punto_vive_digital.nombre }}</td>
+                    <td>
+                        <span style="font-size:16px;">{{ reg.item.servicio.icono }}</span>
+                        <span style="font-size:13px;font-weight:600;">{{ reg.item.servicio.nombre }}</span>
+                    </td>
+                    <td><strong>{{ reg.item.nombre }}</strong></td>
+                    <td>{{ reg.persona_display }}</td>
+                    <td style="white-space:nowrap;font-size:12px;">{{ reg.creado_en|date:"d/m/Y H:i" }}</td>
+                    <td style="white-space:nowrap;font-size:12px;">
+                        {% if reg.fecha_fin_esperada %}{{ reg.fecha_fin_esperada|date:"d/m/Y H:i" }}{% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                    </td>
+                    <td style="font-size:12px;color:#64748b;max-width:160px;">{{ reg.notas|default:"—" }}</td>
+                    <td>
+                        <div style="display:flex;gap:4px;">
+                            <form method="post" action="{% url 'modulo_puntos:finalizar_registro_servicio' reg_id=reg.pk %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm" style="background:#10b981;">✓</button>
+                            </form>
+                            <form method="post" action="{% url 'modulo_puntos:cancelar_registro_servicio' reg_id=reg.pk %}"
+                                  onsubmit="return confirm('¿Cancelar?')" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;">✗</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

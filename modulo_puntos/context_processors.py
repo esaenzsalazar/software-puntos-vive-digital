@@ -53,6 +53,9 @@ _BREADCRUMB_MAP = {
     'crear_sesion_curso':    ('Nueva Sesión',          'Cursos',                'lista_cursos'),
     'inscribir_ciudadano':   ('Inscripción',           'Cursos',                'lista_cursos'),
     'marcar_asistencia':     ('Asistencia',            'Cursos',                'lista_cursos'),
+    # Servicios personalizados
+    'lista_servicios_custom':    ('Servicios Personalizados', 'Panel',         'panel_control'),
+    'gestionar_servicio_custom': ('Gestión de servicio',  'Servicios Personalizados', 'lista_servicios_custom'),
     # Mantenimientos
     'lista_mantenimientos':  ('Mantenimientos',        'Panel',                 'panel_control'),
     'crear_mantenimiento':   ('Nuevo Mantenimiento',   'Mantenimientos',        'lista_mantenimientos'),
@@ -62,6 +65,19 @@ _BREADCRUMB_MAP = {
     'crear_admin_tic':       ('Nuevo Admin TIC',       'Panel',                 'panel_control'),
     'crear_admin_pvd':       ('Nuevo Admin PVD',       'Panel',                 'panel_control'),
     'accesos_temporales':    ('Accesos Temporales',    'Panel',                 'panel_control'),
+}
+
+# target url_name → cualquier código que permite mostrar el botón al Admin PVD
+_TOPBAR_MODULO_REQUERIDO = {
+    'registrar_atencion':  {'atencion_ciudadana', 'atenciones', 'ciudadanos'},
+    'registrar_ciudadano': {'atencion_ciudadana', 'ciudadanos'},
+    'crear_recurso':       {'recursos_salas', 'recursos'},
+    'registrar_prestamo':  {'recursos_salas', 'prestamos'},
+    'reportes':            {'reportes'},
+    'crear_sala':          {'recursos_salas', 'salas'},
+    'crear_habilitacion':  {'recursos_salas', 'habilitaciones'},
+    'crear_curso':         {'cursos_talleres', 'cursos'},
+    'crear_mantenimiento': {'mantenimiento'},
 }
 
 # (label, url_name_or_sentinel, css_extra)
@@ -181,16 +197,25 @@ def pvd_navigation(request):
     # Superusuario y Admin TIC ven todo sin restricción.
     if ctx.get('es_admin_pvd_only') and ctx.get('pvd_activo'):
         ctx['restringir_modulos'] = True
-        ctx['modulos_pvd_activo'] = set(
+        # Módulos del sistema (coarse-grained)
+        modulos_activos = set(
             ModuloHabilitado.objects.filter(
                 punto_vive_digital=ctx['pvd_activo'],
                 habilitado=True
             ).values_list('modulo', flat=True)
         )
+        # Añadir capacidades granulares de servicios personalizados habilitados
+        from .models import ServicioPersonalizado
+        for svc in ServicioPersonalizado.objects.filter(
+            punto_vive_digital=ctx['pvd_activo'], habilitado=True
+        ).only('modulos_sistema'):
+            modulos_activos.update(svc.modulos_sistema or [])
+        ctx['modulos_pvd_activo'] = modulos_activos
 
     # Resolver acciones del topbar para la página actual
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])
     resolved = []
+    modulos_activos = ctx.get('modulos_pvd_activo', set())
     for label, target, css in raw_actions:
         if target == '__back__':
             action_url = bc_parent_url
@@ -200,6 +225,10 @@ def pvd_navigation(request):
             except NoReverseMatch:
                 action_url = None
         if action_url:
+            # Ocultar botones que requieren módulos no habilitados
+            if ctx.get('restringir_modulos') and target in _TOPBAR_MODULO_REQUERIDO:
+                if not _TOPBAR_MODULO_REQUERIDO[target].intersection(modulos_activos):
+                    continue
             resolved.append({'label': label, 'url': action_url, 'css': css})
     ctx['topbar_actions'] = resolved
 

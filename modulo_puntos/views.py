@@ -1,7 +1,7 @@
 import random
 from io import BytesIO
 from datetime import datetime, date as date_type, time as time_type
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -10,13 +10,15 @@ from django.db.models import Q, Count, Avg, Max
 from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso,
     Recurso, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
-    MantenimientoEquipo,
+    MantenimientoEquipo, ServicioPersonalizado, ItemServicio, RegistroServicio,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
@@ -24,7 +26,8 @@ from .forms import (
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
     CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
-    MantenimientoEquipoForm, MODULOS_INFO,
+    MantenimientoEquipoForm, MODULOS_INFO, CAPACIDADES_INFO,
+    ItemServicioForm, RegistroServicioForm,
 )
 from .utils import registrar_auditoria, tiene_permiso
 
@@ -77,6 +80,8 @@ def inicio(request):
     return redirect('modulo_puntos:login')
 
 
+@never_cache
+@ensure_csrf_cookie
 def login_usuario(request):
     if request.user.is_authenticated:
         return redirect('modulo_puntos:panel_control')
@@ -161,6 +166,8 @@ def panel_control(request):
         'total_pvds': PuntoViveDigital.objects.count(),
         'total_recursos': Recurso.objects.count(),
         'total_cursos': Curso.objects.count(),
+        'total_servicios_custom': ServicioPersonalizado.objects.filter(habilitado=True).count(),
+        'total_registros_custom_activos': RegistroServicio.objects.filter(estado='A').count(),
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
         'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
@@ -1146,6 +1153,30 @@ def lista_pvd(request):
 
 
 @login_required(login_url='/login/')
+def validar_nombre_pvd(request):
+    nombre = request.GET.get('nombre', '').strip()
+    exclude_id = request.GET.get('exclude_id', None)
+
+    if not nombre:
+        return JsonResponse({'disponible': True})
+
+    nombre_norm = ' '.join(nombre.split()).lower()
+
+    qs = PuntoViveDigital.objects.all()
+    if exclude_id:
+        try:
+            qs = qs.exclude(pk=int(exclude_id))
+        except (ValueError, TypeError):
+            pass
+
+    for nombre_existente in qs.values_list('nombre', flat=True):
+        if ' '.join(nombre_existente.split()).lower() == nombre_norm:
+            return JsonResponse({'disponible': False})
+
+    return JsonResponse({'disponible': True})
+
+
+@login_required(login_url='/login/')
 def crear_pvd(request):
     if not usuario_es_admin_tic(request.user):
         messages.error(request, 'No tienes permisos para crear PVDs.')
@@ -1191,8 +1222,13 @@ def wizard_servicios_pvd(request, pvd_id):
 
     if request.method == 'POST':
         desde_wizard_post = request.POST.get('desde_wizard', '0') == '1'
-        if form.is_valid():
-            modulos_sel = form.cleaned_data['modulos']
+        modulos_sel = request.POST.getlist('modulos')
+        custom_ids_raw = request.POST.getlist('servicios_personalizados')
+        custom_ids = [int(x) for x in custom_ids_raw if x.isdigit()]
+
+        if not modulos_sel and not custom_ids:
+            messages.error(request, 'Debes habilitar al menos un servicio funcional para este PVD.')
+        else:
             pvd.modulos_habilitados.update(habilitado=False)
             for cod in modulos_sel:
                 ModuloHabilitado.objects.update_or_create(
@@ -1200,19 +1236,27 @@ def wizard_servicios_pvd(request, pvd_id):
                     modulo=cod,
                     defaults={'habilitado': True}
                 )
+            ServicioPersonalizado.objects.filter(punto_vive_digital=pvd).update(habilitado=False)
+            if custom_ids:
+                ServicioPersonalizado.objects.filter(pk__in=custom_ids, punto_vive_digital=pvd).update(habilitado=True)
+
+            nombres_sel = modulos_sel + [str(i) for i in custom_ids]
             registrar_auditoria(
                 request, 'UPDATE', 'ModuloHabilitado', pvd.pk,
-                f'Módulos configurados para "{pvd.nombre}": {", ".join(modulos_sel)}'
+                f'Servicios configurados para "{pvd.nombre}": {", ".join(nombres_sel)}'
             )
             if desde_wizard_post:
                 messages.success(request, 'Paso 2 completado. Ahora asigna el administrador.')
                 return redirect('modulo_puntos:wizard_asignar_admin_pvd', pvd_id=pvd.pk)
-            messages.success(request, f'Módulos de "{pvd.nombre}" actualizados correctamente.')
+            messages.success(request, f'Servicios de "{pvd.nombre}" actualizados correctamente.')
             return redirect('modulo_puntos:lista_pvd')
 
     checked_modulos = (
         request.POST.getlist('modulos') if request.method == 'POST'
         else modulos_actuales
+    )
+    servicios_personalizados = list(
+        ServicioPersonalizado.objects.filter(punto_vive_digital=pvd).order_by('nombre')
     )
     return render(request, 'modulo_puntos/wizard_servicios_pvd.html', {
         'form': form,
@@ -1221,7 +1265,291 @@ def wizard_servicios_pvd(request, pvd_id):
         'desde_wizard': desde_wizard,
         'checked_modulos': checked_modulos,
         'modulos_info': MODULOS_INFO,
+        'capacidades_info': CAPACIDADES_INFO,
+        'servicios_personalizados': servicios_personalizados,
     })
+
+
+@login_required(login_url='/login/')
+def crear_servicio_personalizado(request, pvd_id):
+    if not usuario_es_admin_tic(request.user):
+        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    nombre = (data.get('nombre') or '').strip()
+    if not nombre:
+        return JsonResponse({'ok': False, 'error': 'El nombre es requerido'}, status=400)
+
+    from .forms import CAPACIDADES_INFO
+    codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
+    modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
+
+    svc = ServicioPersonalizado.objects.create(
+        punto_vive_digital=pvd,
+        nombre=nombre,
+        icono=(data.get('icono') or '⚙️').strip() or '⚙️',
+        descripcion=(data.get('descripcion') or '').strip(),
+        modulos_sistema=modulos_sistema,
+        incluye_extra=data.get('incluye_extra') or [],
+        habilitado=True,
+    )
+    return JsonResponse({
+        'ok': True,
+        'id': svc.pk,
+        'nombre': svc.nombre,
+        'icono': svc.icono,
+        'descripcion': svc.descripcion,
+        'modulos_sistema': svc.modulos_sistema,
+        'incluye_extra': svc.incluye_extra,
+    })
+
+
+@login_required(login_url='/login/')
+def editar_servicio_personalizado(request, svc_id):
+    if not usuario_es_admin_tic(request.user):
+        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    import json
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    nombre = (data.get('nombre') or '').strip()
+    if not nombre:
+        return JsonResponse({'ok': False, 'error': 'El nombre es requerido'}, status=400)
+
+    from .forms import CAPACIDADES_INFO
+    codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
+    svc.nombre = nombre
+    svc.icono = (data.get('icono') or '⚙️').strip() or '⚙️'
+    svc.descripcion = (data.get('descripcion') or '').strip()
+    svc.modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
+    svc.incluye_extra = data.get('incluye_extra') or []
+    svc.save()
+    return JsonResponse({
+        'ok': True,
+        'id': svc.pk,
+        'nombre': svc.nombre,
+        'icono': svc.icono,
+        'descripcion': svc.descripcion,
+        'modulos_sistema': svc.modulos_sistema,
+        'incluye_extra': svc.incluye_extra,
+    })
+
+
+@login_required(login_url='/login/')
+def eliminar_servicio_personalizado(request, svc_id):
+    if not usuario_es_admin_tic(request.user):
+        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
+    svc.delete()
+    return JsonResponse({'ok': True})
+
+
+# ── GESTIÓN DE ÍTEMS Y REGISTROS DE SERVICIOS PERSONALIZADOS ──────────────────
+
+@login_required(login_url='/login/')
+def lista_servicios_custom(request):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Sin permisos para acceder a esta sección.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+    pvd_filtro = request.GET.get('pvd', '')
+
+    servicios = (
+        ServicioPersonalizado.objects
+        .select_related('punto_vive_digital')
+        .annotate(
+            total_items=Count('items', filter=Q(items__activo=True)),
+            registros_activos=Count(
+                'items__registros',
+                filter=Q(items__registros__estado='A'),
+                distinct=True,
+            ),
+            total_registros=Count('items__registros', distinct=True),
+        )
+        .order_by('punto_vive_digital__nombre', 'nombre')
+    )
+    if pvd_filtro:
+        servicios = servicios.filter(punto_vive_digital_id=pvd_filtro)
+
+    # Registros activos: globales o filtrados por PVD
+    reg_activos_qs = (
+        RegistroServicio.objects
+        .filter(estado='A')
+        .select_related('item__servicio__punto_vive_digital', 'ciudadano')
+        .order_by('-creado_en')
+    )
+    if pvd_filtro:
+        reg_activos_qs = reg_activos_qs.filter(item__servicio__punto_vive_digital_id=pvd_filtro)
+
+    pvd_filtro_obj = None
+    if pvd_filtro:
+        pvd_filtro_obj = PuntoViveDigital.objects.filter(pk=pvd_filtro).first()
+
+    return render(request, 'modulo_puntos/lista_servicios_custom.html', {
+        'servicios': servicios,
+        'pvds': pvds,
+        'pvd_filtro': pvd_filtro,
+        'pvd_filtro_obj': pvd_filtro_obj,
+        'registros_activos': reg_activos_qs[:100],
+        'total_servicios': ServicioPersonalizado.objects.count(),
+        'total_items': ItemServicio.objects.filter(activo=True).count(),
+        'total_activos': RegistroServicio.objects.filter(estado='A').count(),
+        'total_historial': RegistroServicio.objects.filter(estado__in=['F', 'C']).count(),
+    })
+
+
+def _verificar_acceso_servicio_custom(request, svc):
+    """Verifica que el usuario puede gestionar este servicio personalizado."""
+    from django.core.exceptions import PermissionDenied
+    u = request.user
+    if u.is_superuser or u.groups.filter(name='Administrador TIC').exists():
+        return
+    if u.groups.filter(name='Administrador PVD').exists():
+        pvd_id = request.session.get('pvd_activo_id')
+        if pvd_id and svc.punto_vive_digital_id == pvd_id:
+            return
+    raise PermissionDenied
+
+
+@login_required(login_url='/login/')
+def gestionar_servicio_custom(request, svc_id):
+    from django.utils import timezone
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
+    _verificar_acceso_servicio_custom(request, svc)
+
+    items_qs = list(svc.items.filter(activo=True))
+    registros_activos = RegistroServicio.objects.filter(
+        item__servicio=svc, estado='A'
+    ).select_related('item', 'ciudadano').order_by('-creado_en')
+    registros_historial = RegistroServicio.objects.filter(
+        item__servicio=svc, estado__in=['F', 'C']
+    ).select_related('item', 'ciudadano').order_by('-creado_en')[:50]
+
+    items_with_forms = [
+        (item, RegistroServicioForm(prefix=f'reg_{item.pk}'))
+        for item in items_qs
+    ]
+    item_form = ItemServicioForm()
+
+    return render(request, 'modulo_puntos/gestionar_servicio_custom.html', {
+        'svc': svc,
+        'pvd': svc.punto_vive_digital,
+        'items_with_forms': items_with_forms,
+        'registros_activos': registros_activos,
+        'registros_historial': registros_historial,
+        'item_form': item_form,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_item_servicio(request, svc_id):
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
+    _verificar_acceso_servicio_custom(request, svc)
+    if request.method == 'POST':
+        form = ItemServicioForm(request.POST)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.servicio = svc
+            item.save()
+            messages.success(request, f'Ítem "{item.nombre}" creado.')
+        else:
+            for errs in form.errors.values():
+                for e in errs:
+                    messages.error(request, e)
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
+
+
+@login_required(login_url='/login/')
+def editar_item_servicio(request, item_id):
+    item = get_object_or_404(ItemServicio, pk=item_id)
+    _verificar_acceso_servicio_custom(request, item.servicio)
+    if request.method == 'POST':
+        form = ItemServicioForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Ítem "{item.nombre}" actualizado.')
+        else:
+            for errs in form.errors.values():
+                for e in errs:
+                    messages.error(request, e)
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=item.servicio_id)
+
+
+@login_required(login_url='/login/')
+def eliminar_item_servicio(request, item_id):
+    item = get_object_or_404(ItemServicio, pk=item_id)
+    _verificar_acceso_servicio_custom(request, item.servicio)
+    svc_id = item.servicio_id
+    if request.method == 'POST':
+        item.activo = False
+        item.save()
+        messages.success(request, f'"{item.nombre}" desactivado.')
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
+
+
+@login_required(login_url='/login/')
+def crear_registro_servicio(request, item_id):
+    item = get_object_or_404(ItemServicio, pk=item_id)
+    _verificar_acceso_servicio_custom(request, item.servicio)
+    if request.method == 'POST':
+        if item.cantidad_disponible <= 0:
+            messages.error(request, f'No hay unidades disponibles de "{item.nombre}".')
+        else:
+            form = RegistroServicioForm(request.POST, prefix=f'reg_{item_id}')
+            if form.is_valid():
+                reg = form.save(commit=False)
+                reg.item = item
+                reg.registrado_por = request.user
+                reg.estado = 'A'
+                reg.save()
+                messages.success(request, f'Uso de "{item.nombre}" registrado.')
+            else:
+                for errs in form.errors.values():
+                    for e in errs:
+                        messages.error(request, e)
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=item.servicio_id)
+
+
+@login_required(login_url='/login/')
+def finalizar_registro_servicio(request, reg_id):
+    from django.utils import timezone
+    reg = get_object_or_404(RegistroServicio, pk=reg_id)
+    _verificar_acceso_servicio_custom(request, reg.item.servicio)
+    if request.method == 'POST':
+        reg.estado = 'F'
+        reg.fecha_fin_real = timezone.now()
+        reg.save()
+        messages.success(request, 'Registro finalizado.')
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=reg.item.servicio_id)
+
+
+@login_required(login_url='/login/')
+def cancelar_registro_servicio(request, reg_id):
+    reg = get_object_or_404(RegistroServicio, pk=reg_id)
+    _verificar_acceso_servicio_custom(request, reg.item.servicio)
+    if request.method == 'POST':
+        reg.estado = 'C'
+        reg.save()
+        messages.success(request, 'Registro cancelado.')
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=reg.item.servicio_id)
 
 
 @login_required(login_url='/login/')

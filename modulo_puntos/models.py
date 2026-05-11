@@ -251,6 +251,115 @@ class ModuloHabilitado(models.Model):
         return f"{self.get_modulo_display()} — {self.punto_vive_digital.nombre}"
 
 
+class ServicioPersonalizado(models.Model):
+    punto_vive_digital = models.ForeignKey(
+        'PuntoViveDigital', on_delete=models.CASCADE,
+        related_name='servicios_personalizados',
+        verbose_name='Punto Vive Digital'
+    )
+    nombre = models.CharField(max_length=100, verbose_name='Nombre del servicio')
+    icono = models.CharField(max_length=20, default='⚙️', verbose_name='Icono (emoji)')
+    descripcion = models.CharField(max_length=255, blank=True, verbose_name='Descripción')
+    modulos_sistema = models.JSONField(default=list, verbose_name='Módulos del sistema que activa')
+    incluye_extra = models.JSONField(default=list, verbose_name='Ítems adicionales descriptivos')
+    habilitado = models.BooleanField(default=True, verbose_name='Habilitado')
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_servicios_personalizados'
+        ordering = ['nombre']
+        verbose_name = 'Servicio Personalizado'
+        verbose_name_plural = 'Servicios Personalizados'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.punto_vive_digital.nombre})"
+
+
+class ItemServicio(models.Model):
+    """Ítem gestionable dentro de un servicio personalizado."""
+    servicio = models.ForeignKey(
+        'ServicioPersonalizado', on_delete=models.CASCADE,
+        related_name='items', verbose_name='Servicio'
+    )
+    nombre = models.CharField(max_length=100, verbose_name='Nombre del ítem')
+    descripcion = models.CharField(max_length=255, blank=True, verbose_name='Descripción')
+    cantidad_total = models.PositiveIntegerField(default=1, verbose_name='Cantidad total')
+    unidad = models.CharField(max_length=50, default='unidad', verbose_name='Nombre de la unidad')
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_item_servicio'
+        ordering = ['nombre']
+        verbose_name = 'Ítem de servicio'
+        verbose_name_plural = 'Ítems de servicio'
+
+    @property
+    def cantidad_en_uso(self):
+        return self.registros.filter(estado='A').count()
+
+    @property
+    def cantidad_disponible(self):
+        return max(0, self.cantidad_total - self.cantidad_en_uso)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.servicio.nombre})"
+
+
+class RegistroServicio(models.Model):
+    """Registro de uso/transacción de un ítem de servicio personalizado."""
+    ESTADO_CHOICES = [
+        ('A', 'Activo'),
+        ('F', 'Finalizado'),
+        ('C', 'Cancelado'),
+    ]
+    item = models.ForeignKey(
+        'ItemServicio', on_delete=models.CASCADE,
+        related_name='registros', verbose_name='Ítem'
+    )
+    ciudadano = models.ForeignKey(
+        'Ciudadano', on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='Ciudadano'
+    )
+    nombre_persona = models.CharField(
+        max_length=100, blank=True,
+        verbose_name='Nombre (si no es ciudadano registrado)'
+    )
+    fecha_fin_esperada = models.DateTimeField(
+        null=True, blank=True, verbose_name='Fecha/hora de devolución esperada'
+    )
+    fecha_fin_real = models.DateTimeField(
+        null=True, blank=True, verbose_name='Fecha/hora de finalización real'
+    )
+    notas = models.TextField(blank=True, verbose_name='Notas')
+    estado = models.CharField(
+        max_length=1, choices=ESTADO_CHOICES, default='A', verbose_name='Estado'
+    )
+    registrado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='Registrado por'
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_registro_servicio'
+        ordering = ['-creado_en']
+        verbose_name = 'Registro de servicio'
+        verbose_name_plural = 'Registros de servicio'
+
+    @property
+    def persona_display(self):
+        if self.ciudadano:
+            return f"{self.ciudadano.primer_nombre} {self.ciudadano.primer_apellido}"
+        return self.nombre_persona or '—'
+
+    def __str__(self):
+        return f"{self.item.nombre} — {self.persona_display}"
+
+
 class Satisfaccion(models.Model):
     atencion = models.ForeignKey(
         'Atencion', models.PROTECT,

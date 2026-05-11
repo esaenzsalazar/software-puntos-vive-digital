@@ -40,6 +40,7 @@
                 <label for="{{ form.nombre.id_for_label }}">Nombre del PVD <span style="color:red;">*</span></label>
                 {{ form.nombre }}
                 {% if form.nombre.errors %}<div class="form-error">{{ form.nombre.errors }}</div>{% endif %}
+                <div id="pvd-nombre-check" style="margin-top: 4px; font-size: 12px; min-height: 18px;"></div>
             </div>
 
             {# ── CONSTRUCTOR DE DIRECCIÓN ─────────────────────────────── #}
@@ -262,12 +263,50 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('pvd_rur_preview').textContent = '';
     };
 
+    // ── VALIDACIÓN DE NOMBRE EN TIEMPO REAL (unicidad en BD) ────────────
+    const nombreCheckUrl = "{% url 'modulo_puntos:validar_nombre_pvd' %}";
+    const nombreExcludeId = "{{ pvd.pk|default:'' }}";
+    let nombreDisponible = true;
+    let nombreDebounceTimer = null;
+    const nombreFeedback = document.getElementById('pvd-nombre-check');
+
+    function verificarNombrePVD(valor) {
+        if (!valor.trim()) {
+            nombreFeedback.innerHTML = '';
+            nombreDisponible = true;
+            nombreInput.classList.remove('input-error');
+            return;
+        }
+        nombreFeedback.innerHTML = '<span style="color:#64748b;">Verificando...</span>';
+        const params = new URLSearchParams({ nombre: valor });
+        if (nombreExcludeId) params.append('exclude_id', nombreExcludeId);
+        fetch(nombreCheckUrl + '?' + params)
+            .then(r => r.json())
+            .then(data => {
+                if (data.disponible) {
+                    nombreFeedback.innerHTML = '<span style="color:#16a34a;">✓ Nombre disponible</span>';
+                    nombreDisponible = true;
+                    nombreInput.classList.remove('input-error');
+                } else {
+                    nombreFeedback.innerHTML = '<span style="color:#dc2626;">✗ Ya existe un PVD con ese nombre</span>';
+                    nombreDisponible = false;
+                    nombreInput.classList.add('input-error');
+                }
+            })
+            .catch(() => {
+                nombreFeedback.innerHTML = '';
+                nombreDisponible = true;
+            });
+    }
+
     // ── VALIDACIONES INLINE ─────────────────────────────────────────────
     if (nombreInput) {
         nombreInput.addEventListener('blur', () => ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre del PVD'));
         nombreInput.addEventListener('input', function () {
             if (this.classList.contains('input-error'))
                 ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre del PVD');
+            clearTimeout(nombreDebounceTimer);
+            nombreDebounceTimer = setTimeout(() => verificarNombrePVD(this.value), 400);
         });
     }
 
@@ -296,6 +335,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let ok = true;
 
             if (nombreInput && !ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre del PVD').valido) ok = false;
+            if (!nombreDisponible) { ok = false; }
 
             if (!direccionHidden.value.trim()) {
                 dirError.style.display = 'block';

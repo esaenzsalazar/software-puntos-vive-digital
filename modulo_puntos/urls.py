@@ -82,13 +82,29 @@ urlpatterns = [
     # GESTIÓN DE PUNTOS VIVE DIGITAL (Multi-PVD)
     # ==========================================================================
     path('pvd/', views.lista_pvd, name='lista_pvd'),
+    path('pvd/validar-nombre/', views.validar_nombre_pvd, name='validar_nombre_pvd'),
     path('pvd/crear/', views.crear_pvd, name='crear_pvd'),
     path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
     path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
     path('pvd/eliminar/<int:pvd_cdgo>/', views.eliminar_pvd, name='eliminar_pvd'),
     path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
     path('pvd/<int:pvd_id>/servicios/', views.wizard_servicios_pvd, name='wizard_servicios_pvd'),
+    path('pvd/<int:pvd_id>/servicios/personalizado/crear/', views.crear_servicio_personalizado, name='crear_servicio_personalizado'),
+    path('pvd/servicios/personalizado/<int:svc_id>/editar/', views.editar_servicio_personalizado, name='editar_servicio_personalizado'),
+    path('pvd/servicios/personalizado/<int:svc_id>/eliminar/', views.eliminar_servicio_personalizado, name='eliminar_servicio_personalizado'),
     path('pvd/<int:pvd_id>/admin/', views.wizard_asignar_admin_pvd, name='wizard_asignar_admin_pvd'),
+
+    # ==========================================================================
+    # GESTIÓN DE ÍTEMS Y REGISTROS DE SERVICIOS PERSONALIZADOS
+    # ==========================================================================
+    path('servicios-custom/', views.lista_servicios_custom, name='lista_servicios_custom'),
+    path('servicio-custom/<int:svc_id>/', views.gestionar_servicio_custom, name='gestionar_servicio_custom'),
+    path('servicio-custom/<int:svc_id>/item/crear/', views.crear_item_servicio, name='crear_item_servicio'),
+    path('servicio-custom/item/<int:item_id>/editar/', views.editar_item_servicio, name='editar_item_servicio'),
+    path('servicio-custom/item/<int:item_id>/eliminar/', views.eliminar_item_servicio, name='eliminar_item_servicio'),
+    path('servicio-custom/item/<int:item_id>/registrar/', views.crear_registro_servicio, name='crear_registro_servicio'),
+    path('servicio-custom/registro/<int:reg_id>/finalizar/', views.finalizar_registro_servicio, name='finalizar_registro_servicio'),
+    path('servicio-custom/registro/<int:reg_id>/cancelar/', views.cancelar_registro_servicio, name='cancelar_registro_servicio'),
     path('configuracion/roles/', views.gestionar_roles, name='gestionar_roles'),
     # ==========================================================================
     # GESTIÓN DE SALAS

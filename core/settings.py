@@ -28,8 +28,16 @@ ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS]
 if '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('*')
 
-# CSRF trusted origins for cross-origin requests
-CSRF_TRUSTED_ORIGINS = [f'http://{h}' for h in ALLOWED_HOSTS if h not in ('127.0.0.1', 'localhost', '*')]
+# CSRF trusted origins
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://localhost:8000',
+    'http://127.0.0.1',
+    'http://127.0.0.1:8000',
+]
+_extra_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+if _extra_origins:
+    CSRF_TRUSTED_ORIGINS.extend([o.strip() for o in _extra_origins.split(',')])
 
 # Application definition
 INSTALLED_APPS = [

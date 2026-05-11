@@ -230,6 +230,20 @@
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
             </div>
         </div>
+
+        <div class="menu-card" style="border-left:4px solid #8b5cf6;">
+            <h3>✨ Servicios Personalizados</h3>
+            <p>Ver y gestionar los servicios creados por cada PVD, sus ítems y registros de uso.</p>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+                <span style="font-size:12px;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;">{{ total_servicios_custom }} servicio(s)</span>
+                {% if total_registros_custom_activos > 0 %}
+                <span style="font-size:12px;background:#fff1f2;color:#be123c;padding:2px 8px;border-radius:20px;">{{ total_registros_custom_activos }} en uso ahora</span>
+                {% endif %}
+            </div>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_servicios_custom' %}">Ver servicios</a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -390,19 +404,39 @@
             </div>
         </div>
 
+        <div class="menu-card" style="border-left:4px solid #8b5cf6;">
+            <h3>✨ Servicios Personalizados</h3>
+            <p>Ver los servicios propios de cada PVD, sus ítems y usos registrados.</p>
+            {% if total_registros_custom_activos > 0 %}
+            <div style="margin-top:6px;">
+                <span style="font-size:12px;background:#fff1f2;color:#be123c;padding:2px 8px;border-radius:20px;">{{ total_registros_custom_activos }} en uso ahora</span>
+            </div>
+            {% endif %}
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_servicios_custom' %}">Ver servicios</a>
+            </div>
+        </div>
+
     </div>
 </div>
 
 {# ============================================================================ #}
-{# PANEL ADMIN PVD #}
+{# PANEL ADMIN PVD — filtrado por módulos habilitados del PVD activo #}
 {# ============================================================================ #}
 {% elif es_admin_pvd_only %}
 <div class="content-section">
     <div class="section-header">
         <h3 class="section-title">🏢 Funciones de Admin PVD</h3>
+        {% if pvd_activo %}
+        <p class="muted" style="margin:4px 0 0; font-size:13px;">
+            Mostrando solo los módulos habilitados para <strong>{{ pvd_activo.nombre }}</strong>
+        </p>
+        {% endif %}
     </div>
-    
+
     <div class="grid" style="margin-top: 24px;">
+
+        {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'ciudadanos' in modulos_pvd_activo %}
         <div class="menu-card">
             <h3>👥 Ciudadanos</h3>
             <p>Consultar, registrar y aprobar ciudadanos.</p>
@@ -411,7 +445,9 @@
                 <a class="btn btn-success btn--sm" href="{% url 'modulo_puntos:registrar_ciudadano' %}">Registrar</a>
             </div>
         </div>
+        {% endif %}
 
+        {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'atenciones' in modulos_pvd_activo %}
         <div class="menu-card menu-card--featured">
             <h3>🎯 Atención al Ciudadano</h3>
             <p>Registrar atenciones y servicios.</p>
@@ -420,25 +456,31 @@
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_servicio' %}">Servicio</a>
             </div>
         </div>
+        {% endif %}
 
+        {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'recursos' in modulos_pvd_activo or 'prestamos' in modulos_pvd_activo %}
         <div class="menu-card">
             <h3>📦 Inventario</h3>
             <p>Gestionar recursos y préstamos.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>
+                {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'recursos' in modulos_pvd_activo %}<a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_recurso' %}">Recurso</a>{% endif %}
+                {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'prestamos' in modulos_pvd_activo %}<a class="btn btn--sm" href="{% url 'modulo_puntos:registrar_prestamo' %}">Préstamo</a>{% endif %}
             </div>
         </div>
+        {% endif %}
 
+        {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'salas' in modulos_pvd_activo or 'habilitaciones' in modulos_pvd_activo %}
         <div class="menu-card">
             <h3>🏛️ Infraestructura</h3>
             <p>Gestionar salas y habilitar espacios para uso.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
+                {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'salas' in modulos_pvd_activo %}<a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>{% endif %}
+                {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'habilitaciones' in modulos_pvd_activo %}<a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>{% endif %}
             </div>
         </div>
+        {% endif %}
 
+        {% if not restringir_modulos or 'cursos_talleres' in modulos_pvd_activo or 'cursos' in modulos_pvd_activo %}
         <div class="menu-card">
             <h3>📚 Cursos y Talleres</h3>
             <p>Gestionar cursos de formación, inscripciones y asistencia.</p>
@@ -447,7 +489,9 @@
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_curso' %}">Nuevo Curso</a>
             </div>
         </div>
+        {% endif %}
 
+        {% if not restringir_modulos or 'mantenimiento' in modulos_pvd_activo %}
         <div class="menu-card">
             <h3>🔧 Mantenimiento</h3>
             <p>Registrar mantenimientos preventivos y correctivos de equipos.</p>
@@ -456,9 +500,42 @@
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_mantenimiento' %}">Registrar</a>
             </div>
         </div>
+        {% endif %}
 
     </div>
 </div>
+
+{# ── Servicios personalizados habilitados en este PVD ── #}
+{% if pvd_activo %}
+{% with custom_svcs=pvd_activo.servicios_personalizados.all %}
+{% if custom_svcs %}
+<div class="content-section">
+    <div class="section-header">
+        <h3 class="section-title">✨ Servicios personalizados</h3>
+        <p class="muted" style="margin:4px 0 0; font-size:13px;">Servicios propios de {{ pvd_activo.nombre }}</p>
+    </div>
+    <div class="grid" style="margin-top:16px;">
+        {% for svc in custom_svcs %}{% if svc.habilitado %}
+        <div class="menu-card" style="border-left:4px solid #8b5cf6;">
+            <h3>{{ svc.icono }} {{ svc.nombre }}</h3>
+            <p>{{ svc.descripcion|default:"Servicio personalizado de este PVD." }}</p>
+            {% if svc.incluye_extra %}
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                {% for item in svc.incluye_extra %}
+                <span style="font-size:11px; background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:20px;">{{ item }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="menu-card__actions" style="margin-top:10px;">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}">Gestionar</a>
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}
 
 {# ============================================================================ #}
 {# PANEL POR DEFECTO (si no coincide ningún rol) #}

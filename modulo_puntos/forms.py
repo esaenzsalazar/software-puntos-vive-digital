@@ -11,6 +11,7 @@ from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo,
+    ItemServicio, RegistroServicio,
 )
 
 # ==============================================================================
@@ -418,6 +419,20 @@ MODULOS_WIZARD_CHOICES = [
     ('reportes', 'Reportes y exportaciones'),
 ]
 
+CAPACIDADES_INFO = [
+    {'codigo': 'ciudadanos',     'label': 'Ciudadanos',            'icono': '👤', 'descripcion': 'Consultar y registrar ciudadanos atendidos'},
+    {'codigo': 'atenciones',     'label': 'Atenciones',            'icono': '🎯', 'descripcion': 'Registrar atenciones al ciudadano'},
+    {'codigo': 'servicios',      'label': 'Servicios',             'icono': '🛠️', 'descripcion': 'Registro de servicios prestados en cada atención'},
+    {'codigo': 'satisfaccion',   'label': 'Satisfacción',          'icono': '⭐', 'descripcion': 'Encuestas de satisfacción del ciudadano'},
+    {'codigo': 'recursos',       'label': 'Recursos (inventario)', 'icono': '📦', 'descripcion': 'Gestión de equipos e inventario del PVD'},
+    {'codigo': 'prestamos',      'label': 'Préstamos',             'icono': '🔄', 'descripcion': 'Préstamo de recursos y equipos a ciudadanos'},
+    {'codigo': 'salas',          'label': 'Salas',                 'icono': '🏛️', 'descripcion': 'Gestión de salas y espacios físicos del PVD'},
+    {'codigo': 'habilitaciones', 'label': 'Habilitación de salas', 'icono': '🔓', 'descripcion': 'Habilitar espacios y salas para uso programado'},
+    {'codigo': 'cursos',         'label': 'Cursos y Talleres',     'icono': '📚', 'descripcion': 'Formación ciudadana: cursos, inscripciones y asistencia'},
+    {'codigo': 'mantenimiento',  'label': 'Mantenimiento',         'icono': '🔧', 'descripcion': 'Mantenimiento preventivo y correctivo de equipos'},
+    {'codigo': 'reportes',       'label': 'Reportes',              'icono': '📊', 'descripcion': 'Estadísticas, indicadores y exportación a Excel'},
+]
+
 MODULOS_INFO = [
     {
         'codigo': 'atencion_ciudadana',
@@ -461,9 +476,8 @@ class ModulosHabilitadosForm(forms.Form):
     modulos = forms.MultipleChoiceField(
         choices=MODULOS_WIZARD_CHOICES,
         widget=forms.CheckboxSelectMultiple,
-        required=True,
-        label='Módulos funcionales de este PVD',
-        error_messages={'required': 'Debes habilitar al menos un módulo funcional para este PVD.'}
+        required=False,
+        label='Servicios funcionales del PVD',
     )
 
 
@@ -1204,4 +1218,71 @@ class MantenimientoEquipoForm(forms.ModelForm):
             'hallazgos': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Problemas encontrados...'}),
             'acciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Acciones tomadas o recomendaciones...'}),
         }
+
+
+class ItemServicioForm(forms.ModelForm):
+    class Meta:
+        model = ItemServicio
+        fields = ['nombre', 'descripcion', 'cantidad_total', 'unidad']
+        labels = {
+            'nombre': 'Nombre del ítem',
+            'descripcion': 'Descripción',
+            'cantidad_total': 'Cantidad total',
+            'unidad': 'Nombre de la unidad',
+        }
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: PlayStation 5, Bicicleta, Sala A, Turno...',
+            }),
+            'descripcion': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descripción opcional...',
+            }),
+            'cantidad_total': forms.NumberInput(attrs={
+                'class': 'form-control', 'min': '1',
+            }),
+            'unidad': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: consola, libro, turno, hora, espacio...',
+            }),
+        }
+
+
+class RegistroServicioForm(forms.ModelForm):
+    class Meta:
+        model = RegistroServicio
+        fields = ['ciudadano', 'nombre_persona', 'fecha_fin_esperada', 'notas']
+        labels = {
+            'ciudadano': 'Ciudadano registrado (opcional)',
+            'nombre_persona': 'Nombre (si no está registrado)',
+            'fecha_fin_esperada': 'Hora/fecha de devolución esperada',
+            'notas': 'Notas / observaciones',
+        }
+        widgets = {
+            'ciudadano': forms.Select(attrs={'class': 'form-control'}),
+            'nombre_persona': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del usuario si no está en el sistema...',
+            }),
+            'fecha_fin_esperada': forms.DateTimeInput(
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
+            'notas': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': '2',
+                'placeholder': 'Observaciones adicionales...',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ciudadano'].queryset = Ciudadano.objects.order_by(
+            'primer_apellido', 'primer_nombre'
+        )
+        self.fields['ciudadano'].empty_label = '— Sin ciudadano registrado —'
+        self.fields['ciudadano'].required = False
+        self.fields['nombre_persona'].required = False
+        self.fields['fecha_fin_esperada'].required = False
+        self.fields['notas'].required = False
 

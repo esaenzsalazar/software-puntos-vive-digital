@@ -1,0 +1,270 @@
+{% extends 'modulo_puntos/base.html' %}
+{% block title %}{{ fun.nombre }} — {{ svc.nombre }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <span class="eyebrow">{{ svc.icono }} {{ svc.nombre }} · {{ pvd.nombre }}</span>
+                <h1 class="page-title">{{ fun.nombre }}</h1>
+                {% if fun.descripcion %}<p class="muted">{{ fun.descripcion }}</p>{% endif %}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <a href="{% url 'modulo_puntos:editar_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk %}" class="btn btn-secondary btn--sm">✏️ Editar función</a>
+                <button class="btn btn--sm" onclick="document.getElementById('panel-nuevo-reg').style.display = document.getElementById('panel-nuevo-reg').style.display === 'none' ? 'block' : 'none'">+ Nuevo registro</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Módulos activos badges ── #}
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    {% if fun.mod_formulario %}<span class="badge badge-info">📋 Formulario</span>{% endif %}
+    {% if fun.mod_estados %}<span class="badge badge-info">🔄 Estados</span>{% endif %}
+    {% if fun.mod_ciudadano %}<span class="badge badge-info">👤 Ciudadano</span>{% endif %}
+    {% if fun.mod_stock %}<span class="badge badge-info">📦 Stock</span>{% endif %}
+</div>
+
+{# ── Stock status ── #}
+{% if fun.mod_stock %}
+<div class="card" style="padding:16px 20px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;">{{ fun.stock_nombre|default:"Stock" }}</div>
+            <div style="font-size:24px;font-weight:800;color:#1e293b;margin-top:2px;">
+                {{ fun.stock_disponible }} <span style="font-size:14px;color:#64748b;">/ {{ fun.stock_total }} {{ fun.stock_unidad }}</span>
+            </div>
+        </div>
+        <div style="flex:1;min-width:160px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;">
+                <span>Disponibles</span><span>En uso: {{ fun.stock_en_uso }}</span>
+            </div>
+            <div style="background:#e2e8f0;border-radius:999px;height:10px;overflow:hidden;">
+                {% if fun.stock_total > 0 %}
+                <div style="background:{% if fun.stock_disponible > 0 %}#10b981{% else %}#f43f5e{% endif %};height:100%;width:{% widthratio fun.stock_disponible fun.stock_total 100 %}%;border-radius:999px;transition:width .3s;"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Panel nuevo registro ── #}
+<div id="panel-nuevo-reg" style="display:none;margin-bottom:20px;">
+    <div class="card" style="border:2px solid #1e40af;">
+        <div style="background:#1e40af;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;margin:-1px -1px 0;font-weight:700;font-size:15px;">
+            + Nuevo registro
+        </div>
+        <div style="padding:20px;">
+            <form method="post" action="{% url 'modulo_puntos:crear_registro_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk %}">
+                {% csrf_token %}
+                <div style="display:flex;flex-direction:column;gap:14px;">
+
+                    {% if fun.mod_ciudadano %}
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">
+                                Ciudadano {% if fun.ciudadano_requerido %}<span style="color:red;">*</span>{% else %}<span style="color:#94a3b8;font-weight:400;">(opcional)</span>{% endif %}
+                            </label>
+                            <select name="ciudadano_id" class="form-control">
+                                <option value="">— Seleccionar ciudadano —</option>
+                                {% for c in ciudadanos %}
+                                <option value="{{ c.pk }}">{{ c.primer_nombre }} {{ c.primer_apellido }} · {{ c.numero_documento }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">Nombre libre <span style="color:#94a3b8;font-weight:400;">(si no está registrado)</span></label>
+                            <input type="text" name="nombre_persona" class="form-control" placeholder="Nombre completo">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if fun.mod_formulario and fun.campos %}
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+                        {% for campo in fun.campos %}
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">
+                                {{ campo.nombre }}{% if campo.requerido %} <span style="color:red;">*</span>{% endif %}
+                            </label>
+                            {% if campo.tipo == 'textarea' %}
+                            <textarea name="campo_{{ campo.nombre }}" class="form-control" rows="2" {% if campo.requerido %}required{% endif %}></textarea>
+                            {% elif campo.tipo == 'numero' %}
+                            <input type="number" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            {% elif campo.tipo == 'fecha' %}
+                            <input type="date" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            {% elif campo.tipo == 'booleano' %}
+                            <select name="campo_{{ campo.nombre }}" class="form-control">
+                                <option value="">—</option>
+                                <option value="Sí">Sí</option>
+                                <option value="No">No</option>
+                            </select>
+                            {% elif campo.tipo == 'lista' and campo.opciones %}
+                            <select name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                                <option value="">— Seleccionar —</option>
+                                {% for op in campo.opciones %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select>
+                            {% else %}
+                            <input type="text" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if fun.mod_stock %}
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">Cantidad de {{ fun.stock_nombre|default:"ítems" }} <span style="color:red;">*</span></label>
+                        <input type="number" name="stock_cantidad" class="form-control" min="1" max="{{ fun.stock_disponible }}" value="1" style="max-width:120px;" required>
+                        <span style="font-size:11px;color:#64748b;"> (máx. {{ fun.stock_disponible }} disponibles)</span>
+                    </div>
+                    {% endif %}
+
+                    <div style="display:grid;grid-template-columns:{% if fun.mod_stock %}1fr 1fr{% else %}1fr{% endif %};gap:12px;">
+                        {% if fun.mod_stock %}
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">Fecha / hora de devolución <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
+                            <input type="datetime-local" name="fecha_fin_esperada" class="form-control">
+                        </div>
+                        {% endif %}
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">Notas internas <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
+                            <input type="text" name="notas" class="form-control" placeholder="Observación rápida...">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid #e2e8f0;">
+                        <button type="button" onclick="document.getElementById('panel-nuevo-reg').style.display='none'" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn">✓ Crear registro</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Registros activos ── #}
+{% if fun.mod_estados and estados_map %}
+<div class="card" style="margin-bottom:16px;">
+    <div style="padding:16px 20px 0;font-weight:700;font-size:14px;color:#374151;">🔄 Registros por estado</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0;border-top:1px solid #f1f5f9;margin-top:12px;">
+        {% for nombre_estado, grupo in estados_map.items %}
+        <div style="border-right:1px solid #f1f5f9;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <div style="width:10px;height:10px;border-radius:50%;background:{{ grupo.config.color }};flex-shrink:0;"></div>
+                <span style="font-size:12px;font-weight:700;color:#374151;">{{ nombre_estado }}</span>
+                <span style="font-size:11px;background:#e2e8f0;color:#64748b;padding:1px 8px;border-radius:20px;">{{ grupo.registros|length }}</span>
+            </div>
+            {% if grupo.registros %}
+            {% for reg in grupo.registros %}
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+                <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px;">{{ reg.persona_display }}</div>
+                <div style="font-size:11px;color:#64748b;margin-bottom:8px;">{{ reg.creado_en|date:"d/m/Y H:i" }}</div>
+                {% if reg.datos %}
+                {% for k, v in reg.datos.items %}{% if v %}
+                <div style="font-size:11px;color:#475569;margin-bottom:2px;"><strong>{{ k }}:</strong> {{ v }}</div>
+                {% endif %}{% endfor %}
+                {% endif %}
+                {% if not grupo.config.es_terminal %}
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
+                    {% for est in fun.estados %}{% if est.nombre != nombre_estado %}
+                    <form method="post" action="{% url 'modulo_puntos:cambiar_estado_registro_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk reg_id=reg.pk %}" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="nuevo_estado" value="{{ est.nombre }}">
+                        <button type="submit" class="btn btn--sm" style="background:{{ est.color }};border-color:{{ est.color }};font-size:11px;padding:3px 8px;">→ {{ est.nombre }}</button>
+                    </form>
+                    {% endif %}{% endfor %}
+                    <form method="post" action="{% url 'modulo_puntos:cerrar_registro_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk reg_id=reg.pk %}" style="margin:0;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary btn--sm" style="font-size:11px;padding:3px 8px;" onclick="return confirm('¿Cerrar este registro?')">✗ Cerrar</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="font-size:11px;color:#94a3b8;text-align:center;padding:16px 0;">Sin registros</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% elif registros_activos %}
+{# ── Sin estados: lista simple ── #}
+<div class="content-section">
+    <div class="section-header"><h3 class="section-title" style="color:#dc2626;">🔴 Registros activos</h3></div>
+    <div class="table-responsive" style="margin-top:12px;">
+        <table class="table">
+            <thead><tr>
+                <th>Persona</th>
+                {% if fun.mod_formulario %}<th>Datos</th>{% endif %}
+                {% if fun.mod_stock %}<th>Cantidad</th>{% endif %}
+                <th>Creado</th>
+                <th>Devolución</th>
+                <th>Acciones</th>
+            </tr></thead>
+            <tbody>
+                {% for reg in registros_activos %}
+                <tr>
+                    <td><strong>{{ reg.persona_display }}</strong></td>
+                    {% if fun.mod_formulario %}<td style="font-size:12px;">{% for k,v in reg.datos.items %}{% if v %}<div><strong>{{ k }}:</strong> {{ v }}</div>{% endif %}{% endfor %}</td>{% endif %}
+                    {% if fun.mod_stock %}<td>{{ reg.stock_cantidad }} {{ fun.stock_unidad }}</td>{% endif %}
+                    <td style="white-space:nowrap;font-size:12px;">{{ reg.creado_en|date:"d/m/Y H:i" }}</td>
+                    <td style="white-space:nowrap;font-size:12px;">{% if reg.fecha_fin_esperada %}{{ reg.fecha_fin_esperada|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
+                    <td>
+                        <form method="post" action="{% url 'modulo_puntos:cerrar_registro_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk reg_id=reg.pk %}" style="margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn--sm" onclick="return confirm('¿Cerrar registro?')">✓ Cerrar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if not registros_activos and not estados_map %}
+<div class="card" style="text-align:center;padding:48px 20px;color:#94a3b8;">
+    <div style="font-size:48px;margin-bottom:12px;">📋</div>
+    <p style="margin:0 0 16px;font-size:14px;">Aún no hay registros. Crea el primero con el botón de arriba.</p>
+</div>
+{% endif %}
+
+{# ── Historial ── #}
+{% if registros_cerrados %}
+<details class="content-section" style="cursor:pointer;margin-top:16px;">
+    <summary style="font-weight:700;font-size:14px;color:#374151;list-style:none;display:flex;align-items:center;gap:8px;padding:4px 0;outline:none;">
+        <span>📜 Historial de registros cerrados</span>
+        <span style="font-size:12px;background:#e2e8f0;color:#64748b;padding:2px 10px;border-radius:20px;">{{ registros_cerrados|length }}</span>
+    </summary>
+    <div class="table-responsive" style="margin-top:12px;">
+        <table class="table">
+            <thead><tr>
+                <th>Persona</th>
+                {% if fun.mod_estados %}<th>Estado final</th>{% endif %}
+                {% if fun.mod_stock %}<th>Cantidad</th>{% endif %}
+                <th>Creado</th><th>Cerrado</th><th>Notas</th>
+            </tr></thead>
+            <tbody>
+                {% for reg in registros_cerrados %}
+                <tr>
+                    <td>{{ reg.persona_display }}</td>
+                    {% if fun.mod_estados %}
+                    <td>{% if reg.estado_actual %}<span class="badge badge-info">{{ reg.estado_actual }}</span>{% else %}—{% endif %}</td>
+                    {% endif %}
+                    {% if fun.mod_stock %}<td>{{ reg.stock_cantidad }} {{ fun.stock_unidad }}</td>{% endif %}
+                    <td style="font-size:12px;white-space:nowrap;">{{ reg.creado_en|date:"d/m/Y H:i" }}</td>
+                    <td style="font-size:12px;white-space:nowrap;">{% if reg.fecha_fin_real %}{{ reg.fecha_fin_real|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
+                    <td style="font-size:12px;color:#64748b;">{{ reg.notas|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endif %}
+
+{% endblock %}

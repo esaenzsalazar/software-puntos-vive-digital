@@ -115,21 +115,6 @@
                 {% if form.barrio.errors %}<div class="form-error">{{ form.barrio.errors }}</div>{% endif %}
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.telefono.id_for_label }}">Teléfono <span style="color:red;">*</span></label>
-                    {{ form.telefono }}
-                    {% if form.telefono.errors %}<div class="form-error">{{ form.telefono.errors }}</div>{% endif %}
-                    <small class="form-hint">Exactamente 10 dígitos — Ej: 3101234567</small>
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.correo.id_for_label }}">Correo electrónico</label>
-                    {{ form.correo }}
-                    {% if form.correo.errors %}<div class="form-error">{{ form.correo.errors }}</div>{% endif %}
-                    <small class="form-hint">Debe contener @ — Ej: pvd@bugalagrande.gov.co</small>
-                </div>
-            </div>
-
             <div class="form-group">
                 <label for="{{ form.estado.id_for_label }}">Estado <span style="color:red;">*</span></label>
                 {{ form.estado }}
@@ -143,6 +128,7 @@
             </div>
         </fieldset>
 
+        {% if not wizard %}
         <fieldset style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">
             <legend style="font-size: 15px; font-weight: 600; margin-bottom: 4px; padding: 0 6px; color: #166534;">
                 <i class="fas fa-user-tie me-1"></i> Administrador PVD a cargo
@@ -160,6 +146,7 @@
                 <small class="form-hint">Puedes cambiar este valor en cualquier momento desde "Editar PVD".</small>
             </div>
         </fieldset>
+        {% endif %}
 
         <div class="actions">
             <button type="submit" class="btn btn-primary">
@@ -194,8 +181,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('form-pvd');
     const nombreInput = document.getElementById('{{ form.nombre.id_for_label }}');
-    const tlfnoInput = document.getElementById('{{ form.telefono.id_for_label }}');
-    const correoInput = document.getElementById('{{ form.correo.id_for_label }}');
     const direccionHidden = document.getElementById('id_direccion');
     const dirError = document.getElementById('pvd_dir_error');
 
@@ -310,25 +295,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (tlfnoInput) {
-        tlfnoInput.addEventListener('blur', () => ValidacionPVD.validarYMostrar(tlfnoInput, ValidacionPVD.validarTelefono, 'Teléfono'));
-        tlfnoInput.addEventListener('input', function () {
-            if (this.classList.contains('input-error'))
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarTelefono, 'Teléfono');
-        });
-    }
-
-    if (correoInput) {
-        correoInput.addEventListener('blur', function () {
-            if (this.value) ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
-            else ValidacionPVD.ocultarError(this);
-        });
-        correoInput.addEventListener('input', function () {
-            if (this.classList.contains('input-error'))
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarEmail, 'Correo electrónico');
-        });
-    }
-
     // ── VALIDACIÓN AL ENVIAR ────────────────────────────────────────────
     if (form) {
         form.addEventListener('submit', function (e) {
@@ -343,10 +309,6 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 dirError.style.display = 'none';
             }
-
-            if (tlfnoInput && !ValidacionPVD.validarYMostrar(tlfnoInput, ValidacionPVD.validarTelefono, 'Teléfono').valido) ok = false;
-
-            if (correoInput && correoInput.value && !ValidacionPVD.validarYMostrar(correoInput, ValidacionPVD.validarEmail, 'Correo electrónico').valido) ok = false;
 
             if (!ok) e.preventDefault();
         });

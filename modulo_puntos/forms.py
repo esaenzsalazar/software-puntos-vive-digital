@@ -11,7 +11,6 @@ from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo,
-    ItemServicio, RegistroServicio,
 )
 
 # ==============================================================================
@@ -420,18 +419,30 @@ MODULOS_WIZARD_CHOICES = [
 ]
 
 CAPACIDADES_INFO = [
-    {'codigo': 'ciudadanos',     'label': 'Ciudadanos',            'icono': '👤', 'descripcion': 'Consultar y registrar ciudadanos atendidos'},
-    {'codigo': 'atenciones',     'label': 'Atenciones',            'icono': '🎯', 'descripcion': 'Registrar atenciones al ciudadano'},
-    {'codigo': 'servicios',      'label': 'Servicios',             'icono': '🛠️', 'descripcion': 'Registro de servicios prestados en cada atención'},
-    {'codigo': 'satisfaccion',   'label': 'Satisfacción',          'icono': '⭐', 'descripcion': 'Encuestas de satisfacción del ciudadano'},
-    {'codigo': 'recursos',       'label': 'Recursos (inventario)', 'icono': '📦', 'descripcion': 'Gestión de equipos e inventario del PVD'},
-    {'codigo': 'prestamos',      'label': 'Préstamos',             'icono': '🔄', 'descripcion': 'Préstamo de recursos y equipos a ciudadanos'},
-    {'codigo': 'salas',          'label': 'Salas',                 'icono': '🏛️', 'descripcion': 'Gestión de salas y espacios físicos del PVD'},
-    {'codigo': 'habilitaciones', 'label': 'Habilitación de salas', 'icono': '🔓', 'descripcion': 'Habilitar espacios y salas para uso programado'},
-    {'codigo': 'cursos',         'label': 'Cursos y Talleres',     'icono': '📚', 'descripcion': 'Formación ciudadana: cursos, inscripciones y asistencia'},
-    {'codigo': 'mantenimiento',  'label': 'Mantenimiento',         'icono': '🔧', 'descripcion': 'Mantenimiento preventivo y correctivo de equipos'},
-    {'codigo': 'reportes',       'label': 'Reportes',              'icono': '📊', 'descripcion': 'Estadísticas, indicadores y exportación a Excel'},
+    {'codigo': 'ciudadanos',     'label': 'Ciudadanos',            'icono': '👤', 'descripcion': 'Consultar y registrar ciudadanos atendidos',               'grupo': 'Atención ciudadana'},
+    {'codigo': 'atenciones',     'label': 'Atenciones',            'icono': '🎯', 'descripcion': 'Registrar atenciones al ciudadano',                        'grupo': 'Atención ciudadana'},
+    {'codigo': 'servicios',      'label': 'Servicios',             'icono': '🛠️', 'descripcion': 'Registro de servicios prestados en cada atención',          'grupo': 'Atención ciudadana'},
+    {'codigo': 'satisfaccion',   'label': 'Satisfacción',          'icono': '⭐', 'descripcion': 'Encuestas de satisfacción del ciudadano',                  'grupo': 'Atención ciudadana'},
+    {'codigo': 'recursos',       'label': 'Recursos (inventario)', 'icono': '📦', 'descripcion': 'Gestión de equipos e inventario del PVD',                  'grupo': 'Recursos y Salas'},
+    {'codigo': 'prestamos',      'label': 'Préstamos',             'icono': '🔄', 'descripcion': 'Préstamo de recursos y equipos a ciudadanos',              'grupo': 'Recursos y Salas'},
+    {'codigo': 'salas',          'label': 'Salas',                 'icono': '🏛️', 'descripcion': 'Gestión de salas y espacios físicos del PVD',             'grupo': 'Recursos y Salas'},
+    {'codigo': 'habilitaciones', 'label': 'Habilitación de salas', 'icono': '🔓', 'descripcion': 'Habilitar espacios y salas para uso programado',          'grupo': 'Recursos y Salas'},
+    {'codigo': 'cursos',         'label': 'Cursos y Talleres',     'icono': '📚', 'descripcion': 'Formación ciudadana: cursos, inscripciones y asistencia',  'grupo': 'Formación'},
+    {'codigo': 'mantenimiento',  'label': 'Mantenimiento',         'icono': '🔧', 'descripcion': 'Mantenimiento preventivo y correctivo de equipos',        'grupo': 'Mantenimiento'},
+    {'codigo': 'reportes',       'label': 'Reportes',              'icono': '📊', 'descripcion': 'Estadísticas, indicadores y exportación a Excel',         'grupo': 'Reportes'},
 ]
+
+def _agrupar_capacidades():
+    from collections import OrderedDict
+    grupos = OrderedDict()
+    for cap in CAPACIDADES_INFO:
+        g = cap['grupo']
+        if g not in grupos:
+            grupos[g] = []
+        grupos[g].append(cap)
+    return [{'grupo': g, 'capacidades': caps} for g, caps in grupos.items()]
+
+CAPACIDADES_POR_GRUPO = _agrupar_capacidades()
 
 MODULOS_INFO = [
     {
@@ -767,15 +778,12 @@ class PuntoViveDigitalForm(forms.ModelForm):
         model = PuntoViveDigital
         fields = [
             'nombre', 'direccion', 'barrio',
-            'telefono', 'correo', 'estado',
-            'descripcion', 'admin_a_cargo',
+            'estado', 'descripcion', 'admin_a_cargo',
         ]
         labels = {
             'nombre': 'Nombre del Punto Vive Digital',
             'direccion': 'Dirección',
             'barrio': 'Barrio / Vereda',
-            'telefono': 'Teléfono',
-            'correo': 'Correo electrónico',
             'estado': 'Estado',
             'descripcion': 'Descripción / Notas',
             'admin_a_cargo': 'Administrador PVD a cargo (referencia)',
@@ -792,18 +800,6 @@ class PuntoViveDigitalForm(forms.ModelForm):
                 choices=BARRIO_CHOICES,
                 attrs={'class': 'form-control'}
             ),
-            'telefono': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Ej: 3101234567',
-                    'oninput': "this.value = this.value.replace(/[^0-9]/g, '').substring(0,10)",
-                    'maxlength': '10',
-                    'pattern': '[0-9]{10}'
-                }
-            ),
-            'correo': forms.EmailInput(
-                attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}
-            ),
             'estado': forms.Select(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(
                 attrs={
@@ -817,7 +813,6 @@ class PuntoViveDigitalForm(forms.ModelForm):
 
     def __init__(self, *args, wizard=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['telefono'].required = True
         self.fields['admin_a_cargo'].queryset = User.objects.filter(
             groups__name='Administrador PVD'
         ).order_by('first_name', 'last_name', 'username')
@@ -853,32 +848,6 @@ class PuntoViveDigitalForm(forms.ModelForm):
                 )
         return direccion.strip() if direccion else direccion
 
-    def clean_telefono(self):
-        tlfno = self.cleaned_data.get('telefono')
-        if not tlfno:
-            raise ValidationError('El teléfono es requerido.')
-        limpio = tlfno.replace(' ', '').replace('-', '')
-        if not limpio.isdigit():
-            raise ValidationError('El teléfono solo debe contener números.')
-        if len(limpio) != 10:
-            raise ValidationError('El teléfono debe tener exactamente 10 dígitos.')
-        return limpio
-
-    def clean_correo(self):
-        import re
-        correo = self.cleaned_data.get('correo')
-        if correo:
-            if not re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', correo):
-                raise ValidationError('El formato del correo electrónico no es válido.')
-            qs = PuntoViveDigital.objects.filter(correo__iexact=correo.strip())
-            if self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
-            if qs.exists():
-                pvd_existente = qs.first()
-                raise ValidationError(
-                    f'Este correo ya está registrado en el PVD "{pvd_existente.nombre}".'
-                )
-        return correo
 
 
 # ==============================================================================
@@ -1220,69 +1189,4 @@ class MantenimientoEquipoForm(forms.ModelForm):
         }
 
 
-class ItemServicioForm(forms.ModelForm):
-    class Meta:
-        model = ItemServicio
-        fields = ['nombre', 'descripcion', 'cantidad_total', 'unidad']
-        labels = {
-            'nombre': 'Nombre del ítem',
-            'descripcion': 'Descripción',
-            'cantidad_total': 'Cantidad total',
-            'unidad': 'Nombre de la unidad',
-        }
-        widgets = {
-            'nombre': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: PlayStation 5, Bicicleta, Sala A, Turno...',
-            }),
-            'descripcion': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Descripción opcional...',
-            }),
-            'cantidad_total': forms.NumberInput(attrs={
-                'class': 'form-control', 'min': '1',
-            }),
-            'unidad': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: consola, libro, turno, hora, espacio...',
-            }),
-        }
-
-
-class RegistroServicioForm(forms.ModelForm):
-    class Meta:
-        model = RegistroServicio
-        fields = ['ciudadano', 'nombre_persona', 'fecha_fin_esperada', 'notas']
-        labels = {
-            'ciudadano': 'Ciudadano registrado (opcional)',
-            'nombre_persona': 'Nombre (si no está registrado)',
-            'fecha_fin_esperada': 'Hora/fecha de devolución esperada',
-            'notas': 'Notas / observaciones',
-        }
-        widgets = {
-            'ciudadano': forms.Select(attrs={'class': 'form-control'}),
-            'nombre_persona': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Nombre del usuario si no está en el sistema...',
-            }),
-            'fecha_fin_esperada': forms.DateTimeInput(
-                attrs={'class': 'form-control', 'type': 'datetime-local'},
-                format='%Y-%m-%dT%H:%M',
-            ),
-            'notas': forms.Textarea(attrs={
-                'class': 'form-control', 'rows': '2',
-                'placeholder': 'Observaciones adicionales...',
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['ciudadano'].queryset = Ciudadano.objects.order_by(
-            'primer_apellido', 'primer_nombre'
-        )
-        self.fields['ciudadano'].empty_label = '— Sin ciudadano registrado —'
-        self.fields['ciudadano'].required = False
-        self.fields['nombre_persona'].required = False
-        self.fields['fecha_fin_esperada'].required = False
-        self.fields['notas'].required = False
 

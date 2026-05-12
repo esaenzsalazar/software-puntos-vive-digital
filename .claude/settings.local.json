@@ -30,7 +30,15 @@
       "Bash('.\\\\entorno\\\\Scripts\\\\python.exe' manage.py shell -c ' *)",
       "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py makemigrations modulo_puntos_app --name servicio_personalizado)",
       "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py shell -c \"from django.urls import reverse; print\\(reverse\\('modulo_puntos:wizard_servicios_pvd', args=[1]\\)\\); print\\(reverse\\('modulo_puntos:crear_servicio_personalizado', args=[1]\\)\\); print\\(reverse\\('modulo_puntos:editar_servicio_personalizado', args=[5]\\)\\); print\\(reverse\\('modulo_puntos:eliminar_servicio_personalizado', args=[5]\\)\\)\")",
-      "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py makemigrations modulo_puntos_app --name servicios_modulos_sistema)"
+      "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py makemigrations modulo_puntos_app --name servicios_modulos_sistema)",
+      "Bash(claude *)",
+      "Bash(npm show *)",
+      "Bash(npm update *)",
+      "Bash(xargs grep *)",
+      "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py makemigrations modulo_puntos_app --name=\"remove_telefono_correo_pvd\")",
+      "Bash(./entorno/Scripts/python.exe manage.py migrate modulo_puntos_app)",
+      "Bash(./entorno/Scripts/python.exe *)",
+      "PowerShell(git checkout *)"
     ]
   }
 }

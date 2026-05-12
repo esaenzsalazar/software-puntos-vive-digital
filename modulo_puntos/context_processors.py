@@ -2,8 +2,14 @@
 Contexto global para navegación según permisos (contrato PVD / roles).
 Proporciona variables de contexto disponibles en todos los templates.
 """
-from .models import PuntoViveDigital, ModuloHabilitado
+from .models import PuntoViveDigital, ModuloHabilitado, ServicioPersonalizado
 from django.urls import reverse, NoReverseMatch
+
+_FUNCTION_URL_NAMES = frozenset({
+    'gestionar_servicio_custom', 'gestionar_funcion', 'crear_funcion',
+    'editar_funcion', 'crear_registro_funcion', 'cambiar_estado_registro_funcion',
+    'cerrar_registro_funcion', 'eliminar_funcion',
+})
 
 # (label, parent_label, parent_url_name)
 _BREADCRUMB_MAP = {
@@ -54,8 +60,7 @@ _BREADCRUMB_MAP = {
     'inscribir_ciudadano':   ('Inscripción',           'Cursos',                'lista_cursos'),
     'marcar_asistencia':     ('Asistencia',            'Cursos',                'lista_cursos'),
     # Servicios personalizados
-    'lista_servicios_custom':    ('Servicios Personalizados', 'Panel',         'panel_control'),
-    'gestionar_servicio_custom': ('Gestión de servicio',  'Servicios Personalizados', 'lista_servicios_custom'),
+    'gestionar_servicio_custom': ('Gestión de servicio',  'Nuevos servicios', 'panel_control'),
     # Mantenimientos
     'lista_mantenimientos':  ('Mantenimientos',        'Panel',                 'panel_control'),
     'crear_mantenimiento':   ('Nuevo Mantenimiento',   'Mantenimientos',        'lista_mantenimientos'),
@@ -193,6 +198,20 @@ def pvd_navigation(request):
         PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
     )
 
+    # Servicios personalizados para el sidebar (requiere pvd_activo)
+    ctx['es_pagina_servicio_custom'] = url_name in _FUNCTION_URL_NAMES
+    if ctx.get('pvd_activo'):
+        ctx['servicios_custom_nav'] = list(
+            ServicioPersonalizado.objects.filter(
+                punto_vive_digital=ctx['pvd_activo']
+            ).only('pk', 'nombre', 'icono')
+        )
+        _svc_id_raw = (getattr(rm, 'kwargs', None) or {}).get('svc_id')
+        ctx['active_svc_id'] = int(_svc_id_raw) if _svc_id_raw else None
+    else:
+        ctx['servicios_custom_nav'] = []
+        ctx['active_svc_id'] = None
+
     # Restricción de módulos: solo aplica para Admin PVD con PVD activo seleccionado.
     # Superusuario y Admin TIC ven todo sin restricción.
     if ctx.get('es_admin_pvd_only') and ctx.get('pvd_activo'):
@@ -205,7 +224,6 @@ def pvd_navigation(request):
             ).values_list('modulo', flat=True)
         )
         # Añadir capacidades granulares de servicios personalizados habilitados
-        from .models import ServicioPersonalizado
         for svc in ServicioPersonalizado.objects.filter(
             punto_vive_digital=ctx['pvd_activo'], habilitado=True
         ).only('modulos_sistema'):

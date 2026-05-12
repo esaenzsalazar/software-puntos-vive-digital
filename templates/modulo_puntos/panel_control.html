@@ -241,7 +241,7 @@
                 {% endif %}
             </div>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_servicios_custom' %}">Ver servicios</a>
+                {% if pvd_activo %}<a class="btn btn--sm" href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}">Configurar</a>{% else %}<a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Ir a PVDs</a>{% endif %}
             </div>
         </div>
     </div>

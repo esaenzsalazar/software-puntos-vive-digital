@@ -154,6 +154,36 @@
             </div>
             {% endif %}
 
+            {# ── NUEVOS SERVICIOS ── visibles cuando hay PVD activo #}
+            {% if pvd_activo %}
+            <div class="sidebar-group">
+                <div class="sidebar-group__label" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>Nuevos servicios</span>
+                    <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}"
+                       style="color:#94a3b8;font-size:20px;line-height:1;text-decoration:none;padding:0 2px;"
+                       title="Crear nuevo servicio">+</a>
+                </div>
+                <div class="sidebar-group__items">
+                    {% if servicios_custom_nav %}
+                        {% for svc in servicios_custom_nav %}
+                        <a href="{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}"
+                           class="sidebar-link {% if es_pagina_servicio_custom and active_svc_id == svc.pk %}is-active{% endif %}">
+                            <span class="sidebar-link__icon" style="font-size:14px;width:16px;text-align:center;display:inline-block;">{{ svc.icono }}</span>
+                            <span class="sidebar-link__label">{{ svc.nombre }}</span>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}" class="sidebar-link">
+                            <span class="sidebar-link__icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            </span>
+                            <span class="sidebar-link__label" style="color:#8b5cf6;">Crear primer servicio</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
             {# ── GESTIÓN: Reportes (módulo: reportes) + ítems admin (sin restricción de módulo) #}
             {% if not restringir_modulos or 'reportes' in modulos_pvd_activo or nav_super or nav_tic %}
             <div class="sidebar-group">

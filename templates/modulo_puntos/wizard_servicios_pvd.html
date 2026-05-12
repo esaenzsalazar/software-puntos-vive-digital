@@ -46,12 +46,11 @@
             <div style="flex:1; min-width:200px;">
                 <p style="margin:0; color:#374151; font-size:14px;">
                     Selecciona los <strong>servicios funcionales</strong> que este PVD tendrá disponibles.
-                    {% if desde_wizard %}<strong>Habilita al menos uno para continuar.</strong>{% endif %}
+                    {% if desde_wizard %}<strong>Habilita al menos uno para continuar o de lo contrario cree un nuevo servicio.</strong>{% endif %}
                 </p>
             </div>
             <input type="text" id="buscador-servicios" placeholder="Buscar servicio..."
                    autocomplete="off" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; min-width:180px; outline:none;">
-            <button type="button" onclick="abrirModalCrear()" class="btn" style="white-space:nowrap;">+ Crear servicio</button>
         </div>
 
         <div id="form-error-msg" style="display:none; margin-bottom:16px; padding:12px 16px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; color:#991b1b; font-weight:600;"></div>
@@ -62,26 +61,17 @@
                 <span class="servicios-seccion__titulo">Servicios del sistema</span>
                 <span class="servicios-seccion__badge">Fijos · No editables</span>
             </div>
-            <div class="servicios-grid" id="grid-sistema">
+            <div class="svc-toggle-list" id="grid-sistema">
                 {% for modulo in modulos_info %}
-                <label class="servicio-card {% if modulo.codigo in checked_modulos %}servicio-card--checked{% endif %}"
+                <label class="svc-toggle-row {% if modulo.codigo in checked_modulos %}svc-toggle-row--checked{% endif %}"
                        for="mod_{{ modulo.codigo }}" data-nombre="{{ modulo.label|lower }}">
                     <input type="checkbox" name="modulos" value="{{ modulo.codigo }}"
                            id="mod_{{ modulo.codigo }}"
                            {% if modulo.codigo in checked_modulos %}checked{% endif %}
                            onchange="toggleServicio(this)">
-                    <div class="servicio-card__header">
-                        <span class="servicio-card__icono">{{ modulo.icono }}</span>
-                        <div class="servicio-card__check-badge">✓ Habilitado</div>
-                    </div>
-                    <div class="servicio-card__title">{{ modulo.label }}</div>
-                    <p class="servicio-card__desc">{{ modulo.descripcion }}</p>
-                    <div class="servicio-card__funciones">
-                        <span class="funciones-label">Incluye:</span>
-                        <div class="funciones-lista">
-                            {% for fn in modulo.incluye %}<span class="funcion-tag">{{ fn }}</span>{% endfor %}
-                        </div>
-                    </div>
+                    <span class="svc-toggle-row__icon">{{ modulo.icono }}</span>
+                    <span class="svc-toggle-row__name">{{ modulo.label }}</span>
+                    <div class="svc-toggle-switch"><div class="svc-toggle-switch__thumb"></div></div>
                 </label>
                 {% endfor %}
             </div>
@@ -104,7 +94,7 @@
                         <span class="servicio-card__icono">{{ svc.icono }}</span>
                         <div class="servicio-card__actions">
                             <button type="button" class="svc-btn-edit" title="Editar"
-                                    onclick="abrirModalEditar({{ svc.pk }}, '{{ svc.nombre|escapejs }}', '{{ svc.icono|escapejs }}', '{{ svc.descripcion|escapejs }}', {{ svc.modulos_sistema|safe }}, {{ svc.incluye_extra|safe }})">✏️ Editar</button>
+                                    onclick="abrirModalEditar({{ svc.pk }}, '{{ svc.nombre|escapejs }}', '{{ svc.icono|escapejs }}', '{{ svc.descripcion|escapejs }}', {{ svc.modulos_sistema|safe }})">✏️ Editar</button>
                         </div>
                     </div>
                     <div class="servicio-card__title-row">
@@ -136,13 +126,18 @@
             </div>
         </div>
 
+        {# ── Botón crear servicio ─────────────────────────────────────────────── #}
+        <div style="margin-top:16px;">
+            <button type="button" onclick="abrirModalCrear()" class="btn btn-secondary" style="white-space:nowrap;">+ Crear nuevo servicio</button>
+        </div>
+
         <div id="seleccion-info" style="margin-top:16px; padding:10px 16px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:13px; color:#0369a1; display:none;">
             <strong id="seleccion-count">0</strong> servicio(s) seleccionado(s)
         </div>
 
         <div class="actions" style="margin-top:24px;">
             <button type="submit" class="btn">{% if desde_wizard %}Siguiente: Administrador →{% else %}💾 Guardar servicios{% endif %}</button>
-            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="btn btn-secondary">{% if desde_wizard %}Saltar todos los pasos{% else %}Cancelar{% endif %}</a>
+            {% if not desde_wizard %}<a href="{% url 'modulo_puntos:lista_pvd' %}" class="btn btn-secondary">Cancelar</a>{% endif %}
         </div>
     </form>
 </div>
@@ -157,18 +152,12 @@
 
         <div style="padding:24px; display:flex; flex-direction:column; gap:18px; overflow-y:auto; flex:1;">
             <input type="hidden" id="modal-svc-id" value="">
+            <input type="hidden" id="modal-icono" value="⚙️">
 
-            <div style="display:flex; gap:12px; align-items:flex-end;">
-                <div class="form-group" style="margin:0; flex-shrink:0;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:6px;">Icono</label>
-                    <input type="text" id="modal-icono" class="form-control" maxlength="10" value="⚙️"
-                           style="font-size:24px; width:64px; text-align:center; padding:6px;">
-                </div>
-                <div class="form-group" style="margin:0; flex:1;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:6px;">Nombre del servicio <span style="color:red;">*</span></label>
-                    <input type="text" id="modal-nombre" class="form-control" placeholder="Ej: Videojuegos, Impresión 3D...">
-                    <div id="modal-nombre-error" style="color:#dc2626; font-size:12px; margin-top:4px; display:none;">El nombre es requerido.</div>
-                </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-weight:600; font-size:13px; display:block; margin-bottom:6px;">Nombre del servicio <span style="color:red;">*</span></label>
+                <input type="text" id="modal-nombre" class="form-control" placeholder="Nombre del nuevo servicio aquí">
+                <div id="modal-nombre-error" style="color:#dc2626; font-size:12px; margin-top:4px; display:none;">El nombre es requerido.</div>
             </div>
 
             <div class="form-group" style="margin:0;">
@@ -176,38 +165,16 @@
                 <input type="text" id="modal-descripcion" class="form-control" placeholder="Describe brevemente este servicio...">
             </div>
 
-            {# Selección de capacidades granulares del sistema #}
-            <div class="form-group" style="margin:0;">
-                <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Funciones del sistema que habilita <span style="color:#94a3b8; font-weight:400;">(solo las que incluye este servicio)</span></label>
-                <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Si marcas "Préstamos", el administrador del PVD solo verá el módulo de préstamos en su panel.</p>
-                <div id="modal-modulos-sistema" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    {% for cap in capacidades_info %}
-                    <label class="mod-sys-label" for="modal-mod-{{ cap.codigo }}">
-                        <input type="checkbox" id="modal-mod-{{ cap.codigo }}" class="modal-modulo-chk" value="{{ cap.codigo }}"
-                               style="accent-color:var(--primary-color,#1e40af); width:16px; height:16px; flex-shrink:0;">
-                        <span class="mod-sys-icon">{{ cap.icono }}</span>
-                        <div>
-                            <div style="font-size:13px; font-weight:600; color:#1e293b;">{{ cap.label }}</div>
-                            <div style="font-size:11px; color:#64748b;">{{ cap.descripcion }}</div>
-                        </div>
-                    </label>
-                    {% endfor %}
-                </div>
-                <p style="font-size:12px; color:#94a3b8; margin:8px 0 0;">Si el servicio es puramente informativo y no activa funciones del sistema, deja todo sin marcar.</p>
-            </div>
-
-            {# Ítems adicionales descriptivos #}
-            <div class="form-group" style="margin:0;">
-                <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Ítems adicionales <span style="color:#94a3b8; font-weight:400;">(descriptivos, opcionales)</span></label>
-                <p style="font-size:12px; color:#64748b; margin:0 0 8px;">Para documentar aspectos específicos del servicio que no están en el sistema.</p>
-                <div id="incluye-tags" style="display:flex; flex-wrap:wrap; gap:6px; min-height:24px; margin-bottom:8px;"></div>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="incluye-input" class="form-control" placeholder="Ej: 20 consolas disponibles, control de turnos...">
-                    <button type="button" onclick="agregarIncluye()" class="btn btn-secondary" style="white-space:nowrap; padding:8px 14px; font-size:13px;">+ Agregar</button>
-                </div>
-                <small style="color:#94a3b8; font-size:12px; margin-top:4px; display:block;">Escribe un ítem y presiona Enter o "Agregar"</small>
+            {# ── Nueva función o servicio ── #}
+            <div style="border-top:1px dashed #e2e8f0; padding-top:16px;">
+                <button type="button" class="btn" onclick="irABuilder()" id="btn-nueva-funcion">
+                    ＋ Nueva función o servicio
+                </button>
+                <p style="font-size:11px; color:#64748b; margin:6px 0 0;">Guarda este servicio y abre el constructor de funciones.</p>
             </div>
         </div>
+
+        <div id="modal-error-bar" style="display:none; margin:0 24px 0; padding:10px 14px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; color:#991b1b; font-size:13px; font-weight:600;"></div>
 
         <div style="padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end; flex-shrink:0;">
             <button type="button" onclick="cerrarModal()" class="btn btn-secondary">Cancelar</button>
@@ -234,6 +201,26 @@
 .servicios-seccion__badge{font-size:11px;background:#e2e8f0;color:#64748b;padding:2px 10px;border-radius:20px;font-weight:600;}
 .servicios-seccion__badge--custom{background:#dbeafe;color:#1d4ed8;}
 
+/* ── Toggle switch list para servicios del sistema ── */
+.svc-toggle-list{display:flex;flex-direction:column;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
+
+.svc-toggle-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .12s;position:relative;}
+.svc-toggle-row:last-child{border-bottom:none;}
+.svc-toggle-row:hover{background:#f8fafc;}
+.svc-toggle-row--checked{background:#f0fdf4;}
+.svc-toggle-row--checked:hover{background:#dcfce7;}
+.svc-toggle-row input[type="checkbox"]{position:absolute;opacity:0;width:0;height:0;}
+
+.svc-toggle-row__icon{font-size:17px;flex-shrink:0;width:24px;text-align:center;line-height:1;}
+.svc-toggle-row__name{flex:1;font-size:13px;font-weight:500;color:#374151;}
+.svc-toggle-row--checked .svc-toggle-row__name{color:#166534;font-weight:600;}
+
+.svc-toggle-switch{flex-shrink:0;width:38px;height:20px;background:#cbd5e1;border-radius:10px;position:relative;transition:background .2s;}
+.svc-toggle-switch__thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.svc-toggle-row--checked .svc-toggle-switch{background:#10b981;}
+.svc-toggle-row--checked .svc-toggle-switch__thumb{transform:translateX(18px);}
+
+/* ── Tarjetas personalizadas (mantienen grid) ── */
 .servicios-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
 
 .servicio-card{display:flex;flex-direction:column;gap:8px;padding:16px;border:2px solid #e2e8f0;border-radius:12px;cursor:pointer;background:#f8fafc;transition:border-color .15s,background .15s,box-shadow .15s;position:relative;}
@@ -266,15 +253,31 @@
 .custom-toggle:hover{color:var(--primary-color,#1e40af);}
 .servicio-card--checked .custom-toggle{color:#10b981;}
 
-.mod-sys-label{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;}
-.mod-sys-label:hover{background:#f0f9ff;border-color:#bae6fd;}
-.mod-sys-label:has(input:checked){background:#f0fdf4;border-color:#86efac;}
-.mod-sys-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+/* ── Botón Nueva función o servicio ── */
+.btn-nueva-funcion{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border:1.5px dashed #94a3b8;border-radius:8px;background:transparent;color:#64748b;font-size:13px;font-weight:600;cursor:not-allowed;opacity:.65;transition:all .15s;}
 
-.incluye-tag-item{display:inline-flex;align-items:center;gap:5px;background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;}
-.incluye-tag-item button{background:none;border:none;cursor:pointer;color:#1d4ed8;font-size:14px;line-height:1;padding:0 1px;}
+/* ── Grupos de capacidades en el modal ── */
+.cap-grupo{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
+.cap-grupo__header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;background:#f8fafc;padding:7px 12px;border-bottom:1px solid #e2e8f0;}
+.cap-grupo__lista{display:flex;flex-direction:column;}
 
-.no-resultados{grid-column:1/-1;padding:24px;text-align:center;color:#94a3b8;font-size:13px;}
+.cap-toggle-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .12s;position:relative;}
+.cap-toggle-row:last-child{border-bottom:none;}
+.cap-toggle-row:hover{background:#f8fafc;}
+.cap-toggle-row input[type="checkbox"]{position:absolute;opacity:0;width:0;height:0;}
+.cap-toggle-row:has(input:checked){background:#f0fdf4;}
+.cap-toggle-row:has(input:checked):hover{background:#dcfce7;}
+.cap-toggle-row:has(input:checked) .svc-toggle-switch{background:#10b981;}
+.cap-toggle-row:has(input:checked) .svc-toggle-switch__thumb{transform:translateX(18px);}
+.cap-toggle-row:has(input:checked) .cap-toggle-row__name{color:#166534;font-weight:600;}
+
+.cap-toggle-row__icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;line-height:1;}
+.cap-toggle-row__body{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.cap-toggle-row__name{font-size:12px;font-weight:500;color:#374151;line-height:1.3;}
+.cap-toggle-row__desc{font-size:11px;color:#94a3b8;line-height:1.3;}
+
+
+.no-resultados{padding:24px;text-align:center;color:#94a3b8;font-size:13px;}
 @media(max-width:640px){.servicios-grid{grid-template-columns:1fr;}}
 </style>
 
@@ -282,17 +285,56 @@
 <script>
 const CSRF     = document.querySelector('[name=csrfmiddlewaretoken]').value;
 const URL_CREAR = "{% url 'modulo_puntos:crear_servicio_personalizado' pvd_id=pvd.pk %}";
+const PVD_ID   = {{ pvd.pk }};
+let currentModulosSistema = [];
+
+// ── IR AL BUILDER DE FUNCIONES ───────────────────────────────────────────────
+async function irABuilder() {
+    const nombre = document.getElementById('modal-nombre').value.trim();
+    if (!nombre) {
+        document.getElementById('modal-nombre-error').style.display = 'block';
+        document.getElementById('modal-nombre').focus();
+        return;
+    }
+    document.getElementById('modal-nombre-error').style.display = 'none';
+
+    const btn = document.getElementById('btn-nueva-funcion');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    const svcId = document.getElementById('modal-svc-id').value;
+    if (svcId) {
+        window.location.href = `/pvd/${PVD_ID}/servicio/${svcId}/funcion/nueva/?from_wizard=1`;
+        return;
+    }
+
+    const payload = {
+        nombre,
+        icono:           '⚙️',
+        descripcion:     document.getElementById('modal-descripcion').value.trim(),
+        modulos_sistema: currentModulosSistema,
+        incluye_extra:   [],
+    };
+
+    try {
+        const r    = await fetch(URL_CREAR, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(payload) });
+        const text = await r.text();
+        const data = JSON.parse(text);
+        if (!data.ok) { mostrarErrorModal(data.error || 'Error al guardar.'); btn.disabled = false; btn.textContent = '＋ Nueva función o servicio'; return; }
+        window.location.href = `/pvd/${PVD_ID}/servicio/${data.id}/funcion/nueva/?from_wizard=1`;
+    } catch {
+        btn.disabled = false; btn.textContent = '＋ Nueva función o servicio';
+        mostrarErrorModal('No se pudo conectar con el servidor.');
+    }
+}
 
 // Mapa código → label para mostrar en tarjetas creadas via JS
 const MODULOS_MAP = {
 {% for cap in capacidades_info %}'{{ cap.codigo }}': { label: '{{ cap.label|escapejs }}', icono: '{{ cap.icono }}' },
 {% endfor %}};
 
-let incluyeItems = [];
-
 // ── TOGGLE SISTEMA ──────────────────────────────────────────────────────────
 function toggleServicio(checkbox) {
-    checkbox.closest('.servicio-card').classList.toggle('servicio-card--checked', checkbox.checked);
+    checkbox.closest('.svc-toggle-row').classList.toggle('svc-toggle-row--checked', checkbox.checked);
     actualizarContador();
 }
 
@@ -318,20 +360,34 @@ function actualizarContador() {
 // ── BUSCADOR ────────────────────────────────────────────────────────────────
 document.getElementById('buscador-servicios').addEventListener('input', function () {
     const q = this.value.toLowerCase().trim();
-    ['grid-sistema', 'grid-personalizados'].forEach(id => {
-        const grid = document.getElementById(id);
-        if (!grid) return;
+    // Sistema: busca en .svc-toggle-row
+    const listaSistema = document.getElementById('grid-sistema');
+    if (listaSistema) {
         let vis = 0;
-        grid.querySelectorAll('.servicio-card').forEach(c => {
+        listaSistema.querySelectorAll('.svc-toggle-row').forEach(c => {
             const ok = !q || (c.getAttribute('data-nombre') || '').includes(q);
             c.style.display = ok ? '' : 'none';
             if (ok) vis++;
         });
-        let noRes = grid.querySelector('.no-resultados');
+        let noRes = listaSistema.querySelector('.no-resultados');
         if (vis === 0) {
-            if (!noRes) { noRes = document.createElement('div'); noRes.className='no-resultados'; noRes.textContent='Sin resultados'; grid.appendChild(noRes); }
+            if (!noRes) { noRes = document.createElement('div'); noRes.className='no-resultados'; noRes.textContent='Sin resultados'; listaSistema.appendChild(noRes); }
         } else if (noRes) noRes.remove();
-    });
+    }
+    // Personalizados: busca en .servicio-card
+    const gridCustom = document.getElementById('grid-personalizados');
+    if (gridCustom) {
+        let vis = 0;
+        gridCustom.querySelectorAll('.servicio-card').forEach(c => {
+            const ok = !q || (c.getAttribute('data-nombre') || '').includes(q);
+            c.style.display = ok ? '' : 'none';
+            if (ok) vis++;
+        });
+        let noRes = gridCustom.querySelector('.no-resultados');
+        if (vis === 0) {
+            if (!noRes) { noRes = document.createElement('div'); noRes.className='no-resultados'; noRes.textContent='Sin resultados'; gridCustom.appendChild(noRes); }
+        } else if (noRes) noRes.remove();
+    }
 });
 
 // ── MODAL OPEN ───────────────────────────────────────────────────────────────
@@ -339,33 +395,26 @@ function abrirModalCrear() {
     document.getElementById('modal-svc-id').value = '';
     document.getElementById('modal-titulo').textContent = 'Nuevo servicio';
     document.getElementById('modal-btn-guardar').textContent = 'Crear servicio';
-    document.getElementById('modal-icono').value = '⚙️';
     document.getElementById('modal-nombre').value = '';
     document.getElementById('modal-descripcion').value = '';
     document.getElementById('modal-nombre-error').style.display = 'none';
-    document.querySelectorAll('.modal-modulo-chk').forEach(c => c.checked = false);
-    incluyeItems = [];
-    renderIncluye();
+    currentModulosSistema = [];
     mostrarModal();
 }
 
-function abrirModalEditar(id, nombre, icono, descripcion, modulosSistema, incluyeExtra) {
+function abrirModalEditar(id, nombre, icono, descripcion, modulosSistema) {
     document.getElementById('modal-svc-id').value = id;
     document.getElementById('modal-titulo').textContent = 'Editar servicio';
     document.getElementById('modal-btn-guardar').textContent = 'Guardar cambios';
-    document.getElementById('modal-icono').value = icono || '⚙️';
     document.getElementById('modal-nombre').value = nombre;
     document.getElementById('modal-descripcion').value = descripcion || '';
     document.getElementById('modal-nombre-error').style.display = 'none';
-    document.querySelectorAll('.modal-modulo-chk').forEach(c => {
-        c.checked = Array.isArray(modulosSistema) && modulosSistema.includes(c.value);
-    });
-    incluyeItems = Array.isArray(incluyeExtra) ? [...incluyeExtra] : [];
-    renderIncluye();
+    currentModulosSistema = Array.isArray(modulosSistema) ? modulosSistema : [];
     mostrarModal();
 }
 
 function mostrarModal() {
+    ocultarErrorModal();
     document.getElementById('modal-overlay').style.display = 'flex';
     setTimeout(() => document.getElementById('modal-nombre').focus(), 80);
 }
@@ -374,42 +423,31 @@ function cerrarModal() { document.getElementById('modal-overlay').style.display 
 document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 
-// ── INCLUYE EXTRA TAGS ───────────────────────────────────────────────────────
-function renderIncluye() {
-    const cont = document.getElementById('incluye-tags');
-    cont.innerHTML = '';
-    incluyeItems.forEach((item, idx) => {
-        const s = document.createElement('span');
-        s.className = 'incluye-tag-item';
-        s.innerHTML = item + `<button type="button" onclick="quitarIncluye(${idx})">×</button>`;
-        cont.appendChild(s);
-    });
-}
-function agregarIncluye() {
-    const inp = document.getElementById('incluye-input');
-    const val = inp.value.trim();
-    if (val && !incluyeItems.includes(val)) { incluyeItems.push(val); renderIncluye(); }
-    inp.value = ''; inp.focus();
-}
-function quitarIncluye(idx) { incluyeItems.splice(idx,1); renderIncluye(); }
-document.getElementById('incluye-input').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); agregarIncluye(); } });
-
 // ── GUARDAR ──────────────────────────────────────────────────────────────────
+function mostrarErrorModal(msg) {
+    const bar = document.getElementById('modal-error-bar');
+    bar.textContent = msg;
+    bar.style.display = 'block';
+    bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function ocultarErrorModal() {
+    document.getElementById('modal-error-bar').style.display = 'none';
+}
+
 function guardarServicio() {
+    ocultarErrorModal();
     const svcId  = document.getElementById('modal-svc-id').value;
     const nombre = document.getElementById('modal-nombre').value.trim();
     const errEl  = document.getElementById('modal-nombre-error');
     if (!nombre) { errEl.style.display = 'block'; document.getElementById('modal-nombre').focus(); return; }
     errEl.style.display = 'none';
 
-    const modulosSistema = [...document.querySelectorAll('.modal-modulo-chk:checked')].map(c => c.value);
-
     const payload = {
         nombre,
-        icono:          document.getElementById('modal-icono').value.trim() || '⚙️',
-        descripcion:    document.getElementById('modal-descripcion').value.trim(),
-        modulos_sistema: modulosSistema,
-        incluye_extra:  incluyeItems,
+        icono:           '⚙️',
+        descripcion:     document.getElementById('modal-descripcion').value.trim(),
+        modulos_sistema: currentModulosSistema,
+        incluye_extra:   [],
     };
 
     const url = svcId ? `/pvd/servicios/personalizado/${svcId}/editar/` : URL_CREAR;
@@ -421,17 +459,24 @@ function guardarServicio() {
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
         body: JSON.stringify(payload),
     })
-    .then(r => r.json())
-    .then(data => {
+    .then(r => r.text().then(text => ({ status: r.status, text })))
+    .then(({ status, text }) => {
         btn.disabled = false;
         btn.textContent = svcId ? 'Guardar cambios' : 'Crear servicio';
-        if (!data.ok) { alert('Error: ' + data.error); return; }
+        let data;
+        try { data = JSON.parse(text); }
+        catch { mostrarErrorModal('Error inesperado del servidor (código ' + status + ').'); return; }
+        if (!data.ok) { mostrarErrorModal(data.error || 'Error desconocido.'); return; }
         if (svcId) actualizarTarjetaCustom(data);
         else       agregarTarjetaCustom(data);
         cerrarModal();
         actualizarContador();
     })
-    .catch(() => { btn.disabled = false; btn.textContent = svcId ? 'Guardar cambios' : 'Crear servicio'; alert('Error de red.'); });
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = svcId ? 'Guardar cambios' : 'Crear servicio';
+        mostrarErrorModal('No se pudo conectar con el servidor. Verifique su conexión e intente de nuevo.');
+    });
 }
 
 // ── DOM: crear / actualizar tarjeta personalizada ────────────────────────────
@@ -455,7 +500,7 @@ function actualizarTarjetaCustom(svc) {
 }
 
 function buildCardHTML(svc, checked) {
-    const editArgs = `${svc.id},'${esc(svc.nombre)}','${esc(svc.icono)}','${esc(svc.descripcion)}',${JSON.stringify(svc.modulos_sistema)},${JSON.stringify(svc.incluye_extra)}`;
+    const editArgs = `${svc.id},'${esc(svc.nombre)}','${esc(svc.icono)}','${esc(svc.descripcion)}',${JSON.stringify(svc.modulos_sistema)}`;
 
     let modulosTags = '';
     if (svc.modulos_sistema && svc.modulos_sistema.length) {
@@ -465,12 +510,6 @@ function buildCardHTML(svc, checked) {
             if (m) modulosTags += `<span class="funcion-tag" style="background:#dbeafe;color:#1d4ed8;">${m.icono} ${m.label}</span>`;
         });
         modulosTags += `</div></div>`;
-    }
-    let extraTags = '';
-    if (svc.incluye_extra && svc.incluye_extra.length) {
-        extraTags = `<div class="servicio-card__funciones" style="margin-top:4px;"><span class="funciones-label">Además incluye:</span><div class="funciones-lista">`;
-        svc.incluye_extra.forEach(t => { extraTags += `<span class="funcion-tag">${t}</span>`; });
-        extraTags += `</div></div>`;
     }
     return `
         <input type="checkbox" name="servicios_personalizados" value="${svc.id}"
@@ -487,7 +526,7 @@ function buildCardHTML(svc, checked) {
             <div class="servicio-card__check-badge">✓ Habilitado</div>
         </div>
         <p class="servicio-card__desc">${svc.descripcion || '<em style="color:#94a3b8;">Sin descripción</em>'}</p>
-        ${modulosTags}${extraTags}
+        ${modulosTags}
         <div class="custom-toggle" onclick="toggleCustom(${svc.id})">
             <span id="toggle-label-${svc.id}">${checked?'Deshabilitar':'Habilitar'}</span>
         </div>`;

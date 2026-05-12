@@ -18,7 +18,7 @@ from .models import (
     Recurso, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
-    MantenimientoEquipo, ServicioPersonalizado, ItemServicio, RegistroServicio,
+    MantenimientoEquipo, ServicioPersonalizado, FuncionServicio, RegistroFuncion,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
@@ -26,8 +26,7 @@ from .forms import (
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
     CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
-    MantenimientoEquipoForm, MODULOS_INFO, CAPACIDADES_INFO,
-    ItemServicioForm, RegistroServicioForm,
+    MantenimientoEquipoForm, MODULOS_INFO, CAPACIDADES_INFO, CAPACIDADES_POR_GRUPO,
 )
 from .utils import registrar_auditoria, tiene_permiso
 
@@ -167,7 +166,6 @@ def panel_control(request):
         'total_recursos': Recurso.objects.count(),
         'total_cursos': Curso.objects.count(),
         'total_servicios_custom': ServicioPersonalizado.objects.filter(habilitado=True).count(),
-        'total_registros_custom_activos': RegistroServicio.objects.filter(estado='A').count(),
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
         'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
@@ -187,6 +185,9 @@ def panel_control(request):
             context['pvd_cursos']         = Curso.objects.filter(punto_vive_digital_id=pvd_id).count()
             context['pvd_mantenimientos'] = MantenimientoEquipo.objects.filter(punto_vive_digital_id=pvd_id).count()
             context['pvd_habilitaciones'] = HabilitacionSala.objects.filter(sala__punto_vive_digital_id=pvd_id).count()
+            context['servicios_custom']   = ServicioPersonalizado.objects.filter(punto_vive_digital=pvd_activo)
+    if 'servicios_custom' not in context:
+        context['servicios_custom'] = ServicioPersonalizado.objects.all().select_related('punto_vive_digital')
     return render(request, 'modulo_puntos/panel_control.html', context)
 
 
@@ -477,7 +478,14 @@ def reportes(request):
         .order_by('-mes')[:12]
     )
 
+    pvd_id_rpt = request.session.get('pvd_activo_id')
+    if pvd_id_rpt:
+        servicios_custom_rpt = list(ServicioPersonalizado.objects.filter(punto_vive_digital_id=pvd_id_rpt).order_by('nombre'))
+    else:
+        servicios_custom_rpt = list(ServicioPersonalizado.objects.all().select_related('punto_vive_digital').order_by('punto_vive_digital__nombre', 'nombre'))
+
     return render(request, 'modulo_puntos/reportes.html', {
+        'servicios_custom_rpt': servicios_custom_rpt,
         'total_ciudadanos': total_ciudadanos,
         'ciudadanos_activos': ciudadanos_activos,
         'total_atenciones': total_atenciones,
@@ -784,6 +792,45 @@ def _crear_hoja(titulo, headers, filas):
     return wb
 
 
+def _agregar_hoja(wb, titulo, headers, filas):
+    """Agrega una hoja estilizada a un workbook openpyxl existente."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    ws = wb.create_sheet(titulo[:31])
+    cabecera_fondo  = PatternFill(start_color='0B1220', end_color='0B1220', fill_type='solid')
+    cabecera_fuente = Font(bold=True, color='FFFFFF', size=10)
+    fila_par  = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
+    borde_cab = Border(
+        left=Side(style='thin', color='FFFFFF'), right=Side(style='thin', color='FFFFFF'),
+        bottom=Side(style='medium', color='4A90D9'),
+    )
+    borde_dato = Border(
+        left=Side(style='thin', color='D1D5DB'), right=Side(style='thin', color='D1D5DB'),
+        top=Side(style='thin', color='D1D5DB'),  bottom=Side(style='thin', color='D1D5DB'),
+    )
+    for col, texto in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=texto)
+        cell.font = cabecera_fuente
+        cell.fill = cabecera_fondo
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = borde_cab
+    ws.row_dimensions[1].height = 32
+    for row_idx, fila in enumerate(filas, 2):
+        for col_idx, valor in enumerate(fila, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=valor)
+            cell.alignment = Alignment(vertical='center', wrap_text=False)
+            cell.border = borde_dato
+            if row_idx % 2 == 0:
+                cell.fill = fila_par
+        ws.row_dimensions[row_idx].height = 18
+    ws.freeze_panes = 'A2'
+    for col in ws.columns:
+        max_len = max((len(str(c.value)) for c in col if c.value is not None), default=8)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+    return ws
+
+
 @login_required(login_url='/login/')
 def exportar_atenciones_csv(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
@@ -1001,6 +1048,66 @@ def exportar_prestamos_csv(request):
 
     wb = _crear_hoja('Prestamos', headers, filas)
     return _xlsx_response('Reporte_Prestamos_PVD', wb)
+
+
+@login_required(login_url='/login/')
+def exportar_servicio_custom_xlsx(request, svc_id):
+    """Exporta todos los registros de un ServicioPersonalizado, una hoja por función."""
+    import openpyxl
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
+    pvd = svc.punto_vive_digital
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)  # eliminar hoja vacía por defecto
+
+    for fun in svc.funciones.filter(activo=True).order_by('nombre'):
+        campo_nombres = [c['nombre'] for c in (fun.campos or [])]
+
+        headers = ['PVD', 'Servicio', 'Función', 'Persona', 'Documento']
+        if fun.mod_estados:
+            headers.append('Estado')
+        if fun.mod_stock:
+            headers.append(f'Cantidad ({fun.stock_nombre or "ítem"})')
+        headers += ['Activo', 'Fecha creación', 'Fecha fin esperada', 'Fecha fin real', 'Notas', 'Registrado por']
+        headers += campo_nombres
+
+        filas = []
+        for reg in (RegistroFuncion.objects
+                    .filter(funcion=fun)
+                    .select_related('ciudadano', 'creado_por')
+                    .order_by('-creado_en')):
+            row = [
+                pvd.nombre,
+                svc.nombre,
+                fun.nombre,
+                reg.persona_display,
+                reg.ciudadano.numero_documento if reg.ciudadano else '',
+            ]
+            if fun.mod_estados:
+                row.append(reg.estado_actual or '—')
+            if fun.mod_stock:
+                row.append(reg.stock_cantidad)
+            row += [
+                'Sí' if reg.activo else 'No',
+                reg.creado_en.strftime('%d/%m/%Y %H:%M') if reg.creado_en else '',
+                reg.fecha_fin_esperada.strftime('%d/%m/%Y %H:%M') if reg.fecha_fin_esperada else '',
+                reg.fecha_fin_real.strftime('%d/%m/%Y %H:%M') if reg.fecha_fin_real else '',
+                reg.notas or '',
+                (reg.creado_por.get_full_name() or reg.creado_por.username) if reg.creado_por else '',
+            ]
+            datos = reg.datos or {}
+            for nombre in campo_nombres:
+                row.append(str(datos.get(nombre, '')))
+            filas.append(row)
+
+        _agregar_hoja(wb, fun.nombre, headers, filas)
+
+    if not wb.worksheets:
+        _agregar_hoja(wb, 'Sin funciones', ['Información'], [['Este servicio no tiene funciones activas.']])
+
+    nombre_archivo = 'Servicio_' + svc.nombre.replace(' ', '_').replace('/', '-')
+    return _xlsx_response(nombre_archivo, wb)
 
 
 # ── AYUDA ──────────────────────────────────────────────────────────────────────
@@ -1266,6 +1373,7 @@ def wizard_servicios_pvd(request, pvd_id):
         'checked_modulos': checked_modulos,
         'modulos_info': MODULOS_INFO,
         'capacidades_info': CAPACIDADES_INFO,
+        'capacidades_por_grupo': CAPACIDADES_POR_GRUPO,
         'servicios_personalizados': servicios_personalizados,
     })
 
@@ -1288,28 +1396,31 @@ def crear_servicio_personalizado(request, pvd_id):
     if not nombre:
         return JsonResponse({'ok': False, 'error': 'El nombre es requerido'}, status=400)
 
-    from .forms import CAPACIDADES_INFO
-    codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
-    modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
+    try:
+        from .forms import CAPACIDADES_INFO
+        codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
+        modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
 
-    svc = ServicioPersonalizado.objects.create(
-        punto_vive_digital=pvd,
-        nombre=nombre,
-        icono=(data.get('icono') or '⚙️').strip() or '⚙️',
-        descripcion=(data.get('descripcion') or '').strip(),
-        modulos_sistema=modulos_sistema,
-        incluye_extra=data.get('incluye_extra') or [],
-        habilitado=True,
-    )
-    return JsonResponse({
-        'ok': True,
-        'id': svc.pk,
-        'nombre': svc.nombre,
-        'icono': svc.icono,
-        'descripcion': svc.descripcion,
-        'modulos_sistema': svc.modulos_sistema,
-        'incluye_extra': svc.incluye_extra,
-    })
+        svc = ServicioPersonalizado.objects.create(
+            punto_vive_digital=pvd,
+            nombre=nombre,
+            icono='⚙️',
+            descripcion=(data.get('descripcion') or '').strip(),
+            modulos_sistema=modulos_sistema,
+            incluye_extra=[],
+            habilitado=True,
+        )
+        return JsonResponse({
+            'ok': True,
+            'id': svc.pk,
+            'nombre': svc.nombre,
+            'icono': svc.icono,
+            'descripcion': svc.descripcion,
+            'modulos_sistema': svc.modulos_sistema,
+            'incluye_extra': svc.incluye_extra,
+        })
+    except Exception as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=500)
 
 
 @login_required(login_url='/login/')
@@ -1330,23 +1441,25 @@ def editar_servicio_personalizado(request, svc_id):
     if not nombre:
         return JsonResponse({'ok': False, 'error': 'El nombre es requerido'}, status=400)
 
-    from .forms import CAPACIDADES_INFO
-    codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
-    svc.nombre = nombre
-    svc.icono = (data.get('icono') or '⚙️').strip() or '⚙️'
-    svc.descripcion = (data.get('descripcion') or '').strip()
-    svc.modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
-    svc.incluye_extra = data.get('incluye_extra') or []
-    svc.save()
-    return JsonResponse({
-        'ok': True,
-        'id': svc.pk,
-        'nombre': svc.nombre,
-        'icono': svc.icono,
-        'descripcion': svc.descripcion,
-        'modulos_sistema': svc.modulos_sistema,
-        'incluye_extra': svc.incluye_extra,
-    })
+    try:
+        from .forms import CAPACIDADES_INFO
+        codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
+        svc.nombre = nombre
+        svc.descripcion = (data.get('descripcion') or '').strip()
+        svc.modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
+        svc.incluye_extra = []
+        svc.save()
+        return JsonResponse({
+            'ok': True,
+            'id': svc.pk,
+            'nombre': svc.nombre,
+            'icono': svc.icono,
+            'descripcion': svc.descripcion,
+            'modulos_sistema': svc.modulos_sistema,
+            'incluye_extra': svc.incluye_extra,
+        })
+    except Exception as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=500)
 
 
 @login_required(login_url='/login/')
@@ -1363,193 +1476,42 @@ def eliminar_servicio_personalizado(request, svc_id):
 
 # ── GESTIÓN DE ÍTEMS Y REGISTROS DE SERVICIOS PERSONALIZADOS ──────────────────
 
-@login_required(login_url='/login/')
-def lista_servicios_custom(request):
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'Sin permisos para acceder a esta sección.')
-        return redirect('modulo_puntos:panel_control')
-
-    pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
-    pvd_filtro = request.GET.get('pvd', '')
-
-    servicios = (
-        ServicioPersonalizado.objects
-        .select_related('punto_vive_digital')
-        .annotate(
-            total_items=Count('items', filter=Q(items__activo=True)),
-            registros_activos=Count(
-                'items__registros',
-                filter=Q(items__registros__estado='A'),
-                distinct=True,
-            ),
-            total_registros=Count('items__registros', distinct=True),
-        )
-        .order_by('punto_vive_digital__nombre', 'nombre')
-    )
-    if pvd_filtro:
-        servicios = servicios.filter(punto_vive_digital_id=pvd_filtro)
-
-    # Registros activos: globales o filtrados por PVD
-    reg_activos_qs = (
-        RegistroServicio.objects
-        .filter(estado='A')
-        .select_related('item__servicio__punto_vive_digital', 'ciudadano')
-        .order_by('-creado_en')
-    )
-    if pvd_filtro:
-        reg_activos_qs = reg_activos_qs.filter(item__servicio__punto_vive_digital_id=pvd_filtro)
-
-    pvd_filtro_obj = None
-    if pvd_filtro:
-        pvd_filtro_obj = PuntoViveDigital.objects.filter(pk=pvd_filtro).first()
-
-    return render(request, 'modulo_puntos/lista_servicios_custom.html', {
-        'servicios': servicios,
-        'pvds': pvds,
-        'pvd_filtro': pvd_filtro,
-        'pvd_filtro_obj': pvd_filtro_obj,
-        'registros_activos': reg_activos_qs[:100],
-        'total_servicios': ServicioPersonalizado.objects.count(),
-        'total_items': ItemServicio.objects.filter(activo=True).count(),
-        'total_activos': RegistroServicio.objects.filter(estado='A').count(),
-        'total_historial': RegistroServicio.objects.filter(estado__in=['F', 'C']).count(),
-    })
-
-
-def _verificar_acceso_servicio_custom(request, svc):
-    """Verifica que el usuario puede gestionar este servicio personalizado."""
-    from django.core.exceptions import PermissionDenied
-    u = request.user
-    if u.is_superuser or u.groups.filter(name='Administrador TIC').exists():
-        return
-    if u.groups.filter(name='Administrador PVD').exists():
-        pvd_id = request.session.get('pvd_activo_id')
-        if pvd_id and svc.punto_vive_digital_id == pvd_id:
-            return
-    raise PermissionDenied
+_CAPACIDADES_URLS = {
+    'ciudadanos':     ('consultar_ciudadanos',  '👤', 'Ciudadanos',        'Ver y registrar ciudadanos atendidos'),
+    'atenciones':     ('registrar_atencion',    '🎯', 'Atenciones',        'Registrar atenciones al ciudadano'),
+    'servicios':      ('registrar_servicio',    '🛠️', 'Servicios',         'Registrar servicios prestados en atenciones'),
+    'satisfaccion':   ('registrar_satisfaccion','⭐', 'Satisfacción',      'Encuestas de satisfacción del ciudadano'),
+    'recursos':       ('registrar_recurso',     '📦', 'Recursos',          'Inventario y equipos del PVD'),
+    'prestamos':      ('registrar_prestamo',    '🔄', 'Préstamos',         'Préstamo de recursos a ciudadanos'),
+    'salas':          ('lista_salas',           '🏛️', 'Salas',            'Gestión de salas y espacios físicos'),
+    'habilitaciones': ('lista_habilitaciones',  '🔓', 'Habilitaciones',    'Habilitar espacios para uso programado'),
+    'cursos':         ('lista_cursos',          '📚', 'Cursos y Talleres', 'Formación ciudadana y control de asistencia'),
+    'mantenimiento':  ('lista_mantenimientos',  '🔧', 'Mantenimiento',     'Mantenimiento preventivo y correctivo'),
+    'reportes':       ('reportes',              '📊', 'Reportes',          'Estadísticas, indicadores y exportaciones'),
+}
 
 
 @login_required(login_url='/login/')
 def gestionar_servicio_custom(request, svc_id):
-    from django.utils import timezone
     svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
-    _verificar_acceso_servicio_custom(request, svc)
+    pvd = svc.punto_vive_digital
+    _verificar_acceso_pvd_svc(request, pvd, svc)
 
-    items_qs = list(svc.items.filter(activo=True))
-    registros_activos = RegistroServicio.objects.filter(
-        item__servicio=svc, estado='A'
-    ).select_related('item', 'ciudadano').order_by('-creado_en')
-    registros_historial = RegistroServicio.objects.filter(
-        item__servicio=svc, estado__in=['F', 'C']
-    ).select_related('item', 'ciudadano').order_by('-creado_en')[:50]
-
-    items_with_forms = [
-        (item, RegistroServicioForm(prefix=f'reg_{item.pk}'))
-        for item in items_qs
-    ]
-    item_form = ItemServicioForm()
+    funciones_habilitadas = []
+    for codigo in (svc.modulos_sistema or []):
+        if codigo in _CAPACIDADES_URLS:
+            url_name, icono, label, descripcion = _CAPACIDADES_URLS[codigo]
+            try:
+                url = reverse(f'modulo_puntos:{url_name}')
+            except Exception:
+                url = '#'
+            funciones_habilitadas.append({'icono': icono, 'label': label, 'descripcion': descripcion, 'url': url})
 
     return render(request, 'modulo_puntos/gestionar_servicio_custom.html', {
         'svc': svc,
-        'pvd': svc.punto_vive_digital,
-        'items_with_forms': items_with_forms,
-        'registros_activos': registros_activos,
-        'registros_historial': registros_historial,
-        'item_form': item_form,
+        'pvd': pvd,
+        'funciones_habilitadas': funciones_habilitadas,
     })
-
-
-@login_required(login_url='/login/')
-def crear_item_servicio(request, svc_id):
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
-    _verificar_acceso_servicio_custom(request, svc)
-    if request.method == 'POST':
-        form = ItemServicioForm(request.POST)
-        if form.is_valid():
-            item = form.save(commit=False)
-            item.servicio = svc
-            item.save()
-            messages.success(request, f'Ítem "{item.nombre}" creado.')
-        else:
-            for errs in form.errors.values():
-                for e in errs:
-                    messages.error(request, e)
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
-
-
-@login_required(login_url='/login/')
-def editar_item_servicio(request, item_id):
-    item = get_object_or_404(ItemServicio, pk=item_id)
-    _verificar_acceso_servicio_custom(request, item.servicio)
-    if request.method == 'POST':
-        form = ItemServicioForm(request.POST, instance=item)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Ítem "{item.nombre}" actualizado.')
-        else:
-            for errs in form.errors.values():
-                for e in errs:
-                    messages.error(request, e)
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=item.servicio_id)
-
-
-@login_required(login_url='/login/')
-def eliminar_item_servicio(request, item_id):
-    item = get_object_or_404(ItemServicio, pk=item_id)
-    _verificar_acceso_servicio_custom(request, item.servicio)
-    svc_id = item.servicio_id
-    if request.method == 'POST':
-        item.activo = False
-        item.save()
-        messages.success(request, f'"{item.nombre}" desactivado.')
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
-
-
-@login_required(login_url='/login/')
-def crear_registro_servicio(request, item_id):
-    item = get_object_or_404(ItemServicio, pk=item_id)
-    _verificar_acceso_servicio_custom(request, item.servicio)
-    if request.method == 'POST':
-        if item.cantidad_disponible <= 0:
-            messages.error(request, f'No hay unidades disponibles de "{item.nombre}".')
-        else:
-            form = RegistroServicioForm(request.POST, prefix=f'reg_{item_id}')
-            if form.is_valid():
-                reg = form.save(commit=False)
-                reg.item = item
-                reg.registrado_por = request.user
-                reg.estado = 'A'
-                reg.save()
-                messages.success(request, f'Uso de "{item.nombre}" registrado.')
-            else:
-                for errs in form.errors.values():
-                    for e in errs:
-                        messages.error(request, e)
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=item.servicio_id)
-
-
-@login_required(login_url='/login/')
-def finalizar_registro_servicio(request, reg_id):
-    from django.utils import timezone
-    reg = get_object_or_404(RegistroServicio, pk=reg_id)
-    _verificar_acceso_servicio_custom(request, reg.item.servicio)
-    if request.method == 'POST':
-        reg.estado = 'F'
-        reg.fecha_fin_real = timezone.now()
-        reg.save()
-        messages.success(request, 'Registro finalizado.')
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=reg.item.servicio_id)
-
-
-@login_required(login_url='/login/')
-def cancelar_registro_servicio(request, reg_id):
-    reg = get_object_or_404(RegistroServicio, pk=reg_id)
-    _verificar_acceso_servicio_custom(request, reg.item.servicio)
-    if request.method == 'POST':
-        reg.estado = 'C'
-        reg.save()
-        messages.success(request, 'Registro cancelado.')
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=reg.item.servicio_id)
 
 
 @login_required(login_url='/login/')
@@ -2723,3 +2685,240 @@ def accesos_temporales(request):
         'admins_pvd': admins_pvd,
         'pvds_activos': pvds_activos,
     })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COMPOSITOR DE MÓDULOS — Funciones de servicios personalizados
+# ══════════════════════════════════════════════════════════════════════════════
+
+import json as _json
+from django.utils import timezone as _tz
+
+
+def _verificar_acceso_pvd_svc(request, pvd, svc):
+    if request.user.is_superuser or usuario_es_admin_tic(request.user):
+        return
+    pvd_activo_id = request.session.get('pvd_activo_id')
+    if not pvd_activo_id or pvd.pk != pvd_activo_id:
+        from django.http import Http404
+        raise Http404
+
+
+@login_required(login_url='/login/')
+def crear_funcion_view(request, pvd_id, svc_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        try:
+            data = _json.loads(request.body)
+            nombre = data.get('nombre', '').strip()
+            if not nombre:
+                return JsonResponse({'ok': False, 'error': 'El nombre de la función es requerido.'})
+            fun = FuncionServicio(
+                servicio=svc,
+                nombre=nombre,
+                descripcion=data.get('descripcion', '').strip(),
+                mod_formulario=bool(data.get('mod_formulario')),
+                mod_estados=bool(data.get('mod_estados')),
+                mod_ciudadano=bool(data.get('mod_ciudadano')),
+                mod_stock=bool(data.get('mod_stock')),
+                campos=data.get('campos', []),
+                estados=data.get('estados', []),
+                ciudadano_requerido=bool(data.get('ciudadano_requerido')),
+                stock_nombre=data.get('stock_nombre', '').strip(),
+                stock_total=max(0, int(data.get('stock_total') or 0)),
+                stock_unidad=(data.get('stock_unidad', '') or 'unidades').strip(),
+            )
+            fun.save()
+            return JsonResponse({'ok': True, 'fun_id': fun.pk, 'fun_nombre': fun.nombre})
+        except Exception as exc:
+            return JsonResponse({'ok': False, 'error': str(exc)})
+
+    desde_wizard = request.GET.get('from_wizard', '0') == '1'
+    return render(request, 'modulo_puntos/builder_funcion.html', {
+        'pvd': pvd,
+        'svc': svc,
+        'funcion': None,
+        'desde_wizard': desde_wizard,
+    })
+
+
+@login_required(login_url='/login/')
+def editar_funcion_view(request, pvd_id, svc_id, fun_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        try:
+            data = _json.loads(request.body)
+            nombre = data.get('nombre', '').strip()
+            if not nombre:
+                return JsonResponse({'ok': False, 'error': 'El nombre de la función es requerido.'})
+            fun.nombre = nombre
+            fun.descripcion = data.get('descripcion', '').strip()
+            fun.mod_formulario = bool(data.get('mod_formulario'))
+            fun.mod_estados    = bool(data.get('mod_estados'))
+            fun.mod_ciudadano  = bool(data.get('mod_ciudadano'))
+            fun.mod_stock      = bool(data.get('mod_stock'))
+            fun.campos         = data.get('campos', [])
+            fun.estados        = data.get('estados', [])
+            fun.ciudadano_requerido = bool(data.get('ciudadano_requerido'))
+            fun.stock_nombre   = data.get('stock_nombre', '').strip()
+            fun.stock_total    = max(0, int(data.get('stock_total') or 0))
+            fun.stock_unidad   = (data.get('stock_unidad', '') or 'unidades').strip()
+            fun.save()
+            return JsonResponse({'ok': True, 'fun_id': fun.pk, 'fun_nombre': fun.nombre})
+        except Exception as exc:
+            return JsonResponse({'ok': False, 'error': str(exc)})
+
+    desde_wizard = request.GET.get('from_wizard', '0') == '1'
+    return render(request, 'modulo_puntos/builder_funcion.html', {
+        'pvd': pvd,
+        'svc': svc,
+        'funcion': fun,
+        'desde_wizard': desde_wizard,
+    })
+
+
+@login_required(login_url='/login/')
+def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    registros_activos  = fun.registros_funcion.filter(activo=True).select_related('ciudadano', 'creado_por')
+    registros_cerrados = fun.registros_funcion.filter(activo=False).select_related('ciudadano')[:50]
+    ciudadanos = Ciudadano.objects.filter(estado='A').order_by('primer_apellido') if fun.mod_ciudadano else []
+
+    estados_map = {}
+    if fun.mod_estados and fun.estados:
+        for est in fun.estados:
+            estados_map[est['nombre']] = {'config': est, 'registros': []}
+        for reg in registros_activos:
+            key = reg.estado_actual
+            if key not in estados_map:
+                estados_map[key] = {'config': {'nombre': key, 'color': '#64748b', 'es_terminal': False}, 'registros': []}
+            estados_map[key]['registros'].append(reg)
+
+    return render(request, 'modulo_puntos/gestionar_funcion.html', {
+        'pvd': pvd,
+        'svc': svc,
+        'fun': fun,
+        'registros_activos': registros_activos,
+        'registros_cerrados': registros_cerrados,
+        'ciudadanos': ciudadanos,
+        'estados_map': estados_map,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_registro_funcion_view(request, pvd_id, svc_id, fun_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method != 'POST':
+        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+    datos = {}
+    if fun.mod_formulario:
+        for campo in fun.campos:
+            key = 'campo_' + campo['nombre']
+            datos[campo['nombre']] = request.POST.get(key, '').strip()
+
+    ciudadano = None
+    if fun.mod_ciudadano:
+        ciu_id = request.POST.get('ciudadano_id', '').strip()
+        if ciu_id:
+            ciudadano = Ciudadano.objects.filter(pk=ciu_id).first()
+
+    nombre_persona = request.POST.get('nombre_persona', '').strip()
+    stock_cantidad = 1
+    if fun.mod_stock:
+        try:
+            stock_cantidad = max(1, int(request.POST.get('stock_cantidad') or 1))
+        except (ValueError, TypeError):
+            stock_cantidad = 1
+        if stock_cantidad > fun.stock_disponible:
+            messages.error(request, f'Solo hay {fun.stock_disponible} {fun.stock_unidad} disponibles.')
+            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+    fecha_fin_esperada = None
+    raw_fecha = request.POST.get('fecha_fin_esperada', '').strip()
+    if raw_fecha:
+        try:
+            fecha_fin_esperada = datetime.fromisoformat(raw_fecha)
+        except ValueError:
+            pass
+
+    RegistroFuncion.objects.create(
+        funcion=fun,
+        ciudadano=ciudadano,
+        nombre_persona=nombre_persona,
+        estado_actual=fun.estado_inicial,
+        datos=datos,
+        stock_cantidad=stock_cantidad,
+        fecha_fin_esperada=fecha_fin_esperada,
+        notas=request.POST.get('notas', '').strip(),
+        creado_por=request.user,
+    )
+    messages.success(request, 'Registro creado correctamente.')
+    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def cambiar_estado_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        nuevo = request.POST.get('nuevo_estado', '').strip()
+        nombres = [e['nombre'] for e in fun.estados]
+        if nuevo in nombres:
+            reg.estado_actual = nuevo
+            cfg = next((e for e in fun.estados if e['nombre'] == nuevo), {})
+            if cfg.get('es_terminal'):
+                reg.activo = False
+                reg.fecha_fin_real = _tz.now()
+            reg.save()
+            messages.success(request, f'Estado cambiado a "{nuevo}".')
+    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def cerrar_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        reg.activo = False
+        reg.fecha_fin_real = _tz.now()
+        reg.save()
+        messages.success(request, 'Registro cerrado.')
+    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def eliminar_funcion_view(request, pvd_id, svc_id, fun_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        fun.activo = False
+        fun.save()
+        messages.success(request, f'Función "{fun.nombre}" eliminada.')
+    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)

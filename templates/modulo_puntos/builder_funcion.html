@@ -1,0 +1,447 @@
+{% extends 'modulo_puntos/base.html' %}
+{% block title %}{{ funcion|yesno:"Editar,Nueva" }} función — {{ svc.nombre }}{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">{{ svc.icono }} {{ svc.nombre }} · {{ pvd.nombre }}</span>
+        <h1 class="page-title">{% if funcion %}Editar función{% else %}Nueva función{% endif %}</h1>
+        <p class="muted">Define el nombre, qué módulos activa y cómo los configura. Sin restricciones.</p>
+    </div>
+
+    {# ── Datos básicos ── #}
+    <div class="builder-section">
+        <div class="form-group" style="margin:0 0 16px;">
+            <label class="builder-label">Nombre de la función <span style="color:red;">*</span></label>
+            <input type="text" id="fun-nombre" class="form-control" style="font-size:16px;font-weight:600;"
+                   placeholder="Ej: Préstamo de tablet, Registro de visita, Solicitud de impresión..."
+                   value="{{ funcion.nombre|default:'' }}">
+            <div id="fun-nombre-error" style="color:#dc2626;font-size:12px;margin-top:4px;display:none;">El nombre es requerido.</div>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label class="builder-label">Descripción <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
+            <input type="text" id="fun-desc" class="form-control"
+                   placeholder="Describe brevemente para qué sirve esta función..."
+                   value="{{ funcion.descripcion|default:'' }}">
+        </div>
+    </div>
+
+    {# ── Módulos ── #}
+    <div class="builder-section">
+        <div class="builder-section__title">Módulos funcionales</div>
+        <p class="muted" style="margin:0 0 16px;font-size:13px;">Activa los módulos que necesite esta función. Puedes activar uno, varios o todos.</p>
+
+        <div class="modulos-grid">
+
+            {# ── MÓDULO 1: Formulario libre ── #}
+            <div class="modulo-card" id="card-formulario">
+                <div class="modulo-card__header" onclick="toggleModulo('formulario')">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:22px;">📋</span>
+                        <div>
+                            <div class="modulo-card__title">Formulario libre</div>
+                            <div class="modulo-card__desc">Crea los campos que quieras para capturar cualquier dato</div>
+                        </div>
+                    </div>
+                    <div class="svc-toggle-switch" id="sw-formulario"><div class="svc-toggle-switch__thumb"></div></div>
+                </div>
+                <div class="modulo-config" id="cfg-formulario">
+                    <div class="modulo-config__inner">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Campos del formulario</span>
+                            <button type="button" class="btn btn--sm" onclick="agregarCampo()">+ Agregar campo</button>
+                        </div>
+                        <div id="lista-campos" style="display:flex;flex-direction:column;gap:8px;"></div>
+                        <p id="campos-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:12px;display:none;">Aún no hay campos. Agrega el primero.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# ── MÓDULO 2: Estados personalizados ── #}
+            <div class="modulo-card" id="card-estados">
+                <div class="modulo-card__header" onclick="toggleModulo('estados')">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:22px;">🔄</span>
+                        <div>
+                            <div class="modulo-card__title">Estados personalizados</div>
+                            <div class="modulo-card__desc">Define el ciclo de vida de cada registro: pendiente, aprobado, entregado…</div>
+                        </div>
+                    </div>
+                    <div class="svc-toggle-switch" id="sw-estados"><div class="svc-toggle-switch__thumb"></div></div>
+                </div>
+                <div class="modulo-config" id="cfg-estados">
+                    <div class="modulo-config__inner">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Estados del proceso</span>
+                            <button type="button" class="btn btn--sm" onclick="agregarEstado()">+ Agregar estado</button>
+                        </div>
+                        <p style="font-size:11px;color:#64748b;margin:0 0 10px;">El primer estado es el inicial. Marca "Terminal" los que finalizan el proceso.</p>
+                        <div id="lista-estados" style="display:flex;flex-direction:column;gap:8px;"></div>
+                        <p id="estados-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:12px;display:none;">Aún no hay estados. Agrega el primero.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# ── MÓDULO 3: Vínculo ciudadano ── #}
+            <div class="modulo-card" id="card-ciudadano">
+                <div class="modulo-card__header" onclick="toggleModulo('ciudadano')">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:22px;">👤</span>
+                        <div>
+                            <div class="modulo-card__title">Vínculo ciudadano</div>
+                            <div class="modulo-card__desc">Asocia cada registro a un ciudadano del sistema o a un nombre libre</div>
+                        </div>
+                    </div>
+                    <div class="svc-toggle-switch" id="sw-ciudadano"><div class="svc-toggle-switch__thumb"></div></div>
+                </div>
+                <div class="modulo-config" id="cfg-ciudadano">
+                    <div class="modulo-config__inner">
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                            <input type="checkbox" id="ciudadano-requerido" style="width:16px;height:16px;accent-color:#1e40af;"
+                                   {% if funcion.ciudadano_requerido %}checked{% endif %}>
+                            <span style="font-size:13px;color:#374151;">Ciudadano <strong>requerido</strong> (si está desmarcado, es opcional)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {# ── MÓDULO 4: Control de stock ── #}
+            <div class="modulo-card" id="card-stock">
+                <div class="modulo-card__header" onclick="toggleModulo('stock')">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:22px;">📦</span>
+                        <div>
+                            <div class="modulo-card__title">Control de stock</div>
+                            <div class="modulo-card__desc">Controla la disponibilidad de ítems físicos o digitales en tiempo real</div>
+                        </div>
+                    </div>
+                    <div class="svc-toggle-switch" id="sw-stock"><div class="svc-toggle-switch__thumb"></div></div>
+                </div>
+                <div class="modulo-config" id="cfg-stock">
+                    <div class="modulo-config__inner" style="display:flex;flex-direction:column;gap:12px;">
+                        <div class="form-group" style="margin:0;">
+                            <label class="builder-label" style="font-size:12px;">¿Qué ítem se controla?</label>
+                            <input type="text" id="stock-nombre" class="form-control" placeholder="Ej: Tablet, Portátil, Silla, Cámara..."
+                                   value="{{ funcion.stock_nombre|default:'' }}">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="builder-label" style="font-size:12px;">Cantidad total disponible</label>
+                                <input type="number" id="stock-total" class="form-control" min="0" placeholder="0"
+                                       value="{{ funcion.stock_total|default:'' }}">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="builder-label" style="font-size:12px;">Unidad</label>
+                                <input type="text" id="stock-unidad" class="form-control" placeholder="unidades, equipos, sillas..."
+                                       value="{{ funcion.stock_unidad|default:'unidades' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>{# /modulos-grid #}
+    </div>
+
+    {# ── Error bar ── #}
+    <div id="builder-error" style="display:none;margin:0 0 16px;padding:12px 16px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#991b1b;font-weight:600;font-size:13px;"></div>
+
+    {# ── Acciones ── #}
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid #e2e8f0;flex-wrap:wrap;">
+        <a href="{% if desde_wizard %}{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd.pk %}{% else %}{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}{% endif %}" class="btn btn-secondary">← Cancelar</a>
+        <button type="button" onclick="guardarFuncion()" id="btn-guardar" class="btn">
+            {% if funcion %}Guardar cambios{% else %}Crear función{% endif %}
+        </button>
+    </div>
+</div>
+
+<style>
+.builder-section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:20px;}
+.builder-section__title{font-size:14px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.builder-label{font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;}
+
+.modulos-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:640px){.modulos-grid{grid-template-columns:1fr;}}
+
+.modulo-card{border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;transition:border-color .2s;}
+.modulo-card--active{border-color:#1e40af;}
+
+.modulo-card__header{display:flex;align-items:center;justify-content:space-between;padding:16px;cursor:pointer;user-select:none;}
+.modulo-card__header:hover{background:#f8fafc;}
+.modulo-card__title{font-size:14px;font-weight:700;color:#1e293b;}
+.modulo-card__desc{font-size:12px;color:#64748b;margin-top:2px;}
+
+.modulo-config{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.modulo-config--open{max-height:600px;}
+.modulo-config__inner{padding:16px;border-top:1px solid #e2e8f0;background:#f8fafc;}
+
+/* Reutiliza el toggle switch del wizard */
+.svc-toggle-switch{flex-shrink:0;width:38px;height:20px;background:#cbd5e1;border-radius:10px;position:relative;transition:background .2s;}
+.svc-toggle-switch__thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.svc-toggle-switch--on{background:#1e40af;}
+.svc-toggle-switch--on .svc-toggle-switch__thumb{transform:translateX(18px);}
+
+/* Fila de campo del formulario */
+.campo-row{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;}
+.campo-row input[type="text"],.campo-row select{border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;background:#f8fafc;}
+.campo-row input[type="text"]:focus,.campo-row select:focus{outline:none;border-color:#1e40af;}
+.campo-row__nombre{flex:1;min-width:80px;}
+.campo-opciones-row{margin-top:4px;margin-left:10px;}
+
+/* Fila de estado */
+.estado-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;}
+.estado-row input[type="text"]{flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;background:#f8fafc;}
+.estado-row input[type="text"]:focus{outline:none;border-color:#1e40af;}
+.color-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s;flex-shrink:0;}
+.color-dot--sel{border-color:#1e293b;}
+.color-picker-popup{position:absolute;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:flex;gap:6px;flex-wrap:wrap;width:180px;z-index:100;}
+</style>
+
+{% block extra_scripts %}
+<script>
+const DESDE_WIZARD = {% if desde_wizard %}true{% else %}false{% endif %};
+const URL_GUARDAR = "{% if funcion %}{% url 'modulo_puntos:editar_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=funcion.pk %}{% else %}{% url 'modulo_puntos:crear_funcion' pvd_id=pvd.pk svc_id=svc.pk %}{% endif %}";
+const URL_VOLVER  = DESDE_WIZARD
+    ? "{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd.pk %}"
+    : "{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}";
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
+
+const COLORES_ESTADO = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#64748b','#f97316','#14b8a6'];
+const modActivos = { formulario: false, estados: false, ciudadano: false, stock: false };
+
+// ── Toggle módulo ──────────────────────────────────────────────────────────
+function toggleModulo(mod) {
+    modActivos[mod] = !modActivos[mod];
+    const sw  = document.getElementById('sw-' + mod);
+    const cfg = document.getElementById('cfg-' + mod);
+    const card = document.getElementById('card-' + mod);
+    sw.classList.toggle('svc-toggle-switch--on', modActivos[mod]);
+    cfg.classList.toggle('modulo-config--open', modActivos[mod]);
+    card.classList.toggle('modulo-card--active', modActivos[mod]);
+    actualizarVacios();
+}
+
+function activarModulo(mod) {
+    if (!modActivos[mod]) toggleModulo(mod);
+}
+
+// ── Campos del formulario ──────────────────────────────────────────────────
+let campoIdx = 0;
+const TIPOS_CAMPO = [
+    ['texto',    'Texto corto'],
+    ['textarea', 'Texto largo'],
+    ['numero',   'Número'],
+    ['fecha',    'Fecha'],
+    ['booleano', 'Sí / No'],
+    ['lista',    'Lista de opciones'],
+];
+
+function agregarCampo(nombre='', tipo='texto', requerido=false, opciones='') {
+    const idx = campoIdx++;
+    const lista = document.getElementById('lista-campos');
+    const div = document.createElement('div');
+    div.className = 'campo-row';
+    div.dataset.idx = idx;
+    div.innerHTML = `
+        <input type="text" class="campo-row__nombre" placeholder="Nombre del campo" value="${esc(nombre)}">
+        <select class="campo-tipo" onchange="onTipoCambio(this, ${idx})">
+            ${TIPOS_CAMPO.map(([v,l]) => `<option value="${v}" ${tipo===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;cursor:pointer;">
+            <input type="checkbox" ${requerido?'checked':''} style="accent-color:#1e40af;"> Req.
+        </label>
+        <button type="button" onclick="this.closest('.campo-row').nextElementSibling?.remove(); this.closest('.campo-row').remove(); actualizarVacios();" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px;">×</button>`;
+    lista.appendChild(div);
+
+    if (tipo === 'lista') {
+        const opDiv = document.createElement('div');
+        opDiv.className = 'campo-opciones-row';
+        opDiv.dataset.forIdx = idx;
+        opDiv.innerHTML = `<input type="text" class="form-control" placeholder="Opciones separadas por coma: Opción A, Opción B, Opción C" value="${esc(opciones)}" style="font-size:12px;">`;
+        lista.appendChild(opDiv);
+    }
+    actualizarVacios();
+}
+
+function onTipoCambio(sel, idx) {
+    const lista = document.getElementById('lista-campos');
+    const existing = lista.querySelector(`.campo-opciones-row[data-for-idx="${idx}"]`);
+    if (sel.value === 'lista') {
+        if (!existing) {
+            const opDiv = document.createElement('div');
+            opDiv.className = 'campo-opciones-row';
+            opDiv.dataset.forIdx = idx;
+            opDiv.innerHTML = `<input type="text" class="form-control" placeholder="Opciones separadas por coma: Opción A, Opción B, Opción C" style="font-size:12px;">`;
+            sel.closest('.campo-row').insertAdjacentElement('afterend', opDiv);
+        }
+    } else if (existing) {
+        existing.remove();
+    }
+}
+
+function recolectarCampos() {
+    const lista = document.getElementById('lista-campos');
+    const rows  = lista.querySelectorAll('.campo-row');
+    const result = [];
+    rows.forEach(row => {
+        const idx    = row.dataset.idx;
+        const nombre = row.querySelector('.campo-row__nombre').value.trim();
+        const tipo   = row.querySelector('.campo-tipo').value;
+        const req    = row.querySelector('input[type="checkbox"]').checked;
+        if (!nombre) return;
+        const opRow = lista.querySelector(`.campo-opciones-row[data-for-idx="${idx}"]`);
+        const opciones = opRow ? opRow.querySelector('input').value.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        result.push({ nombre, tipo, requerido: req, opciones });
+    });
+    return result;
+}
+
+// ── Estados ───────────────────────────────────────────────────────────────
+let colorSelActivo = null;
+
+function agregarEstado(nombre='', color='#64748b', esTerminal=false) {
+    const lista = document.getElementById('lista-estados');
+    const div = document.createElement('div');
+    div.className = 'estado-row';
+    const dotId = 'dot-' + Math.random().toString(36).slice(2);
+    div.innerHTML = `
+        <input type="text" placeholder="Nombre del estado" value="${esc(nombre)}">
+        <div class="color-dot color-dot--sel" id="${dotId}" style="background:${color};" data-color="${color}"
+             onclick="abrirColorPicker(this)"></div>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;cursor:pointer;">
+            <input type="checkbox" ${esTerminal?'checked':''} style="accent-color:#ef4444;"> Terminal
+        </label>
+        <button type="button" onclick="this.closest('.estado-row').remove(); actualizarVacios();"
+                style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px;">×</button>`;
+    lista.appendChild(div);
+    actualizarVacios();
+}
+
+function abrirColorPicker(dot) {
+    document.querySelectorAll('.color-picker-popup').forEach(p => p.remove());
+    const popup = document.createElement('div');
+    popup.className = 'color-picker-popup';
+    COLORES_ESTADO.forEach(c => {
+        const s = document.createElement('div');
+        s.className = 'color-dot' + (dot.dataset.color === c ? ' color-dot--sel' : '');
+        s.style.background = c;
+        s.style.width = '26px'; s.style.height = '26px';
+        s.title = c;
+        s.onclick = () => {
+            dot.style.background = c;
+            dot.dataset.color = c;
+            popup.remove();
+        };
+        popup.appendChild(s);
+    });
+    dot.style.position = 'relative';
+    dot.appendChild(popup);
+    setTimeout(() => document.addEventListener('click', function h(e){
+        if (!popup.contains(e.target) && e.target !== dot){ popup.remove(); document.removeEventListener('click',h); }
+    }), 10);
+}
+
+function recolectarEstados() {
+    const rows = document.querySelectorAll('#lista-estados .estado-row');
+    const result = [];
+    rows.forEach(row => {
+        const nombre = row.querySelector('input[type="text"]').value.trim();
+        const color  = row.querySelector('.color-dot').dataset.color || '#64748b';
+        const term   = row.querySelector('input[type="checkbox"]').checked;
+        if (!nombre) return;
+        result.push({ nombre, color, es_terminal: term });
+    });
+    return result;
+}
+
+// ── Guardar ───────────────────────────────────────────────────────────────
+function mostrarError(msg) {
+    const bar = document.getElementById('builder-error');
+    bar.textContent = msg;
+    bar.style.display = 'block';
+    bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function guardarFuncion() {
+    document.getElementById('builder-error').style.display = 'none';
+    const nombre = document.getElementById('fun-nombre').value.trim();
+    if (!nombre) {
+        document.getElementById('fun-nombre-error').style.display = 'block';
+        document.getElementById('fun-nombre').focus();
+        return;
+    }
+    document.getElementById('fun-nombre-error').style.display = 'none';
+
+    const payload = {
+        nombre,
+        descripcion:       document.getElementById('fun-desc').value.trim(),
+        mod_formulario:    modActivos.formulario,
+        mod_estados:       modActivos.estados,
+        mod_ciudadano:     modActivos.ciudadano,
+        mod_stock:         modActivos.stock,
+        campos:            modActivos.formulario ? recolectarCampos() : [],
+        estados:           modActivos.estados    ? recolectarEstados() : [],
+        ciudadano_requerido: modActivos.ciudadano ? document.getElementById('ciudadano-requerido').checked : false,
+        stock_nombre:      modActivos.stock ? document.getElementById('stock-nombre').value.trim() : '',
+        stock_total:       modActivos.stock ? parseInt(document.getElementById('stock-total').value || '0') : 0,
+        stock_unidad:      modActivos.stock ? (document.getElementById('stock-unidad').value.trim() || 'unidades') : 'unidades',
+    };
+
+    const btn = document.getElementById('btn-guardar');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    fetch(URL_GUARDAR, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.text().then(text => ({ status: r.status, text })))
+    .then(({ status, text }) => {
+        btn.disabled = false;
+        btn.textContent = '{% if funcion %}Guardar cambios{% else %}Crear función{% endif %}';
+        let data;
+        try { data = JSON.parse(text); } catch { mostrarError('Error inesperado del servidor (' + status + ').'); return; }
+        if (!data.ok) { mostrarError(data.error || 'Error desconocido.'); return; }
+        window.location.href = URL_VOLVER;
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = '{% if funcion %}Guardar cambios{% else %}Crear función{% endif %}';
+        mostrarError('No se pudo conectar con el servidor.');
+    });
+}
+
+function actualizarVacios() {
+    const campos = document.querySelectorAll('#lista-campos .campo-row').length;
+    document.getElementById('campos-vacio').style.display = campos === 0 ? 'block' : 'none';
+    const estados = document.querySelectorAll('#lista-estados .estado-row').length;
+    document.getElementById('estados-vacio').style.display = estados === 0 ? 'block' : 'none';
+}
+
+function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Inicialización (si se edita una función existente) ────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    {% if funcion %}
+    // Restaurar módulos activos
+    {% if funcion.mod_formulario %}activarModulo('formulario');{% endif %}
+    {% if funcion.mod_estados %}activarModulo('estados');{% endif %}
+    {% if funcion.mod_ciudadano %}activarModulo('ciudadano');{% endif %}
+    {% if funcion.mod_stock %}activarModulo('stock');{% endif %}
+
+    // Restaurar campos
+    {% for c in funcion.campos %}
+    agregarCampo('{{ c.nombre|escapejs }}', '{{ c.tipo|escapejs }}', {{ c.requerido|yesno:"true,false" }}, '{% for o in c.opciones %}{{ o|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}');
+    {% endfor %}
+
+    // Restaurar estados
+    {% for e in funcion.estados %}
+    agregarEstado('{{ e.nombre|escapejs }}', '{{ e.color|escapejs }}', {{ e.es_terminal|yesno:"true,false" }});
+    {% endfor %}
+    {% else %}
+    actualizarVacios();
+    {% endif %}
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -15,7 +15,7 @@ from .models import (
 
 @admin.register(PuntoViveDigital)
 class PuntoViveDigitalAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'barrio', 'estado_legible', 'telefono', 'correo', 'fecha_creacion')
+    list_display = ('nombre', 'barrio', 'estado_legible', 'fecha_creacion')
     list_filter = ('estado', 'fecha_creacion')
     search_fields = ('nombre', 'barrio', 'direccion')
     readonly_fields = ('fecha_creacion',)

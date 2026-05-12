@@ -64,6 +64,7 @@ urlpatterns = [
     path('exportar-servicios/', views.exportar_servicios_csv, name='exportar_servicios_csv'),
     path('exportar-satisfaccion/', views.exportar_satisfaccion_csv, name='exportar_satisfaccion_csv'),
     path('exportar-prestamos/', views.exportar_prestamos_csv, name='exportar_prestamos_csv'),
+    path('exportar/servicio-custom/<int:svc_id>/', views.exportar_servicio_custom_xlsx, name='exportar_servicio_custom'),
     
     # ==========================================================================
     # GESTIÓN DE USUARIOS
@@ -95,16 +96,20 @@ urlpatterns = [
     path('pvd/<int:pvd_id>/admin/', views.wizard_asignar_admin_pvd, name='wizard_asignar_admin_pvd'),
 
     # ==========================================================================
-    # GESTIÓN DE ÍTEMS Y REGISTROS DE SERVICIOS PERSONALIZADOS
+    # COMPOSITOR DE MÓDULOS — Funciones de servicios personalizados
     # ==========================================================================
-    path('servicios-custom/', views.lista_servicios_custom, name='lista_servicios_custom'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/nueva/', views.crear_funcion_view, name='crear_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/editar/', views.editar_funcion_view, name='editar_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/', views.gestionar_funcion_view, name='gestionar_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/nuevo/', views.crear_registro_funcion_view, name='crear_registro_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/estado/', views.cambiar_estado_registro_funcion_view, name='cambiar_estado_registro_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/cerrar/', views.cerrar_registro_funcion_view, name='cerrar_registro_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/eliminar/', views.eliminar_funcion_view, name='eliminar_funcion'),
+
+    # ==========================================================================
+    # GESTIÓN DE SERVICIOS PERSONALIZADOS
+    # ==========================================================================
     path('servicio-custom/<int:svc_id>/', views.gestionar_servicio_custom, name='gestionar_servicio_custom'),
-    path('servicio-custom/<int:svc_id>/item/crear/', views.crear_item_servicio, name='crear_item_servicio'),
-    path('servicio-custom/item/<int:item_id>/editar/', views.editar_item_servicio, name='editar_item_servicio'),
-    path('servicio-custom/item/<int:item_id>/eliminar/', views.eliminar_item_servicio, name='eliminar_item_servicio'),
-    path('servicio-custom/item/<int:item_id>/registrar/', views.crear_registro_servicio, name='crear_registro_servicio'),
-    path('servicio-custom/registro/<int:reg_id>/finalizar/', views.finalizar_registro_servicio, name='finalizar_registro_servicio'),
-    path('servicio-custom/registro/<int:reg_id>/cancelar/', views.cancelar_registro_servicio, name='cancelar_registro_servicio'),
     path('configuracion/roles/', views.gestionar_roles, name='gestionar_roles'),
     # ==========================================================================
     # GESTIÓN DE SALAS

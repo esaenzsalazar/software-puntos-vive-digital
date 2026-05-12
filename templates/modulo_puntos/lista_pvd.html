@@ -23,7 +23,6 @@
                     <th>Nombre</th>
                     <th>Dirección</th>
                     <th>Barrio</th>
-                    <th>Teléfono</th>
                     <th>Estado</th>
                     <th class="text-center">Atenciones</th>
                     <th class="text-center">Ciudadanos</th>
@@ -37,7 +36,6 @@
                     <td><strong>{{ pvd.nombre }}</strong></td>
                     <td>{{ pvd.direccion }}</td>
                     <td>{{ pvd.barrio }}</td>
-                    <td>{{ pvd.telefono|default:"—" }}</td>
                     <td>
                         {% if pvd.estado == 'A' %}
                             <span class="badge badge--success">Activo</span>

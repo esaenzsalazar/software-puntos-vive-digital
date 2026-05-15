@@ -59,16 +59,26 @@
 
         {# Acciones #}
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-            {# Cambio de estado controlado #}
+            {# Cambio de estado controlado — filtra por puede_ir_a si está configurado #}
             {% if fun.mod_estados and fun.estados %}
             <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:320px;">
                 {% for est in fun.estados %}
-                    {% if not est.es_terminal or est.nombre != reg.estado_actual %}
-                    <button type="button" class="estado-btn"
-                            style="background:{{ est.color|default:'#64748b' }};color:#fff;"
-                            onclick="cambiarEstado({{ reg.pk }}, '{{ est.nombre|escapejs }}', {% if est.requiere_nota %}true{% else %}false{% endif %})">
-                        {{ est.emoji|default:"" }} {{ est.nombre }}
-                    </button>
+                    {% if est.nombre != reg.estado_actual %}
+                        {% if reg.transiciones_validas %}
+                            {% if est.nombre in reg.transiciones_validas %}
+                            <button type="button" class="estado-btn"
+                                    style="background:{{ est.color|default:'#64748b' }};color:#fff;"
+                                    onclick="cambiarEstado({{ reg.pk }}, '{{ est.nombre|escapejs }}', {% if est.requiere_nota %}true{% else %}false{% endif %})">
+                                {{ est.emoji|default:"" }} {{ est.nombre }}
+                            </button>
+                            {% endif %}
+                        {% else %}
+                            <button type="button" class="estado-btn"
+                                    style="background:{{ est.color|default:'#64748b' }};color:#fff;"
+                                    onclick="cambiarEstado({{ reg.pk }}, '{{ est.nombre|escapejs }}', {% if est.requiere_nota %}true{% else %}false{% endif %})">
+                                {{ est.emoji|default:"" }} {{ est.nombre }}
+                            </button>
+                        {% endif %}
                     {% endif %}
                 {% endfor %}
             </div>

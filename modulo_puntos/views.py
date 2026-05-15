@@ -2947,9 +2947,16 @@ def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
     fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
     _verificar_acceso_pvd_svc(request, pvd, svc)
 
-    registros_activos  = fun.registros_funcion.filter(activo=True).select_related('ciudadano', 'creado_por')
-    registros_cerrados = fun.registros_funcion.filter(activo=False).select_related('ciudadano')[:50]
+    registros_activos_qs = fun.registros_funcion.filter(activo=True).select_related('ciudadano', 'creado_por')
+    registros_cerrados   = fun.registros_funcion.filter(activo=False).select_related('ciudadano')[:50]
     ciudadanos = Ciudadano.objects.filter(estado='A').order_by('primer_apellido') if fun.mod_ciudadano else []
+
+    # Anotar cada registro activo con sus transiciones válidas (para filtrar botones en template)
+    cfg_por_estado = {e['nombre']: e for e in fun.estados} if fun.estados else {}
+    registros_activos = list(registros_activos_qs)
+    for reg in registros_activos:
+        cfg = cfg_por_estado.get(reg.estado_actual, {})
+        reg.transiciones_validas = cfg.get('puede_ir_a', [])
 
     estados_map = {}
     if fun.mod_estados and fun.estados:
@@ -2958,16 +2965,19 @@ def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
         for reg in registros_activos:
             key = reg.estado_actual
             if key not in estados_map:
-                estados_map[key] = {'config': {'nombre': key, 'color': '#64748b', 'es_terminal': False}, 'registros': []}
+                estados_map[key] = {'config': {'nombre': key, 'color': '#64748b', 'es_terminal': False, 'puede_ir_a': []}, 'registros': []}
             estados_map[key]['registros'].append(reg)
 
-    # Alertas de stock
+    # Alertas de stock + info de disponibilidad para multi-stock
     alertas_stock = []
+    stock_items_info = []
     if fun.mod_stock:
         if fun.usa_multi_stock:
             for item in fun.stock_items:
                 disp = fun.stock_item_disponible(item['nombre'])
+                en_uso = fun.stock_item_en_uso(item['nombre'])
                 alerta = item.get('alerta_en')
+                stock_items_info.append({**item, 'disponible': disp, 'en_uso': en_uso})
                 if alerta is not None and disp <= alerta:
                     alertas_stock.append({'nombre': item['nombre'], 'disponible': disp, 'alerta_en': alerta})
         elif fun.stock_alerta_activa:
@@ -2982,6 +2992,7 @@ def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
         'ciudadanos': ciudadanos,
         'estados_map': estados_map,
         'alertas_stock': alertas_stock,
+        'stock_items_info': stock_items_info,
         'estados_json': _json.dumps(fun.estados),
         'campos_json': _json.dumps(fun.campos),
     })
@@ -3211,10 +3222,10 @@ def encuesta_registro_view(request, pvd_id, svc_id, fun_id, reg_id):
 
     if request.method == 'POST' and not ya_respondida:
         respuestas = {}
-        for pregunta in preguntas:
-            texto = pregunta.get('texto', '').strip()
+        for i, pregunta in enumerate(preguntas):
+            texto = pregunta.get('pregunta', '').strip()
             if texto:
-                respuestas[texto] = request.POST.get(f'preg_{preguntas.index(pregunta)}', '').strip()
+                respuestas[texto] = request.POST.get(f'preg_{i}', '').strip()
         reg.encuesta_respuestas = respuestas
         reg.agregar_evento('encuesta', 'Encuesta de satisfacción completada.', request.user)
         reg.save()

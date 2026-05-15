@@ -424,17 +424,78 @@
 {# PANEL ADMIN PVD — filtrado por módulos habilitados del PVD activo #}
 {# ============================================================================ #}
 {% elif es_admin_pvd_only %}
+
+{# ── Servicios personalizados (sección principal) ── #}
+{% if pvd_activo %}
+{% with custom_svcs=pvd_activo.servicios_personalizados.all %}
+<div class="content-section" style="margin-bottom:8px;">
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+            <h3 class="section-title" style="margin:0;">✨ Servicios personalizados</h3>
+            <p class="muted" style="margin:4px 0 0; font-size:13px;">Flujos de trabajo propios de {{ pvd_activo.nombre }}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary btn--sm">📚 Plantillas de red</a>
+            <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}" class="btn btn--sm">+ Nuevo servicio</a>
+        </div>
+    </div>
+
+    {% with habilitados=custom_svcs|length %}
+    {% if habilitados == 0 %}
+    <div style="margin-top:16px;padding:28px;background:#f8fafc;border:2px dashed #e2e8f0;border-radius:12px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:10px;">⚙️</div>
+        <div style="font-size:15px;font-weight:600;color:#1e293b;margin-bottom:6px;">Aún no hay servicios personalizados</div>
+        <p style="font-size:13px;color:#64748b;max-width:400px;margin:0 auto 16px;">
+            Crea servicios con formularios, flujos de estados, control de stock, agenda y más — adaptados exactamente a lo que necesitas.
+        </p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}" class="btn">+ Crear mi primer servicio</a>
+            <a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary">📚 Ver plantillas disponibles</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="grid" style="margin-top:16px;">
+        {% for svc in custom_svcs %}{% if svc.habilitado %}
+        <div style="border:1px solid #e2e8f0;border-left:4px solid #8b5cf6;border-radius:12px;padding:16px;background:#fff;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s;">
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="font-size:26px;line-height:1;flex-shrink:0;">{{ svc.icono }}</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:14px;font-weight:700;color:#1e293b;">{{ svc.nombre }}</div>
+                    {% if svc.descripcion %}
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">{{ svc.descripcion }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if svc.funciones_servicio.filter %}
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                {% for fun in svc.funciones_servicio.all %}
+                <span style="font-size:11px;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;font-weight:500;">{{ fun.nombre }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div style="margin-top:auto;padding-top:8px;border-top:1px solid #f1f5f9;">
+                <a class="btn btn--sm" style="width:100%;text-align:center;" href="{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}">Abrir → Gestionar</a>
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}
+
+{# ── Módulos estándar del sistema ── #}
 <div class="content-section">
     <div class="section-header">
-        <h3 class="section-title">🏢 Funciones de Admin PVD</h3>
+        <h3 class="section-title">🏢 Módulos del sistema</h3>
         {% if pvd_activo %}
-        <p class="muted" style="margin:4px 0 0; font-size:13px;">
-            Mostrando solo los módulos habilitados para <strong>{{ pvd_activo.nombre }}</strong>
-        </p>
+        <p class="muted" style="margin:4px 0 0; font-size:13px;">Módulos habilitados para <strong>{{ pvd_activo.nombre }}</strong></p>
         {% endif %}
     </div>
 
-    <div class="grid" style="margin-top: 24px;">
+    <div class="grid" style="margin-top:16px;">
 
         {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'ciudadanos' in modulos_pvd_activo %}
         <div class="menu-card">
@@ -471,7 +532,7 @@
 
         {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'salas' in modulos_pvd_activo or 'habilitaciones' in modulos_pvd_activo %}
         <div class="menu-card">
-            <h3>🏛️ Infraestructura</h3>
+            <h3>🏛️ Salas y Espacios</h3>
             <p>Gestionar salas y habilitar espacios para uso.</p>
             <div class="menu-card__actions">
                 {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'salas' in modulos_pvd_activo %}<a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>{% endif %}
@@ -504,38 +565,6 @@
 
     </div>
 </div>
-
-{# ── Servicios personalizados habilitados en este PVD ── #}
-{% if pvd_activo %}
-{% with custom_svcs=pvd_activo.servicios_personalizados.all %}
-{% if custom_svcs %}
-<div class="content-section">
-    <div class="section-header">
-        <h3 class="section-title">✨ Servicios personalizados</h3>
-        <p class="muted" style="margin:4px 0 0; font-size:13px;">Servicios propios de {{ pvd_activo.nombre }}</p>
-    </div>
-    <div class="grid" style="margin-top:16px;">
-        {% for svc in custom_svcs %}{% if svc.habilitado %}
-        <div class="menu-card" style="border-left:4px solid #8b5cf6;">
-            <h3>{{ svc.icono }} {{ svc.nombre }}</h3>
-            <p>{{ svc.descripcion|default:"Servicio personalizado de este PVD." }}</p>
-            {% if svc.incluye_extra %}
-            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
-                {% for item in svc.incluye_extra %}
-                <span style="font-size:11px; background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:20px;">{{ item }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
-            <div class="menu-card__actions" style="margin-top:10px;">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}">Gestionar</a>
-            </div>
-        </div>
-        {% endif %}{% endfor %}
-    </div>
-</div>
-{% endif %}
-{% endwith %}
-{% endif %}
 
 {# ============================================================================ #}
 {# PANEL POR DEFECTO (si no coincide ningún rol) #}

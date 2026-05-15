@@ -143,42 +143,85 @@
 </div>
 
 {# ── MODAL crear / editar servicio personalizado ─────────────────────────── #}
-<div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:14px; width:100%; max-width:560px; margin:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
-        <div style="background:var(--primary-color,#1e40af); color:#fff; padding:18px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
-            <h3 id="modal-titulo" style="margin:0; font-size:17px; font-weight:700;">Nuevo servicio</h3>
-            <button type="button" onclick="cerrarModal()" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer; line-height:1; padding:0 4px;">×</button>
+<div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:16px; width:100%; max-width:580px; box-shadow:0 24px 64px rgba(0,0,0,.28); overflow:hidden; display:flex; flex-direction:column; max-height:92vh;">
+
+        {# Header #}
+        <div style="background:linear-gradient(135deg,#1e40af,#6d28d9); color:#fff; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+            <div>
+                <div id="modal-titulo" style="font-size:17px; font-weight:700; margin:0;">Nuevo servicio personalizado</div>
+                <div id="modal-subtitulo" style="font-size:12px; opacity:.8; margin-top:3px;">Define nombre, icono y luego agrega funciones según lo que necesites</div>
+            </div>
+            <button type="button" onclick="cerrarModal()" style="background:rgba(255,255,255,.15); border:none; color:#fff; font-size:18px; cursor:pointer; line-height:1; padding:6px 10px; border-radius:8px;">×</button>
         </div>
 
-        <div style="padding:24px; display:flex; flex-direction:column; gap:18px; overflow-y:auto; flex:1;">
+        <div style="padding:22px 24px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1;">
             <input type="hidden" id="modal-svc-id" value="">
             <input type="hidden" id="modal-icono" value="⚙️">
 
+            {# Nombre #}
             <div class="form-group" style="margin:0;">
-                <label style="font-weight:600; font-size:13px; display:block; margin-bottom:6px;">Nombre del servicio <span style="color:red;">*</span></label>
-                <input type="text" id="modal-nombre" class="form-control" placeholder="Nombre del nuevo servicio aquí">
+                <label style="font-weight:600; font-size:13px; display:block; margin-bottom:6px;">Nombre del servicio <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="modal-nombre" class="form-control" placeholder="Ej: Préstamo de tablet, Registro de trámite, Solicitud de acceso...">
                 <div id="modal-nombre-error" style="color:#dc2626; font-size:12px; margin-top:4px; display:none;">El nombre es requerido.</div>
             </div>
 
+            {# Descripción #}
             <div class="form-group" style="margin:0;">
                 <label style="font-weight:600; font-size:13px; display:block; margin-bottom:6px;">Descripción <span style="color:#94a3b8; font-weight:400;">(opcional)</span></label>
-                <input type="text" id="modal-descripcion" class="form-control" placeholder="Describe brevemente este servicio...">
+                <input type="text" id="modal-descripcion" class="form-control" placeholder="Para qué sirve este servicio...">
             </div>
 
-            {# ── Nueva función o servicio ── #}
-            <div style="border-top:1px dashed #e2e8f0; padding-top:16px;">
-                <button type="button" class="btn" onclick="irABuilder()" id="btn-nueva-funcion">
-                    ＋ Nueva función o servicio
-                </button>
-                <p style="font-size:11px; color:#64748b; margin:6px 0 0;">Guarda este servicio y abre el constructor de funciones.</p>
+            {# Selector de icono #}
+            <div class="form-group" style="margin:0;">
+                <label style="font-weight:600; font-size:13px; display:block; margin-bottom:8px;">Icono del servicio</label>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;" id="emoji-picker">
+                    {% for emoji in emojis_sugeridos %}
+                    <button type="button" class="emoji-btn" onclick="seleccionarEmoji('{{ emoji }}')">{{ emoji }}</button>
+                    {% endfor %}
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="emoji-preview" style="font-size:28px; width:40px; text-align:center;">⚙️</span>
+                    <input type="text" id="emoji-custom" class="form-control" style="width:80px; font-size:16px; text-align:center;" placeholder="..." maxlength="4"
+                           oninput="seleccionarEmoji(this.value)">
+                    <span style="font-size:12px; color:#94a3b8;">O escribe tu propio emoji</span>
+                </div>
             </div>
+
+            <div id="modal-error-bar" style="display:none; padding:10px 14px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; color:#991b1b; font-size:13px; font-weight:600;"></div>
+
+            {# ── Separador: ¿qué quieres hacer? ── #}
+            <div id="seccion-acciones" style="border-top:1px solid #e2e8f0; padding-top:16px;">
+                <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#64748b; margin-bottom:12px;">¿Qué quieres hacer con este servicio?</div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+
+                    {# Opción A: Solo guardar #}
+                    <div class="accion-card" onclick="accionSeleccionada('guardar')" id="accion-guardar">
+                        <div style="font-size:20px; margin-right:12px; flex-shrink:0;">💾</div>
+                        <div>
+                            <div style="font-size:13px; font-weight:700; color:#1e293b; margin-bottom:2px;">Solo registrar el servicio</div>
+                            <div style="font-size:12px; color:#64748b;">Crea el servicio y lo agrega a la lista. Puedes configurar funciones después.</div>
+                        </div>
+                    </div>
+
+                    {# Opción B: Ir al constructor #}
+                    <div class="accion-card" onclick="accionSeleccionada('builder')" id="accion-builder">
+                        <div style="font-size:20px; margin-right:12px; flex-shrink:0;">🔧</div>
+                        <div>
+                            <div style="font-size:13px; font-weight:700; color:#1e293b; margin-bottom:2px;">Crear y configurar funciones personalizadas</div>
+                            <div style="font-size:12px; color:#64748b;">Guarda el servicio y abre el <strong>Constructor de funciones</strong> donde puedes agregar formularios, flujos de estados, control de stock, agenda, encuestas y más.</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
         </div>
 
-        <div id="modal-error-bar" style="display:none; margin:0 24px 0; padding:10px 14px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; color:#991b1b; font-size:13px; font-weight:600;"></div>
-
-        <div style="padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end; flex-shrink:0;">
+        {# Footer #}
+        <div style="padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end; flex-shrink:0; background:#f8fafc;">
             <button type="button" onclick="cerrarModal()" class="btn btn-secondary">Cancelar</button>
-            <button type="button" onclick="guardarServicio()" id="modal-btn-guardar" class="btn">Guardar servicio</button>
+            <button type="button" onclick="ejecutarAccion()" id="modal-btn-guardar" class="btn" disabled style="opacity:.5;">Selecciona una opción…</button>
         </div>
     </div>
 </div>
@@ -279,6 +322,15 @@
 
 .no-resultados{padding:24px;text-align:center;color:#94a3b8;font-size:13px;}
 @media(max-width:640px){.servicios-grid{grid-template-columns:1fr;}}
+
+/* ── Modal mejorado ── */
+.emoji-btn{font-size:20px;padding:5px 8px;border:2px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;transition:border-color .12s,background .12s;line-height:1;}
+.emoji-btn:hover{border-color:#a78bfa;background:#f5f3ff;}
+.emoji-btn.selected{border-color:#6d28d9;background:#ede9fe;}
+
+.accion-card{display:flex;align-items:flex-start;padding:14px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:border-color .15s,background .15s;}
+.accion-card:hover{border-color:#a78bfa;background:#faf8ff;}
+.accion-card.selected{border-color:#6d28d9;background:#f5f3ff;}
 </style>
 
 {% block extra_scripts %}
@@ -288,8 +340,29 @@ const URL_CREAR = "{% url 'modulo_puntos:crear_servicio_personalizado' pvd_id=pv
 const PVD_ID   = {{ pvd.pk }};
 let currentModulosSistema = [];
 
-// ── IR AL BUILDER DE FUNCIONES ───────────────────────────────────────────────
-async function irABuilder() {
+// ── EMOJI PICKER ─────────────────────────────────────────────────────────────
+let accionActual = null;
+
+function seleccionarEmoji(emoji) {
+    if (!emoji.trim()) return;
+    document.getElementById('modal-icono').value = emoji;
+    document.getElementById('emoji-preview').textContent = emoji;
+    document.querySelectorAll('.emoji-btn').forEach(b => {
+        b.classList.toggle('selected', b.textContent.trim() === emoji.trim());
+    });
+}
+
+function accionSeleccionada(accion) {
+    accionActual = accion;
+    document.getElementById('accion-guardar').classList.toggle('selected', accion === 'guardar');
+    document.getElementById('accion-builder').classList.toggle('selected', accion === 'builder');
+    const btn = document.getElementById('modal-btn-guardar');
+    btn.disabled = false; btn.style.opacity = '1';
+    btn.textContent = accion === 'builder' ? '🔧 Guardar y configurar funciones' : '💾 Crear servicio';
+}
+
+async function ejecutarAccion() {
+    if (!accionActual) return;
     const nombre = document.getElementById('modal-nombre').value.trim();
     if (!nombre) {
         document.getElementById('modal-nombre-error').style.display = 'block';
@@ -297,35 +370,52 @@ async function irABuilder() {
         return;
     }
     document.getElementById('modal-nombre-error').style.display = 'none';
-
-    const btn = document.getElementById('btn-nueva-funcion');
-    btn.disabled = true; btn.textContent = 'Guardando...';
+    ocultarErrorModal();
 
     const svcId = document.getElementById('modal-svc-id').value;
-    if (svcId) {
-        window.location.href = `/pvd/${PVD_ID}/servicio/${svcId}/funcion/nueva/?from_wizard=1`;
-        return;
-    }
-
+    const icono = document.getElementById('modal-icono').value || '⚙️';
     const payload = {
         nombre,
-        icono:           '⚙️',
+        icono,
         descripcion:     document.getElementById('modal-descripcion').value.trim(),
         modulos_sistema: currentModulosSistema,
         incluye_extra:   [],
     };
 
+    const btn = document.getElementById('modal-btn-guardar');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    // Si ya existe el servicio y vamos al builder, redirige directo
+    if (svcId && accionActual === 'builder') {
+        window.location.href = `/pvd/${PVD_ID}/servicio/${svcId}/funcion/nueva/?from_wizard=1`;
+        return;
+    }
+
+    // Si ya existe y solo guardamos, guardar cambios
+    const url = svcId ? `/pvd/servicios/personalizado/${svcId}/editar/` : URL_CREAR;
+
     try {
-        const r    = await fetch(URL_CREAR, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(payload) });
-        const text = await r.text();
-        const data = JSON.parse(text);
-        if (!data.ok) { mostrarErrorModal(data.error || 'Error al guardar.'); btn.disabled = false; btn.textContent = '＋ Nueva función o servicio'; return; }
-        window.location.href = `/pvd/${PVD_ID}/servicio/${data.id}/funcion/nueva/?from_wizard=1`;
+        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(payload) });
+        const data = await r.json();
+        if (!data.ok) { mostrarErrorModal(data.error || 'Error al guardar.'); btn.disabled = false; accionSeleccionada(accionActual); return; }
+
+        if (accionActual === 'builder') {
+            window.location.href = `/pvd/${PVD_ID}/servicio/${data.id}/funcion/nueva/?from_wizard=1`;
+        } else {
+            if (svcId) actualizarTarjetaCustom(data);
+            else       agregarTarjetaCustom(data);
+            cerrarModal();
+            actualizarContador();
+        }
     } catch {
-        btn.disabled = false; btn.textContent = '＋ Nueva función o servicio';
+        btn.disabled = false; accionSeleccionada(accionActual);
         mostrarErrorModal('No se pudo conectar con el servidor.');
     }
+
 }
+
+// Función legado para compatibilidad (irABuilder ya no se usa en el modal)
+async function irABuilder() { accionSeleccionada('builder'); ejecutarAccion(); }
 
 // Mapa código → label para mostrar en tarjetas creadas via JS
 const MODULOS_MAP = {
@@ -392,23 +482,39 @@ document.getElementById('buscador-servicios').addEventListener('input', function
 
 // ── MODAL OPEN ───────────────────────────────────────────────────────────────
 function abrirModalCrear() {
+    accionActual = null;
     document.getElementById('modal-svc-id').value = '';
-    document.getElementById('modal-titulo').textContent = 'Nuevo servicio';
-    document.getElementById('modal-btn-guardar').textContent = 'Crear servicio';
+    document.getElementById('modal-titulo').textContent = 'Nuevo servicio personalizado';
+    document.getElementById('modal-subtitulo').textContent = 'Define nombre, icono y luego elige qué hacer';
     document.getElementById('modal-nombre').value = '';
     document.getElementById('modal-descripcion').value = '';
     document.getElementById('modal-nombre-error').style.display = 'none';
+    seleccionarEmoji('⚙️');
+    document.getElementById('emoji-custom').value = '';
+    document.getElementById('accion-guardar').classList.remove('selected');
+    document.getElementById('accion-builder').classList.remove('selected');
+    const btn = document.getElementById('modal-btn-guardar');
+    btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = 'Selecciona una opción…';
+    document.getElementById('seccion-acciones').style.display = '';
     currentModulosSistema = [];
     mostrarModal();
 }
 
 function abrirModalEditar(id, nombre, icono, descripcion, modulosSistema) {
+    accionActual = null;
     document.getElementById('modal-svc-id').value = id;
     document.getElementById('modal-titulo').textContent = 'Editar servicio';
-    document.getElementById('modal-btn-guardar').textContent = 'Guardar cambios';
+    document.getElementById('modal-subtitulo').textContent = 'Modifica los datos o abre el constructor de funciones';
     document.getElementById('modal-nombre').value = nombre;
     document.getElementById('modal-descripcion').value = descripcion || '';
     document.getElementById('modal-nombre-error').style.display = 'none';
+    seleccionarEmoji(icono || '⚙️');
+    document.getElementById('emoji-custom').value = '';
+    document.getElementById('accion-guardar').classList.remove('selected');
+    document.getElementById('accion-builder').classList.remove('selected');
+    const btn = document.getElementById('modal-btn-guardar');
+    btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = 'Selecciona una opción…';
+    document.getElementById('seccion-acciones').style.display = '';
     currentModulosSistema = Array.isArray(modulosSistema) ? modulosSistema : [];
     mostrarModal();
 }
@@ -422,6 +528,12 @@ function cerrarModal() { document.getElementById('modal-overlay').style.display 
 
 document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+// guardarServicio ahora delega en ejecutarAccion con acción 'guardar'
+function guardarServicio() {
+    if (!accionActual) accionSeleccionada('guardar');
+    ejecutarAccion();
+}
 
 // ── GUARDAR ──────────────────────────────────────────────────────────────────
 function mostrarErrorModal(msg) {

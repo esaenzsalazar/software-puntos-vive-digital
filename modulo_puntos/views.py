@@ -1461,6 +1461,7 @@ def wizard_servicios_pvd(request, pvd_id):
         'capacidades_info': CAPACIDADES_INFO,
         'capacidades_por_grupo': CAPACIDADES_POR_GRUPO,
         'servicios_personalizados': servicios_personalizados,
+        'emojis_sugeridos': ['⚙️','📋','🎯','📦','🔑','📅','💻','🛠️','📝','🏷️','🔔','👤','🌐','📊','✅'],
     })
 
 

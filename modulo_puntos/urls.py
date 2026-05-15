@@ -122,7 +122,6 @@ urlpatterns = [
     # ==========================================================================
     path('servicios-custom/', views.lista_servicios_custom_view, name='lista_servicios_custom'),
     path('servicio-custom/<int:svc_id>/', views.gestionar_servicio_custom, name='gestionar_servicio_custom'),
-    path('configuracion/roles/', views.gestionar_roles, name='gestionar_roles'),
     # ==========================================================================
     # GESTIÓN DE SALAS
     # ==========================================================================

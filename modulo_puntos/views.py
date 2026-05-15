@@ -2948,9 +2948,25 @@ def crear_funcion_view(request, pvd_id, svc_id):
     if plantilla_id:
         try:
             pl = PlantillaFuncion.objects.get(pk=plantilla_id, activa=True)
-            funcion_base = pl  # template will read its fields pre-populated
+            funcion_base = pl
         except PlantillaFuncion.DoesNotExist:
             pass
+
+    # El template usa {{ funcion_base.X }} como argumento de |default:, y Django no captura
+    # VariableDoesNotExist en argumentos de filtro. Si funcion_base es None el template
+    # explota con VariableDoesNotExist. Se pasa un objeto con valores vacíos para evitarlo.
+    if funcion_base is None:
+        from types import SimpleNamespace
+        funcion_base = SimpleNamespace(
+            nombre='', descripcion='',
+            campos=[], estados=[], agenda_config={}, encuesta_config=[], stock_items=[],
+            mod_formulario=False, mod_estados=False, mod_ciudadano=False,
+            mod_stock=False, mod_agenda=False, mod_encuesta=False,
+            ciudadano_rol_etiqueta='Ciudadano', ciudadano_requerido=False,
+            ciudadano_permite_inline=False, ciudadano_campos_inline=[],
+            stock_nombre='', stock_total=0, stock_unidad='unidades', stock_alerta_en=None,
+        )
+
     return render(request, 'modulo_puntos/builder_funcion.html', {
         'pvd': pvd,
         'svc': svc,

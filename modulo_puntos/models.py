@@ -464,6 +464,8 @@ class RegistroFuncion(models.Model):
     agenda_hora  = models.TimeField(null=True, blank=True, verbose_name='Hora de turno')
     # Bitácora de eventos: [{tipo, texto, fecha_iso, usuario}]
     bitacora = models.JSONField(default=list, verbose_name='Bitácora de eventos')
+    # Respuestas a la encuesta de satisfacción: {pregunta_texto: respuesta}
+    encuesta_respuestas = models.JSONField(default=dict, verbose_name='Respuestas de encuesta')
     creado_en      = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
     creado_por = models.ForeignKey(

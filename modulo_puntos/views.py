@@ -3157,6 +3157,8 @@ def cerrar_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
         reg.agregar_evento('cierre', request.POST.get('nota_cierre', 'Cerrado manualmente.').strip() or 'Cerrado manualmente.', request.user)
         reg.save()
         messages.success(request, 'Registro cerrado.')
+        if fun.mod_encuesta and fun.encuesta_config:
+            return redirect('modulo_puntos:encuesta_registro', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id, reg_id=reg_id)
     return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
 
 
@@ -3194,6 +3196,37 @@ def agregar_nota_registro_view(request, pvd_id, svc_id, fun_id, reg_id):
         else:
             messages.warning(request, 'La nota no puede estar vacía.')
     return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def encuesta_registro_view(request, pvd_id, svc_id, fun_id, reg_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    preguntas = fun.encuesta_config if isinstance(fun.encuesta_config, list) else []
+    ya_respondida = bool(reg.encuesta_respuestas)
+
+    if request.method == 'POST' and not ya_respondida:
+        respuestas = {}
+        for pregunta in preguntas:
+            texto = pregunta.get('texto', '').strip()
+            if texto:
+                respuestas[texto] = request.POST.get(f'preg_{preguntas.index(pregunta)}', '').strip()
+        reg.encuesta_respuestas = respuestas
+        reg.agregar_evento('encuesta', 'Encuesta de satisfacción completada.', request.user)
+        reg.save()
+        messages.success(request, 'Encuesta registrada. ¡Gracias!')
+        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+    return render(request, 'modulo_puntos/encuesta_registro.html', {
+        'pvd': pvd, 'svc': svc, 'fun': fun, 'reg': reg,
+        'preguntas': preguntas,
+        'ya_respondida': ya_respondida,
+        'pvd_id': pvd_id, 'svc_id': svc_id, 'fun_id': fun_id,
+    })
 
 
 @login_required(login_url='/login/')

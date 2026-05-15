@@ -1,0 +1,116 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Encuesta — {{ fun.nombre }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:680px; margin:0 auto;">
+    <div class="page-hero" style="padding-bottom:20px;">
+        <span class="eyebrow">Servicios personalizados › {{ svc.nombre }} › {{ fun.nombre }}</span>
+        <h1 class="page-title" style="font-size:1.4rem; margin-bottom:6px;">
+            {{ fun.icono|default:"📋" }} Encuesta de satisfacción
+        </h1>
+        <p class="muted">Registro: <strong>{{ reg.persona_display }}</strong></p>
+    </div>
+
+    {% if ya_respondida %}
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:28px; text-align:center; margin-bottom:8px;">
+        <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+        <h3 style="margin:0 0 8px; color:#166534;">Encuesta ya completada</h3>
+        <p class="muted" style="margin:0 0 16px;">Este registro ya tiene respuestas de encuesta guardadas.</p>
+        <details style="text-align:left; margin-top:16px;">
+            <summary style="cursor:pointer; font-weight:600; color:#374151; font-size:14px;">Ver respuestas guardadas</summary>
+            <div style="margin-top:12px;">
+                {% for pregunta, respuesta in reg.encuesta_respuestas.items %}
+                <div style="margin-bottom:12px; padding:10px 14px; background:white; border:1px solid #e2e8f0; border-radius:8px;">
+                    <div style="font-size:12px; font-weight:600; color:#64748b; margin-bottom:4px;">{{ pregunta }}</div>
+                    <div style="font-size:14px; color:#1e293b;">{{ respuesta|default:"—" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        <a href="{% url 'modulo_puntos:gestionar_funcion' pvd_id=pvd_id svc_id=svc_id fun_id=fun_id %}"
+           class="btn btn--sm" style="margin-top:16px;">← Volver a la función</a>
+    </div>
+
+    {% else %}
+    <form method="POST">
+        {% csrf_token %}
+        <div style="margin-bottom:24px;">
+            {% if preguntas %}
+                {% for pregunta in preguntas %}
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-weight:600; color:#1e293b; margin-bottom:8px; font-size:14px;">
+                        {{ forloop.counter }}. {{ pregunta.texto }}
+                        {% if pregunta.requerida %}<span style="color:#dc2626;">*</span>{% endif %}
+                    </label>
+
+                    {% if pregunta.tipo == 'opcion' %}
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            {% for op in pregunta.opciones %}
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:#374151;">
+                                <input type="radio"
+                                       name="preg_{{ forloop.parentloop.counter0 }}"
+                                       value="{{ op }}"
+                                       {% if pregunta.requerida %}required{% endif %}
+                                       style="accent-color:#0f4a9b;">
+                                {{ op }}
+                            </label>
+                            {% endfor %}
+                        </div>
+
+                    {% elif pregunta.tipo == 'estrellas' %}
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            {% for val in "12345" %}
+                            <label style="display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;">
+                                <input type="radio"
+                                       name="preg_{{ forloop.parentloop.counter0 }}"
+                                       value="{{ val }}"
+                                       {% if pregunta.requerida %}required{% endif %}
+                                       style="accent-color:#0f4a9b;">
+                                <span style="font-size:20px;">⭐</span>
+                                <span style="font-size:11px; color:#64748b;">{{ val }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+
+                    {% elif pregunta.tipo == 'si_no' %}
+                        <div style="display:flex; gap:16px;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                                <input type="radio" name="preg_{{ forloop.counter0 }}" value="Sí"
+                                       {% if pregunta.requerida %}required{% endif %}
+                                       style="accent-color:#0f4a9b;"> Sí
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                                <input type="radio" name="preg_{{ forloop.counter0 }}" value="No"
+                                       style="accent-color:#0f4a9b;"> No
+                            </label>
+                        </div>
+
+                    {% else %}
+                        <textarea name="preg_{{ forloop.counter0 }}"
+                                  rows="3"
+                                  class="form-control"
+                                  placeholder="Escribe tu respuesta..."
+                                  {% if pregunta.requerida %}required{% endif %}
+                                  style="font-size:14px;"></textarea>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; padding:32px; color:#64748b;">
+                    <p>Esta función no tiene preguntas de encuesta configuradas.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #e2e8f0; padding-top:16px;">
+            <a href="{% url 'modulo_puntos:gestionar_funcion' pvd_id=pvd_id svc_id=svc_id fun_id=fun_id %}"
+               class="btn btn-secondary btn--sm">Omitir</a>
+            {% if preguntas %}
+            <button type="submit" class="btn btn--sm">Guardar respuestas</button>
+            {% endif %}
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

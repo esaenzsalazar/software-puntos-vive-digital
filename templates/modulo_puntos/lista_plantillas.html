@@ -67,7 +67,7 @@
             {# Stats #}
             <div style="display:flex;gap:12px;font-size:11px;color:#94a3b8;">
                 <span>📊 {{ pl.instalaciones }} instalación{{ pl.instalaciones|pluralize:"es" }}</span>
-                <span>✍️ {{ pl.creado_por.get_full_name|default:pl.creado_por.username|default:"Sistema" }}</span>
+                <span>✍️ {% if pl.creado_por %}{{ pl.creado_por.get_full_name|default:pl.creado_por.username }}{% else %}Sistema{% endif %}</span>
             </div>
 
             {# Instalar en un servicio #}

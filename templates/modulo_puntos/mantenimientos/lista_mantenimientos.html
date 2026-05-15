@@ -52,7 +52,7 @@
                     </td>
                     <td>{{ mant.fecha|date:"d/m/Y" }}</td>
                     <td style="max-width:260px;">{{ mant.equipos_intervenidos|truncatechars:80 }}</td>
-                    <td>{{ mant.realizado_por.get_full_name|default:mant.realizado_por.username|default:"—" }}</td>
+                    <td>{% if mant.realizado_por %}{{ mant.realizado_por.get_full_name|default:mant.realizado_por.username }}{% else %}—{% endif %}</td>
                     <td class="text-center">
                         <a href="{% url 'modulo_puntos:editar_mantenimiento' mant.id %}" class="btn btn--sm" title="Editar">✏️</a>
                     </td>

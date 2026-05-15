@@ -400,13 +400,61 @@ def historial_ciudadano(request, ciu_cdgo):
     })
 
 
+@login_required(login_url='/login/')
+def ciudadanos_pendientes(request):
+    if not (request.user.is_superuser or usuario_es_admin_tic(request.user)):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pendientes = Ciudadano.objects.filter(estado='P').order_by('-fecha_registro')
+    return render(request, 'modulo_puntos/ciudadanos_pendientes.html', {
+        'ciudadanos_pendientes': pendientes,
+        'total_pendientes': pendientes.count(),
+    })
+
+
+@login_required(login_url='/login/')
+def aprobar_ciudadano(request, ciu_id):
+    if not (request.user.is_superuser or usuario_es_admin_tic(request.user)):
+        messages.error(request, 'No tienes permisos para realizar esta acción.')
+        return redirect('modulo_puntos:panel_control')
+
+    if request.method != 'POST':
+        return redirect('modulo_puntos:ciudadanos_pendientes')
+
+    ciudadano = get_object_or_404(Ciudadano, pk=ciu_id, estado='P')
+    nombre = ciudadano.get_nombre_completo()
+    ciudadano.estado = 'A'
+    ciudadano.save()
+    messages.success(request, f'Ciudadano {nombre} aprobado exitosamente.')
+    return redirect('modulo_puntos:ciudadanos_pendientes')
+
+
+@login_required(login_url='/login/')
+def rechazar_ciudadano(request, ciu_id):
+    if not (request.user.is_superuser or usuario_es_admin_tic(request.user)):
+        messages.error(request, 'No tienes permisos para realizar esta acción.')
+        return redirect('modulo_puntos:panel_control')
+
+    if request.method != 'POST':
+        return redirect('modulo_puntos:ciudadanos_pendientes')
+
+    ciudadano = get_object_or_404(Ciudadano, pk=ciu_id, estado='P')
+    nombre = ciudadano.get_nombre_completo()
+    ciudadano.delete()
+    messages.success(request, f'Registro de {nombre} rechazado y eliminado.')
+    return redirect('modulo_puntos:ciudadanos_pendientes')
+
+
 # ── REGISTRO CIUDADANO PÚBLICO (sin login) ─────────────────────────────────────
 
 def registrar_usuario_ciudadano(request):
     form = CiudadanoForm(request.POST or None)
     if request.method == 'POST':
         if form.is_valid():
-            form.save()
+            ciudadano = form.save(commit=False)
+            ciudadano.estado = 'P'
+            ciudadano.save()
             return redirect('modulo_puntos:registro_exitoso')
         messages.error(request, 'Revisa los datos ingresados.')
     return render(request, 'modulo_puntos/registrar_usuario_ciudadano.html', {'form': form})

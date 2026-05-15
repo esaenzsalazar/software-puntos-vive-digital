@@ -32,6 +32,9 @@ urlpatterns = [
     path('registrar-ciudadano/', views.registrar_ciudadano, name='registrar_ciudadano'),
     path('editar-ciudadano/<int:ciu_cdgo>/', views.editar_ciudadano, name='editar_ciudadano'),
     path('historial-ciudadano/<int:ciu_cdgo>/', views.historial_ciudadano, name='historial_ciudadano'),
+    path('ciudadanos-pendientes/', views.ciudadanos_pendientes, name='ciudadanos_pendientes'),
+    path('ciudadano/<int:ciu_id>/aprobar/', views.aprobar_ciudadano, name='aprobar_ciudadano'),
+    path('ciudadano/<int:ciu_id>/rechazar/', views.rechazar_ciudadano, name='rechazar_ciudadano'),
 
     # ==========================================================================
     # REGISTRO DE USUARIO CIUDADANO (Sin autenticación)

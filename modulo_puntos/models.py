@@ -43,6 +43,7 @@ class Ciudadano(models.Model):
     ESTADO_CHOICES = [
         ('A', 'Activo'),
         ('I', 'Inactivo'),
+        ('P', 'Pendiente'),
     ]
     GENERO_CHOICES = [
         ('M', 'Masculino'),

@@ -30,7 +30,7 @@
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm">Editar</a>
-                <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn-primary btn--sm">+ Nueva Sesión</a>
+                <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm">+ Nueva Sesión</a>
                 <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">Inscribir Ciudadano</a>
                 <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm">← Volver</a>
             </div>
@@ -85,7 +85,7 @@
             <h2 style="margin:0;font-size:16px;font-weight:700;color:#1e293b;">Sesiones</h2>
             <span class="muted" style="font-size:13px;">{{ sesiones.count }} sesión{{ sesiones.count|pluralize:"es" }} registrada{{ sesiones.count|pluralize:"s" }}</span>
         </div>
-        <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn-primary btn--sm">+ Nueva Sesión</a>
+        <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm">+ Nueva Sesión</a>
     </div>
 
     {% if sesiones %}

@@ -14,7 +14,7 @@
                 </p>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <a href="{% url 'modulo_puntos:crear_habilitacion' %}" class="btn btn-primary">
+                <a href="{% url 'modulo_puntos:crear_habilitacion' %}" class="btn">
                     ➕ Nueva Habilitación
                 </a>
                 <a href="{% url 'modulo_puntos:lista_salas' %}" class="btn">
@@ -51,7 +51,7 @@
             </select>
         </div>
         <div style="display:flex; gap:8px;">
-            <button type="submit" class="btn btn-primary btn--sm">Filtrar</button>
+            <button type="submit" class="btn btn--sm">Filtrar</button>
             <a href="{% url 'modulo_puntos:lista_habilitaciones' %}" class="btn btn--sm">Limpiar</a>
         </div>
     </form>

@@ -1,31 +1,45 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Consultar Ciudadanos{% endblock %}
+{% block title %}Ciudadanos{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="page-hero">
         <span class="eyebrow">Ciudadanos</span>
         <h2 class="page-title">Consultar ciudadanos</h2>
-        <p class="muted">Búsqueda por nombre, apellido o número de documento.</p>
+        <p class="muted">Búsqueda por nombre, apellido, documento, teléfono o barrio.</p>
     </div>
 
     <form method="GET">
-        <label for="q">Término de búsqueda</label>
         <div class="search-row">
-            <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. 123456, Juan, Pérez" aria-label="Término de búsqueda">
+            <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control"
+                   placeholder="Ej. 123456, Juan, Pérez, barrio…" aria-label="Buscar ciudadano">
+            {% if pvd_filtro %}<input type="hidden" name="pvd" value="{{ pvd_filtro }}">{% endif %}
             <div class="search-row__actions">
                 <button type="submit" class="btn">Buscar</button>
                 <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Limpiar</a>
             </div>
         </div>
     </form>
+
+    {# Filtro PVD — solo Admin TIC / Superusuario #}
+    {% if pvds_para_filtro %}
+    <form method="GET" style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        {% if busqueda %}<input type="hidden" name="q" value="{{ busqueda }}">{% endif %}
+        <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">PVD:</label>
+        <select name="pvd" class="form-control" style="width:auto;min-width:200px;" onchange="this.form.submit()">
+            <option value="">— Todos los PVDs —</option>
+            {% for pvd in pvds_para_filtro %}
+            <option value="{{ pvd.pk }}" {% if pvd_filtro == pvd.pk|stringformat:"s" %}selected{% endif %}>{{ pvd.nombre }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
 </div>
 
 <div class="card">
     <div class="toolbar">
         <h3>Resultados: <span class="text-accent">{{ total_resultados }}</span></h3>
-        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary btn--sm">Volver al panel</a>
     </div>
 
     {% if ciudadanos %}
@@ -37,28 +51,42 @@
                         <th>Nombre del Ciudadano</th>
                         <th>Contacto</th>
                         <th>Ubicación</th>
+                        {% if not es_admin_pvd_solo %}<th>PVD</th>{% endif %}
                         <th>Estado</th>
-                        <th style="text-align: right;">Acciones</th>
+                        <th style="text-align:right;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ciudadano in ciudadanos %}
                         <tr>
                             <td>
-                                <strong>{{ ciudadano.numero_documento }}</strong><br>
-                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.tipo_documento }}</span>
+                                <strong>{{ ciudadano.numero_documento|default:"—" }}</strong><br>
+                                <span style="font-size:12px;color:#64748b;">{{ ciudadano.tipo_documento|default:"" }}</span>
                             </td>
                             <td>
-                                <strong class="text-accent" style="font-size: 15px;">{{ ciudadano.get_nombre_completo }}</strong><br>
-                                <span style="font-size: 13px; color: #64748b;">{{ ciudadano.ocupacion }}</span>
+                                <strong class="text-accent" style="font-size:15px;">{{ ciudadano.get_nombre_completo }}</strong><br>
+                                <span style="font-size:13px;color:#64748b;">{{ ciudadano.ocupacion|default:"" }}</span>
                             </td>
                             <td>
-                                <span style="font-size: 14px;">📞 {{ ciudadano.telefono }}</span>
+                                {% if ciudadano.telefono %}
+                                <span style="font-size:14px;">📞 {{ ciudadano.telefono }}</span>
+                                {% else %}
+                                <span style="color:#94a3b8;font-size:13px;">—</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <strong>{{ ciudadano.barrio|default:"No registrado" }}</strong><br>
-                                <span style="font-size: 12px; color: #64748b;">{{ ciudadano.direccion|default:"Sin dirección" }}</span>
+                                <span style="font-size:12px;color:#64748b;">{{ ciudadano.direccion|default:"" }}</span>
                             </td>
+                            {% if not es_admin_pvd_solo %}
+                            <td style="font-size:12px;white-space:nowrap;">
+                                {% if ciudadano.punto_vive_digital %}
+                                <span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:20px;font-weight:600;">{{ ciudadano.punto_vive_digital.nombre }}</span>
+                                {% else %}
+                                <span style="color:#94a3b8;">—</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
                             <td>
                                 {% if ciudadano.estado == 'A' %}
                                     <span class="badge badge-success">Activo</span>
@@ -66,7 +94,7 @@
                                     <span class="badge badge-danger">Inactivo</span>
                                 {% endif %}
                             </td>
-                            <td style="text-align: right;">
+                            <td style="text-align:right;">
                                 <div class="cell-actions">
                                     <a class="btn btn--sm" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.id %}">Editar</a>
                                     <a class="btn btn-secondary btn--sm" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.id %}">Historial</a>
@@ -77,9 +105,33 @@
                 </tbody>
             </table>
         </div>
+
+        {# ── Paginación ── #}
+        {% if page_obj.has_other_pages %}
+        <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding:16px 0;flex-wrap:wrap;">
+            {% if page_obj.has_previous %}
+            <a href="?{% if busqueda %}q={{ busqueda }}&{% endif %}{% if pvd_filtro %}pvd={{ pvd_filtro }}&{% endif %}page={{ page_obj.previous_page_number }}"
+               class="btn btn-secondary btn--sm">← Anterior</a>
+            {% endif %}
+            <span style="font-size:13px;color:#64748b;padding:0 8px;">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+            {% if page_obj.has_next %}
+            <a href="?{% if busqueda %}q={{ busqueda }}&{% endif %}{% if pvd_filtro %}pvd={{ pvd_filtro }}&{% endif %}page={{ page_obj.next_page_number }}"
+               class="btn btn-secondary btn--sm">Siguiente →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
     {% else %}
         <div class="empty-state">
-            <p class="muted" style="font-size: 16px; margin: 0;">No se encontraron ciudadanos con esa búsqueda.</p>
+            <p class="muted" style="font-size:16px;margin:0;">
+                {% if busqueda or pvd_filtro %}
+                No se encontraron ciudadanos con esa búsqueda.
+                {% else %}
+                Aún no hay ciudadanos registrados.
+                {% endif %}
+            </p>
         </div>
     {% endif %}
 </div>

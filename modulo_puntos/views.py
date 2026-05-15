@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, Permission, User
 from django.db.models import Q, Count, Avg, Max
 from django.db.models.functions import TruncMonth
+from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
@@ -272,22 +273,57 @@ def consultar_ciudadanos(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    busqueda = request.GET.get('q', '').strip()
-    ciudadanos = Ciudadano.objects.all().order_by('-pk')
+    user = request.user
+    es_admin_pvd_solo = (
+        not user.is_superuser
+        and not usuario_es_admin_tic(user)
+        and user.groups.filter(name='Administrador PVD').exists()
+    )
+
+    busqueda  = request.GET.get('q', '').strip()
+    pvd_filtro = request.GET.get('pvd', '').strip()
+
+    ciudadanos = Ciudadano.objects.select_related('punto_vive_digital').order_by('-pk')
+
+    # Admin PVD solo ve su PVD activo
+    if es_admin_pvd_solo:
+        pvd_id = request.session.get('pvd_activo_id')
+        if pvd_id:
+            ciudadanos = ciudadanos.filter(punto_vive_digital_id=pvd_id)
+        else:
+            ciudadanos = ciudadanos.none()
+    elif pvd_filtro:
+        ciudadanos = ciudadanos.filter(punto_vive_digital_id=pvd_filtro)
 
     if busqueda:
         ciudadanos = ciudadanos.filter(
             Q(numero_documento__icontains=busqueda) |
-            Q(primer_nombre__icontains=busqueda) |
-            Q(primer_apellido__icontains=busqueda) |
-            Q(segundo_nombre__icontains=busqueda) |
-            Q(segundo_apellido__icontains=busqueda)
+            Q(primer_nombre__icontains=busqueda)   |
+            Q(primer_apellido__icontains=busqueda)  |
+            Q(segundo_nombre__icontains=busqueda)   |
+            Q(segundo_apellido__icontains=busqueda) |
+            Q(telefono__icontains=busqueda)         |
+            Q(barrio__icontains=busqueda)
         )
 
+    total_resultados = ciudadanos.count()
+    paginator = Paginator(ciudadanos, 25)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+
+    # Lista de PVDs para el filtro (solo para Admin TIC / Super)
+    pvds_para_filtro = (
+        PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+        if not es_admin_pvd_solo else []
+    )
+
     return render(request, 'modulo_puntos/consultar_ciudadanos.html', {
-        'ciudadanos': ciudadanos,
+        'ciudadanos': page_obj,
+        'page_obj': page_obj,
         'busqueda': busqueda,
-        'total_resultados': ciudadanos.count(),
+        'pvd_filtro': pvd_filtro,
+        'pvds_para_filtro': pvds_para_filtro,
+        'total_resultados': total_resultados,
+        'es_admin_pvd_solo': es_admin_pvd_solo,
     })
 
 

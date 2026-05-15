@@ -15,7 +15,7 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 {% if user.is_superuser %}
-                <a href="{% url 'modulo_puntos:crear_recurso' %}" class="btn btn-primary btn--sm">+ Nuevo recurso</a>
+                <a href="{% url 'modulo_puntos:crear_recurso' %}" class="btn btn--sm">+ Nuevo recurso</a>
                 {% endif %}
                 <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn--sm">Exportar préstamos CSV</a>
             </div>

@@ -84,19 +84,27 @@
                     {% if fun.mod_formulario and fun.campos %}
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
                         {% for campo in fun.campos %}
-                        <div class="form-group" style="margin:0;">
+                        <div class="form-group" style="{% if campo.tipo == 'textarea' %}grid-column:1/-1;{% endif %}margin:0;">
                             <label style="font-weight:600;font-size:13px;display:block;margin-bottom:5px;">
                                 {{ campo.nombre }}{% if campo.requerido %} <span style="color:red;">*</span>{% endif %}
                             </label>
                             {% if campo.tipo == 'textarea' %}
                             <textarea name="campo_{{ campo.nombre }}" class="form-control" rows="2" {% if campo.requerido %}required{% endif %}></textarea>
                             {% elif campo.tipo == 'numero' %}
-                            <input type="number" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            <input type="number" name="campo_{{ campo.nombre }}" class="form-control" step="1" {% if campo.requerido %}required{% endif %}>
+                            {% elif campo.tipo == 'decimal' %}
+                            <input type="number" name="campo_{{ campo.nombre }}" class="form-control" step="0.01" {% if campo.requerido %}required{% endif %}>
                             {% elif campo.tipo == 'fecha' %}
                             <input type="date" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            {% elif campo.tipo == 'hora' %}
+                            <input type="time" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            {% elif campo.tipo == 'email' %}
+                            <input type="email" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                            {% elif campo.tipo == 'telefono' %}
+                            <input type="tel" name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
                             {% elif campo.tipo == 'booleano' %}
-                            <select name="campo_{{ campo.nombre }}" class="form-control">
-                                <option value="">—</option>
+                            <select name="campo_{{ campo.nombre }}" class="form-control" {% if campo.requerido %}required{% endif %}>
+                                <option value="">— Seleccionar —</option>
                                 <option value="Sí">Sí</option>
                                 <option value="No">No</option>
                             </select>

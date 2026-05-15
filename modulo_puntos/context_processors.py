@@ -8,7 +8,9 @@ from django.urls import reverse, NoReverseMatch
 _FUNCTION_URL_NAMES = frozenset({
     'gestionar_servicio_custom', 'gestionar_funcion', 'crear_funcion',
     'editar_funcion', 'crear_registro_funcion', 'cambiar_estado_registro_funcion',
-    'cerrar_registro_funcion', 'eliminar_funcion',
+    'cerrar_registro_funcion', 'reabrir_registro_funcion', 'agregar_nota_registro',
+    'api_slots_agenda', 'eliminar_funcion', 'crear_plantilla_desde_funcion',
+    'instalar_plantilla', 'lista_plantillas',
 })
 
 # (label, parent_label, parent_url_name)
@@ -59,9 +61,14 @@ _BREADCRUMB_MAP = {
     'crear_sesion_curso':    ('Nueva Sesión',          'Cursos',                'lista_cursos'),
     'inscribir_ciudadano':   ('Inscripción',           'Cursos',                'lista_cursos'),
     'marcar_asistencia':     ('Asistencia',            'Cursos',                'lista_cursos'),
-    # Servicios personalizados
-    'lista_servicios_custom':    ('Servicios Personalizados', 'Panel',          'panel_control'),
-    'gestionar_servicio_custom': ('Gestión de servicio',  'Servicios Personalizados', 'lista_servicios_custom'),
+    # Servicios personalizados y plantillas
+    'lista_servicios_custom':         ('Servicios Personalizados', 'Panel',                     'panel_control'),
+    'gestionar_servicio_custom':      ('Gestión de servicio',      'Servicios Personalizados',  'lista_servicios_custom'),
+    'gestionar_funcion':              ('Gestionar función',        'Servicios Personalizados',  'lista_servicios_custom'),
+    'crear_funcion':                  ('Nueva función',            'Servicios Personalizados',  'lista_servicios_custom'),
+    'editar_funcion':                 ('Editar función',           'Servicios Personalizados',  'lista_servicios_custom'),
+    'lista_plantillas':               ('Plantillas de red',        'Panel',                     'panel_control'),
+    'crear_plantilla_desde_funcion':  ('Crear plantilla',         'Plantillas de red',          'lista_plantillas'),
     # Mantenimientos
     'lista_mantenimientos':  ('Mantenimientos',        'Panel',                 'panel_control'),
     'crear_mantenimiento':   ('Nuevo Mantenimiento',   'Mantenimientos',        'lista_mantenimientos'),

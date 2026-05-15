@@ -286,38 +286,60 @@ class ServicioPersonalizado(models.Model):
 
 class FuncionServicio(models.Model):
     """
-    Función creada por el operador dentro de un ServicioPersonalizado.
-    Cada función activa uno o varios módulos funcionales (formulario, estados,
-    ciudadano, stock) y almacena su configuración en campos JSON.
+    Función creada dentro de un ServicioPersonalizado.
+    Combina hasta 6 módulos pluggables: formulario, estados, ciudadano,
+    stock (inventario), agenda (citas/turnos) y encuesta automática.
+    Cada módulo tiene su propia sección de configuración en JSON.
     """
     servicio = models.ForeignKey(
         'ServicioPersonalizado', on_delete=models.CASCADE,
         related_name='funciones', verbose_name='Servicio'
     )
-    nombre = models.CharField(max_length=200, verbose_name='Nombre de la función')
+    nombre      = models.CharField(max_length=200, verbose_name='Nombre de la función')
     descripcion = models.TextField(blank=True, default='', verbose_name='Descripción')
 
     # ── Módulos activos ───────────────────────────────────────────────────────
-    mod_formulario = models.BooleanField(default=False, verbose_name='Módulo: Formulario libre')
-    mod_estados    = models.BooleanField(default=False, verbose_name='Módulo: Estados personalizados')
-    mod_ciudadano  = models.BooleanField(default=False, verbose_name='Módulo: Vínculo ciudadano')
-    mod_stock      = models.BooleanField(default=False, verbose_name='Módulo: Control de stock')
+    mod_formulario = models.BooleanField(default=False, verbose_name='Módulo: Formulario')
+    mod_estados    = models.BooleanField(default=False, verbose_name='Módulo: Estados')
+    mod_ciudadano  = models.BooleanField(default=False, verbose_name='Módulo: Ciudadano')
+    mod_stock      = models.BooleanField(default=False, verbose_name='Módulo: Inventario')
+    mod_agenda     = models.BooleanField(default=False, verbose_name='Módulo: Agenda/Citas')
+    mod_encuesta   = models.BooleanField(default=False, verbose_name='Módulo: Encuesta automática')
 
     # ── Config: formulario ────────────────────────────────────────────────────
-    # [{nombre, tipo, requerido, opciones:[]}]
+    # [{nombre, tipo, requerido, opciones:[], visible_si:{campo,valor}|null}]
+    # tipo: texto|textarea|numero|decimal|fecha|hora|email|telefono|booleano|lista|multiselect|calificacion|separador
     campos = models.JSONField(default=list, verbose_name='Campos del formulario')
 
     # ── Config: estados ───────────────────────────────────────────────────────
-    # [{nombre, color, es_terminal}]
-    estados = models.JSONField(default=list, verbose_name='Estados personalizados')
+    # [{nombre, color, emoji, es_terminal, es_inicial, puede_ir_a:[], requiere_nota}]
+    estados = models.JSONField(default=list, verbose_name='Estados del proceso')
 
     # ── Config: ciudadano ─────────────────────────────────────────────────────
-    ciudadano_requerido = models.BooleanField(default=False, verbose_name='Ciudadano requerido')
+    ciudadano_requerido      = models.BooleanField(default=False, verbose_name='Ciudadano requerido')
+    ciudadano_rol_etiqueta   = models.CharField(max_length=50, default='Ciudadano', blank=True,
+                                                verbose_name='Etiqueta del rol')
+    ciudadano_permite_inline = models.BooleanField(default=False,
+                                                   verbose_name='Captura datos inline si no está registrado')
+    ciudadano_campos_inline  = models.JSONField(default=list,
+                                                verbose_name='Campos extra a capturar inline')
 
-    # ── Config: stock ─────────────────────────────────────────────────────────
-    stock_nombre = models.CharField(max_length=200, blank=True, default='', verbose_name='Nombre del ítem')
-    stock_total  = models.PositiveIntegerField(default=0, verbose_name='Cantidad total')
-    stock_unidad = models.CharField(max_length=50, blank=True, default='unidades', verbose_name='Unidad')
+    # ── Config: stock (ítem único legacy + multi-ítem nuevo) ─────────────────
+    stock_nombre   = models.CharField(max_length=200, blank=True, default='', verbose_name='Nombre del ítem')
+    stock_total    = models.PositiveIntegerField(default=0, verbose_name='Cantidad total')
+    stock_unidad   = models.CharField(max_length=50, blank=True, default='unidades', verbose_name='Unidad')
+    stock_alerta_en = models.PositiveIntegerField(null=True, blank=True,
+                                                  verbose_name='Alerta cuando disponibles ≤')
+    # [{nombre, total, unidad, alerta_en}]  — si no vacío, reemplaza los campos legacy
+    stock_items    = models.JSONField(default=list, verbose_name='Múltiples ítems de inventario')
+
+    # ── Config: agenda ────────────────────────────────────────────────────────
+    # {dias:[0-6], hora_inicio:"HH:MM", hora_fin:"HH:MM", duracion_min:int, max_por_franja:int}
+    agenda_config  = models.JSONField(default=dict, verbose_name='Configuración de agenda')
+
+    # ── Config: encuesta automática ───────────────────────────────────────────
+    # [{pregunta, tipo: "calificacion"|"texto"}]
+    encuesta_config = models.JSONField(default=list, verbose_name='Preguntas de encuesta de cierre')
 
     activo    = models.BooleanField(default=True, verbose_name='Activo')
     orden     = models.PositiveIntegerField(default=0, verbose_name='Orden')
@@ -333,12 +355,22 @@ class FuncionServicio(models.Model):
     def __str__(self):
         return f'{self.servicio.nombre} → {self.nombre}'
 
+    # ── Estado inicial ────────────────────────────────────────────────────────
     @property
     def estado_inicial(self):
+        for e in self.estados:
+            if e.get('es_inicial'):
+                return e['nombre']
         return self.estados[0]['nombre'] if self.estados else ''
+
+    # ── Stock: soporte legacy (1 ítem) y multi-ítem ───────────────────────────
+    @property
+    def usa_multi_stock(self):
+        return bool(self.stock_items)
 
     @property
     def stock_en_uso(self):
+        """Para ítem único legacy."""
         from django.db.models import Sum
         return self.registros_funcion.filter(activo=True).aggregate(
             t=Sum('stock_cantidad'))['t'] or 0
@@ -346,6 +378,55 @@ class FuncionServicio(models.Model):
     @property
     def stock_disponible(self):
         return max(0, self.stock_total - self.stock_en_uso)
+
+    @property
+    def stock_alerta_activa(self):
+        if not self.mod_stock or self.usa_multi_stock:
+            return False
+        if self.stock_alerta_en is None:
+            return False
+        return self.stock_disponible <= self.stock_alerta_en
+
+    def stock_item_en_uso(self, nombre_item):
+        """Unidades en uso de un ítem específico (multi-stock)."""
+        total = 0
+        for reg in self.registros_funcion.filter(activo=True):
+            sel = reg.stock_seleccion or {}
+            total += sel.get(nombre_item, 0)
+        return total
+
+    def stock_item_disponible(self, nombre_item):
+        item = next((i for i in self.stock_items if i['nombre'] == nombre_item), None)
+        if not item:
+            return 0
+        return max(0, item['total'] - self.stock_item_en_uso(nombre_item))
+
+    # ── Agenda: slots disponibles para una fecha ──────────────────────────────
+    def slots_agenda(self, fecha):
+        """Retorna lista de (hora_str, ocupados, max) para la fecha dada."""
+        import datetime
+        cfg = self.agenda_config or {}
+        if not cfg:
+            return []
+        try:
+            h_ini  = datetime.time.fromisoformat(cfg['hora_inicio'])
+            h_fin  = datetime.time.fromisoformat(cfg['hora_fin'])
+            dur    = int(cfg.get('duracion_min', 30))
+            maximo = int(cfg.get('max_por_franja', 1))
+        except (KeyError, ValueError):
+            return []
+        slots = []
+        actual = datetime.datetime.combine(fecha, h_ini)
+        fin    = datetime.datetime.combine(fecha, h_fin)
+        while actual < fin:
+            hora_str = actual.strftime('%H:%M')
+            ocupados = self.registros_funcion.filter(
+                activo=True, agenda_fecha=fecha,
+                agenda_hora=actual.time()).count()
+            slots.append({'hora': hora_str, 'ocupados': ocupados, 'max': maximo,
+                          'disponible': ocupados < maximo})
+            actual += datetime.timedelta(minutes=dur)
+        return slots
 
 
 class RegistroFuncion(models.Model):
@@ -365,17 +446,25 @@ class RegistroFuncion(models.Model):
     estado_actual = models.CharField(
         max_length=100, blank=True, default='', verbose_name='Estado actual'
     )
-    datos = models.JSONField(default=dict, verbose_name='Datos del formulario')
-    stock_cantidad = models.PositiveIntegerField(default=1, verbose_name='Cantidad (stock)')
+    datos          = models.JSONField(default=dict, verbose_name='Datos del formulario')
+    stock_cantidad = models.PositiveIntegerField(default=1, verbose_name='Cantidad (ítem único)')
+    # {nombre_item: cantidad} para multi-stock
+    stock_seleccion = models.JSONField(default=dict, verbose_name='Ítems tomados (multi-stock)')
     fecha_fin_esperada = models.DateTimeField(null=True, blank=True, verbose_name='Fecha fin esperada')
     fecha_fin_real     = models.DateTimeField(null=True, blank=True, verbose_name='Fecha fin real')
     notas  = models.TextField(blank=True, default='', verbose_name='Notas')
     activo = models.BooleanField(default=True, verbose_name='Activo')
-    creado_en     = models.DateTimeField(auto_now_add=True)
+    # Agenda
+    agenda_fecha = models.DateField(null=True, blank=True, verbose_name='Fecha de turno')
+    agenda_hora  = models.TimeField(null=True, blank=True, verbose_name='Hora de turno')
+    # Bitácora de eventos: [{tipo, texto, fecha_iso, usuario}]
+    bitacora = models.JSONField(default=list, verbose_name='Bitácora de eventos')
+    creado_en      = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
     creado_por = models.ForeignKey(
         'auth.User', on_delete=models.SET_NULL,
-        null=True, blank=True, verbose_name='Creado por'
+        null=True, blank=True, related_name='registros_funcion_creados',
+        verbose_name='Creado por'
     )
 
     class Meta:
@@ -388,11 +477,88 @@ class RegistroFuncion(models.Model):
     @property
     def persona_display(self):
         if self.ciudadano:
-            return f"{self.ciudadano.primer_nombre} {self.ciudadano.primer_apellido}"
+            n = f"{self.ciudadano.primer_nombre} {self.ciudadano.primer_apellido}".strip()
+            return n or self.ciudadano.numero_documento
         return self.nombre_persona or '—'
+
+    def agregar_evento(self, tipo, texto, usuario=None):
+        """Añade un evento a la bitácora sin guardar — llama a save() después."""
+        from django.utils import timezone
+        evento = {
+            'tipo':    tipo,
+            'texto':   texto,
+            'fecha':   timezone.now().isoformat(),
+            'usuario': (usuario.get_full_name() or usuario.username) if usuario else 'Sistema',
+        }
+        if not self.bitacora:
+            self.bitacora = []
+        self.bitacora.append(evento)
 
     def __str__(self):
         return f'{self.funcion.nombre} — {self.persona_display}'
+
+
+class PlantillaFuncion(models.Model):
+    """
+    Plantilla reutilizable de función creada por Admin TIC o superusuario.
+    Cualquier Admin PVD puede instalarla en sus servicios con un clic,
+    generando una copia local editable de la función.
+    """
+    nombre      = models.CharField(max_length=200, verbose_name='Nombre de la plantilla')
+    descripcion = models.CharField(max_length=500, blank=True, verbose_name='Descripción')
+    icono       = models.CharField(max_length=20, default='📋', verbose_name='Icono (emoji)')
+    categoria   = models.CharField(max_length=100, blank=True, default='General',
+                                   verbose_name='Categoría')
+    # Flags de módulos
+    mod_formulario = models.BooleanField(default=False)
+    mod_estados    = models.BooleanField(default=False)
+    mod_ciudadano  = models.BooleanField(default=False)
+    mod_stock      = models.BooleanField(default=False)
+    mod_agenda     = models.BooleanField(default=False)
+    mod_encuesta   = models.BooleanField(default=False)
+    # Configs (misma estructura que FuncionServicio)
+    campos                   = models.JSONField(default=list)
+    estados                  = models.JSONField(default=list)
+    ciudadano_requerido      = models.BooleanField(default=False)
+    ciudadano_rol_etiqueta   = models.CharField(max_length=50, default='Ciudadano', blank=True)
+    ciudadano_permite_inline = models.BooleanField(default=False)
+    ciudadano_campos_inline  = models.JSONField(default=list)
+    stock_nombre             = models.CharField(max_length=200, blank=True, default='')
+    stock_total              = models.PositiveIntegerField(default=0)
+    stock_unidad             = models.CharField(max_length=50, blank=True, default='unidades')
+    stock_alerta_en          = models.PositiveIntegerField(null=True, blank=True)
+    stock_items              = models.JSONField(default=list)
+    agenda_config            = models.JSONField(default=dict)
+    encuesta_config          = models.JSONField(default=list)
+    # Metadatos
+    solo_admin_tic  = models.BooleanField(default=False,
+                                          verbose_name='Solo Admin TIC puede instalar')
+    instalaciones   = models.PositiveIntegerField(default=0, verbose_name='Veces instalada')
+    activa          = models.BooleanField(default=True, verbose_name='Activa en biblioteca')
+    creado_por      = models.ForeignKey('auth.User', on_delete=models.SET_NULL,
+                                        null=True, blank=True, verbose_name='Creada por')
+    creado_en       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table  = 'pvd_plantillas_funcion'
+        ordering  = ['categoria', 'nombre']
+        verbose_name = 'Plantilla de función'
+        verbose_name_plural = 'Plantillas de funciones'
+
+    def __str__(self):
+        return f'[{self.categoria}] {self.nombre}'
+
+    @property
+    def modulos_activos(self):
+        m = []
+        if self.mod_formulario: m.append('📋')
+        if self.mod_estados:    m.append('🔄')
+        if self.mod_ciudadano:  m.append('👤')
+        if self.mod_stock:      m.append('📦')
+        if self.mod_agenda:     m.append('📅')
+        if self.mod_encuesta:   m.append('⭐')
+        return m
 
 
 class Satisfaccion(models.Model):

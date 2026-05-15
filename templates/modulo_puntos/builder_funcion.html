@@ -2,13 +2,70 @@
 {% block title %}{{ funcion|yesno:"Editar,Nueva" }} función — {{ svc.nombre }}{% endblock %}
 
 {% block content %}
+<style>
+/* ── Builder layout ─────────────────────────────────────────────────────── */
+.bld-section{padding:20px 24px;border-bottom:1px solid #e2e8f0;}
+.bld-section:last-child{border-bottom:none;}
+.bld-section__title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#6d28d9;margin-bottom:12px;}
+.bld-label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;}
+
+/* ── Módulos ────────────────────────────────────────────────────────────── */
+.modulos-list{display:flex;flex-direction:column;gap:0;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;}
+.modulo-item{border-bottom:1px solid #e2e8f0;}
+.modulo-item:last-child{border-bottom:none;}
+.modulo-item--active .modulo-item__header{background:#f5f3ff;}
+.modulo-item__header{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;user-select:none;transition:background .15s;}
+.modulo-item__header:hover{background:#f8fafc;}
+.modulo-item__icon{font-size:22px;flex-shrink:0;}
+.modulo-item__info{flex:1;min-width:0;}
+.modulo-item__title{font-size:14px;font-weight:700;color:#1e293b;display:block;}
+.modulo-item__desc{font-size:12px;color:#64748b;display:block;margin-top:1px;}
+.modulo-item__body{display:none;}
+.modulo-item--active .modulo-item__body{display:block;}
+.modulo-item__inner{padding:16px 18px;background:#fafaf9;border-top:1px solid #e2e8f0;}
+
+/* ── Toggle switch ─────────────────────────────────────────────────────── */
+.bld-toggle{width:40px;height:22px;background:#cbd5e1;border-radius:11px;position:relative;transition:background .2s;flex-shrink:0;}
+.bld-toggle--on{background:#6d28d9;}
+.bld-toggle__thumb{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.bld-toggle--on .bld-toggle__thumb{left:20px;}
+
+/* ── Campo / Estado rows ───────────────────────────────────────────────── */
+.campo-row,.estado-row,.item-row,.preg-row{display:flex;gap:6px;align-items:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;transition:border-color .15s;}
+.campo-row:hover,.estado-row:hover,.item-row:hover,.preg-row:hover{border-color:#a78bfa;}
+.campo-row .drag-handle,.estado-row .drag-handle,.item-row .drag-handle,.preg-row .drag-handle{color:#cbd5e1;cursor:grab;font-size:16px;padding-top:6px;flex-shrink:0;}
+.campo-row .form-control,.estado-row .form-control,.item-row .form-control,.preg-row .form-control{font-size:13px;padding:6px 8px;}
+.campo-row select,.estado-row select,.item-row select,.preg-row select{font-size:13px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;}
+.btn-remove{background:none;border:none;color:#f87171;cursor:pointer;font-size:18px;padding:4px;line-height:1;flex-shrink:0;}
+.btn-remove:hover{color:#dc2626;}
+
+/* Terminal badge */
+.terminal-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;white-space:nowrap;}
+.terminal-badge--off{background:#f1f5f9;color:#64748b;border-color:#cbd5e1;}
+.terminal-badge--on{background:#dcfce7;color:#15803d;border-color:#86efac;}
+.inicial-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;white-space:nowrap;}
+.inicial-badge--off{background:#f1f5f9;color:#64748b;border-color:#cbd5e1;}
+.inicial-badge--on{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd;}
+.nota-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;white-space:nowrap;}
+.nota-badge--off{background:#f1f5f9;color:#64748b;border-color:#cbd5e1;}
+.nota-badge--on{background:#fef9c3;color:#854d0e;border-color:#fde047;}
+
+/* Tooltip info */
+.info-chip{display:inline-block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.4;}
+
+/* Días de agenda */
+.dias-grid{display:flex;gap:4px;flex-wrap:wrap;}
+.dia-btn{padding:5px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#64748b;transition:all .15s;}
+.dia-btn.active{background:#6d28d9;color:#fff;border-color:#6d28d9;}
+</style>
+
 <form id="builder-form" autocomplete="off">{% csrf_token %}
 
 <div class="card card--narrow">
     <div class="page-hero">
         <span class="eyebrow">{{ svc.icono }} {{ svc.nombre }} · {{ pvd.nombre }}</span>
-        <h1 class="page-title">{% if funcion %}Editar función{% else %}Nueva función{% endif %}</h1>
-        <p class="muted">Configura el nombre y activa los módulos que necesitas. Cada módulo agrega capacidades al registro.</p>
+        <h1 class="page-title">{% if funcion %}Editar función{% elif funcion_base %}Nueva función desde plantilla{% else %}Nueva función{% endif %}</h1>
+        <p class="muted">Define el nombre y activa los módulos que necesitas. Puedes combinar todos libremente.</p>
     </div>
 
     {# ── Datos básicos ── #}
@@ -17,14 +74,14 @@
             <label class="bld-label">Nombre de la función <span style="color:red;">*</span></label>
             <input type="text" id="fun-nombre" class="form-control" style="font-size:15px;font-weight:600;"
                    placeholder="Ej: Préstamo de tablet, Registro de visita, Solicitud de certificado..."
-                   value="{{ funcion.nombre|default:'' }}">
+                   value="{{ funcion.nombre|default:funcion_base.nombre|default:'' }}">
             <div id="fun-nombre-error" style="color:#dc2626;font-size:12px;margin-top:4px;display:none;">El nombre es requerido.</div>
         </div>
         <div class="form-group" style="margin:0;">
             <label class="bld-label">Descripción <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
             <input type="text" id="fun-desc" class="form-control"
                    placeholder="Describe brevemente para qué sirve esta función..."
-                   value="{{ funcion.descripcion|default:'' }}">
+                   value="{{ funcion.descripcion|default:funcion_base.descripcion|default:'' }}">
         </div>
     </div>
 
@@ -32,581 +89,730 @@
     <div class="bld-section">
         <div class="bld-section__title">Módulos funcionales</div>
         <p class="muted" style="margin:0 0 14px;font-size:13px;">
-            Activa uno o varios módulos según lo que necesites registrar. Puedes combinarlos libremente.
+            Activa uno o varios módulos según lo que necesites. Puedes combinarlos todos libremente.
         </p>
 
         <div class="modulos-list">
 
-            {# ── MÓDULO 1: Formulario de captura ── #}
+            {# ─── MÓDULO 1: Formulario ─── #}
             <div class="modulo-item" id="card-formulario">
                 <div class="modulo-item__header" onclick="toggleModulo('formulario')">
                     <span class="modulo-item__icon">📋</span>
                     <div class="modulo-item__info">
                         <span class="modulo-item__title">Formulario de captura</span>
-                        <span class="modulo-item__desc">Agrega campos personalizados para capturar datos con cada registro</span>
+                        <span class="modulo-item__desc">Campos personalizados que se piden al crear cada registro</span>
                     </div>
                     <div class="bld-toggle" id="sw-formulario"><div class="bld-toggle__thumb"></div></div>
                 </div>
                 <div class="modulo-item__body" id="cfg-formulario">
                     <div class="modulo-item__inner">
-
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                            <div>
-                                <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Campos</span>
-                                <span style="font-size:11px;color:#64748b;margin-left:6px;">Se muestran al crear cada registro</span>
+                            <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Campos del formulario</span>
+                            <div style="display:flex;gap:6px;">
+                                <button type="button" class="btn btn-secondary btn--sm" onclick="agregarSeparador()">+ Separador</button>
+                                <button type="button" class="btn btn--sm" onclick="agregarCampo()">+ Campo</button>
                             </div>
-                            <button type="button" class="btn btn--sm" onclick="agregarCampo()">+ Campo</button>
                         </div>
-
                         <div id="lista-campos" style="display:flex;flex-direction:column;gap:6px;"></div>
-                        <div id="campos-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;border:1px dashed #e2e8f0;border-radius:8px;display:none;">
+                        <p id="campos-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;border:1px dashed #e2e8f0;border-radius:8px;display:none;">
                             Sin campos. Pulsa <strong>+ Campo</strong> para agregar el primero.
-                        </div>
-
-                        <div style="margin-top:10px;padding:10px 12px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">
-                            <p style="margin:0;font-size:11px;color:#1d4ed8;">
-                                <strong>Tipos disponibles:</strong>
-                                Texto · Texto largo · Número entero · Número decimal · Fecha · Hora · Correo · Teléfono · Sí/No · Lista de opciones
-                            </p>
+                        </p>
+                        <div class="info-chip" style="margin-top:10px;">
+                            <strong>Tipos:</strong> Texto · Texto largo · Número · Decimal · Fecha · Hora · Correo · Teléfono · Sí/No · Lista desplegable · Selección múltiple · Calificación (1–5) · Separador visual
                         </div>
                     </div>
                 </div>
             </div>
 
-            {# ── MÓDULO 2: Estados del proceso ── #}
+            {# ─── MÓDULO 2: Estados ─── #}
             <div class="modulo-item" id="card-estados">
                 <div class="modulo-item__header" onclick="toggleModulo('estados')">
                     <span class="modulo-item__icon">🔄</span>
                     <div class="modulo-item__info">
                         <span class="modulo-item__title">Estados del proceso</span>
-                        <span class="modulo-item__desc">Hace seguimiento al avance de cada registro usando etapas personalizadas</span>
+                        <span class="modulo-item__desc">Etapas por las que pasa cada registro (Solicitado → En revisión → Aprobado…)</span>
                     </div>
                     <div class="bld-toggle" id="sw-estados"><div class="bld-toggle__thumb"></div></div>
                 </div>
                 <div class="modulo-item__body" id="cfg-estados">
                     <div class="modulo-item__inner">
-
-                        {# Explicación visual #}
-                        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px;">
-                            <p style="margin:0;font-size:12px;color:#78350f;line-height:1.5;">
-                                <strong>¿Para qué sirve?</strong> Permite ver en qué etapa está cada registro.
-                                Por ejemplo: <em>Solicitado → En revisión → Aprobado</em>.
-                                El primer estado es el inicial. Los que "cierran el proceso" son los finales (el registro queda cerrado y no se puede mover).
-                            </p>
-                        </div>
-
-                        {# Plantillas rápidas #}
-                        <div style="margin-bottom:12px;">
-                            <span style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Carga rápida de estados</span>
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                <button type="button" class="btn btn-secondary btn--sm" onclick="cargarPlantillaEstados('solicitud')">📝 Solicitud</button>
-                                <button type="button" class="btn btn-secondary btn--sm" onclick="cargarPlantillaEstados('prestamo')">📦 Préstamo</button>
-                                <button type="button" class="btn btn-secondary btn--sm" onclick="cargarPlantillaEstados('aprobacion')">✅ Aprobación</button>
-                                <button type="button" class="btn btn-secondary btn--sm" onclick="cargarPlantillaEstados('visita')">🏠 Visita/Atención</button>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Estados</span>
+                            <div style="display:flex;gap:6px;">
+                                <select id="plantilla-estados" onchange="cargarPlantillaEstados(this)" class="form-control" style="font-size:12px;padding:5px 8px;width:auto;">
+                                    <option value="">📂 Cargar plantilla…</option>
+                                    <option value="solicitud">Solicitud simple</option>
+                                    <option value="prestamo">Préstamo</option>
+                                    <option value="aprobacion">Flujo de aprobación</option>
+                                    <option value="visita">Visita técnica</option>
+                                    <option value="capacitacion">Capacitación</option>
+                                </select>
+                                <button type="button" class="btn btn--sm" onclick="agregarEstado()">+ Estado</button>
                             </div>
                         </div>
-
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                            <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Mis estados</span>
-                            <button type="button" class="btn btn--sm" onclick="agregarEstado()">+ Estado</button>
-                        </div>
-
                         <div id="lista-estados" style="display:flex;flex-direction:column;gap:6px;"></div>
-                        <div id="estados-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;border:1px dashed #e2e8f0;border-radius:8px;display:none;">
-                            Sin estados. Carga una plantilla o agrega uno manualmente.
-                        </div>
-
-                        <div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-                            <p style="margin:0;font-size:11px;color:#64748b;">
-                                🔵 Colores solo para identificar visualmente cada etapa · ✅ <strong>Cierra el proceso</strong> = el registro queda finalizado y ya no se puede mover a otro estado
-                            </p>
+                        <p id="estados-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;border:1px dashed #e2e8f0;border-radius:8px;display:none;">
+                            Sin estados. Pulsa <strong>+ Estado</strong> o usa una plantilla.
+                        </p>
+                        <div class="info-chip" style="margin-top:10px;">
+                            Marca un estado como <strong>Inicial</strong> (punto de partida) y otro/s como <strong>Terminal</strong> (cierra el registro automáticamente).<br>
+                            Usa <strong>Transiciones</strong> para controlar a qué estados se puede pasar desde cada uno. Deja vacío para libre.
                         </div>
                     </div>
                 </div>
             </div>
 
-            {# ── MÓDULO 3: Vínculo al ciudadano ── #}
+            {# ─── MÓDULO 3: Ciudadano ─── #}
             <div class="modulo-item" id="card-ciudadano">
                 <div class="modulo-item__header" onclick="toggleModulo('ciudadano')">
                     <span class="modulo-item__icon">👤</span>
                     <div class="modulo-item__info">
-                        <span class="modulo-item__title">Vínculo al ciudadano</span>
-                        <span class="modulo-item__desc">Asocia cada registro a una persona — del sistema o con nombre libre</span>
+                        <span class="modulo-item__title">Vínculo con ciudadano</span>
+                        <span class="modulo-item__desc">Asocia cada registro a una persona registrada en el sistema</span>
                     </div>
                     <div class="bld-toggle" id="sw-ciudadano"><div class="bld-toggle__thumb"></div></div>
                 </div>
                 <div class="modulo-item__body" id="cfg-ciudadano">
                     <div class="modulo-item__inner">
-
-                        {# Explicación visual #}
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-                            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;">
-                                <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:4px;">👤 Ciudadano registrado</div>
-                                <p style="margin:0;font-size:11px;color:#1e3a5f;line-height:1.4;">
-                                    Se busca al ciudadano en el sistema (por nombre o documento). Sus datos quedan vinculados automáticamente.
-                                </p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                            <div>
+                                <label class="bld-label">Etiqueta del rol</label>
+                                <input type="text" id="ciu-etiqueta" class="form-control" placeholder="Ciudadano, Participante, Solicitante…" value="">
                             </div>
-                            <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 12px;">
-                                <div style="font-size:13px;font-weight:700;color:#6d28d9;margin-bottom:4px;">✏️ Nombre libre</div>
-                                <p style="margin:0;font-size:11px;color:#4c1d95;line-height:1.4;">
-                                    Si la persona no está en el sistema, se escribe su nombre directamente. Útil para visitantes o personas externas.
-                                </p>
+                            <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+                                    <input type="checkbox" id="ciu-requerido" style="width:15px;height:15px;">
+                                    <span><strong>Requerido</strong> — no se puede crear un registro sin seleccionar uno</span>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+                                    <input type="checkbox" id="ciu-inline" onchange="toggleCiuInline(this)">
+                                    <span><strong>Captura inline</strong> — si no está registrado, pedir datos básicos al crear</span>
+                                </label>
                             </div>
                         </div>
-
-                        <p style="margin:0 0 12px;font-size:12px;color:#64748b;">
-                            Ambas opciones siempre estarán disponibles al crear un registro. Lo que configuras aquí es si el ciudadano del sistema es <strong>obligatorio</strong> o no.
-                        </p>
-
-                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;">
-                            <input type="checkbox" id="ciudadano-requerido" style="width:17px;height:17px;accent-color:#1e40af;margin-top:1px;flex-shrink:0;"
-                                   {% if funcion.ciudadano_requerido %}checked{% endif %}>
-                            <div>
-                                <div style="font-size:13px;font-weight:700;color:#1e293b;">Ciudadano del sistema requerido</div>
-                                <div style="font-size:11px;color:#64748b;margin-top:2px;">
-                                    Actívalo si el registro <em>siempre</em> debe estar asociado a un ciudadano existente en el sistema.
-                                    Si lo dejas desactivado, el operador puede elegir entre ciudadano del sistema o escribir un nombre libre.
-                                </div>
+                        <div id="ciu-inline-campos" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed #e2e8f0;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <span style="font-size:12px;font-weight:700;color:#374151;">Campos extra inline</span>
+                                <button type="button" class="btn btn--sm" onclick="agregarCampoInline()">+ Campo</button>
                             </div>
-                        </label>
-
+                            <div id="lista-campos-inline" style="display:flex;flex-direction:column;gap:6px;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {# ── MÓDULO 4: Control de inventario ── #}
+            {# ─── MÓDULO 4: Stock ─── #}
             <div class="modulo-item" id="card-stock">
                 <div class="modulo-item__header" onclick="toggleModulo('stock')">
                     <span class="modulo-item__icon">📦</span>
                     <div class="modulo-item__info">
-                        <span class="modulo-item__title">Control de inventario</span>
-                        <span class="modulo-item__desc">Controla la disponibilidad de ítems físicos en tiempo real (tablets, sillas, kits…)</span>
+                        <span class="modulo-item__title">Control de inventario / stock</span>
+                        <span class="modulo-item__desc">Lleva el conteo de recursos disponibles que se consumen con cada registro</span>
                     </div>
                     <div class="bld-toggle" id="sw-stock"><div class="bld-toggle__thumb"></div></div>
                 </div>
                 <div class="modulo-item__body" id="cfg-stock">
                     <div class="modulo-item__inner">
-
-                        {# Explicación visual del flujo #}
-                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:14px;">
-                            <p style="margin:0;font-size:12px;color:#14532d;line-height:1.5;">
-                                <strong>¿Cómo funciona?</strong>
-                                Defines cuántos ítems hay en total.
-                                Cada vez que se crea un registro se descuenta la cantidad prestada del inventario disponible.
-                                Cuando el registro se cierra, las unidades vuelven a estar disponibles automáticamente.
-                            </p>
-                            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#15803d;">
-                                <span style="background:#dcfce7;padding:2px 8px;border-radius:20px;">Total: 5</span>
-                                <span>→</span>
-                                <span style="background:#fef3c7;padding:2px 8px;border-radius:20px;">En uso: 2</span>
-                                <span>→</span>
-                                <span style="background:#dcfce7;padding:2px 8px;border-radius:20px;">Disponibles: 3</span>
-                            </div>
+                        <div style="display:flex;gap:10px;margin-bottom:12px;">
+                            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;">
+                                <input type="radio" name="stock-modo" value="simple" checked onchange="toggleStockModo('simple')">
+                                <span>Un solo ítem</span>
+                            </label>
+                            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;">
+                                <input type="radio" name="stock-modo" value="multi" onchange="toggleStockModo('multi')">
+                                <span>Múltiples ítems</span>
+                            </label>
                         </div>
 
-                        <div style="display:flex;flex-direction:column;gap:12px;">
-                            <div class="form-group" style="margin:0;">
-                                <label class="bld-label" style="font-size:12px;">¿Qué ítem se controla? <span style="color:red;">*</span></label>
-                                <input type="text" id="stock-nombre" class="form-control"
-                                       placeholder="Ej: Tablet, Portátil, Silla, Cámara, Kit de herramientas..."
-                                       value="{{ funcion.stock_nombre|default:'' }}">
-                            </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                                <div class="form-group" style="margin:0;">
-                                    <label class="bld-label" style="font-size:12px;">Cantidad total disponible <span style="color:red;">*</span></label>
-                                    <input type="number" id="stock-total" class="form-control" min="1" placeholder="Ej: 5"
-                                           value="{{ funcion.stock_total|default:'' }}">
+                        {# Stock simple #}
+                        <div id="stock-simple">
+                            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;">
+                                <div>
+                                    <label class="bld-label">Nombre del ítem</label>
+                                    <input type="text" id="stock-nombre" class="form-control" placeholder="Tablet, Bicicleta, Kit escolar…">
                                 </div>
-                                <div class="form-group" style="margin:0;">
-                                    <label class="bld-label" style="font-size:12px;">Nombre de la unidad</label>
-                                    <input type="text" id="stock-unidad" class="form-control"
-                                           placeholder="unidades, equipos, sillas..."
-                                           value="{{ funcion.stock_unidad|default:'unidades' }}">
+                                <div>
+                                    <label class="bld-label">Cantidad total</label>
+                                    <input type="number" id="stock-total" class="form-control" min="0" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="bld-label">Unidad</label>
+                                    <input type="text" id="stock-unidad" class="form-control" placeholder="unidades">
+                                </div>
+                                <div>
+                                    <label class="bld-label">Alerta si quedan ≤</label>
+                                    <input type="number" id="stock-alerta" class="form-control" min="0" placeholder="—">
                                 </div>
                             </div>
                         </div>
-                        <p style="margin:10px 0 0;font-size:11px;color:#64748b;">
-                            💡 Al crear un registro el operador indica cuántas unidades toma (1 por defecto). El sistema valida que no supere el stock disponible.
+
+                        {# Stock multi #}
+                        <div id="stock-multi" style="display:none;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <span style="font-size:12px;font-weight:700;color:#374151;">Ítems del inventario</span>
+                                <button type="button" class="btn btn--sm" onclick="agregarItem()">+ Ítem</button>
+                            </div>
+                            <div id="lista-items" style="display:flex;flex-direction:column;gap:6px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ─── MÓDULO 5: Agenda ─── #}
+            <div class="modulo-item" id="card-agenda">
+                <div class="modulo-item__header" onclick="toggleModulo('agenda')">
+                    <span class="modulo-item__icon">📅</span>
+                    <div class="modulo-item__info">
+                        <span class="modulo-item__title">Agenda / Citas y turnos</span>
+                        <span class="modulo-item__desc">Define horarios disponibles y permite asignar un turno a cada registro</span>
+                    </div>
+                    <div class="bld-toggle" id="sw-agenda"><div class="bld-toggle__thumb"></div></div>
+                </div>
+                <div class="modulo-item__body" id="cfg-agenda">
+                    <div class="modulo-item__inner">
+                        <div style="margin-bottom:12px;">
+                            <label class="bld-label">Días de atención</label>
+                            <div class="dias-grid" id="agenda-dias">
+                                <span class="dia-btn" data-dia="1" onclick="toggleDia(this)">Lun</span>
+                                <span class="dia-btn" data-dia="2" onclick="toggleDia(this)">Mar</span>
+                                <span class="dia-btn" data-dia="3" onclick="toggleDia(this)">Mié</span>
+                                <span class="dia-btn" data-dia="4" onclick="toggleDia(this)">Jue</span>
+                                <span class="dia-btn" data-dia="5" onclick="toggleDia(this)">Vie</span>
+                                <span class="dia-btn" data-dia="6" onclick="toggleDia(this)">Sáb</span>
+                                <span class="dia-btn" data-dia="0" onclick="toggleDia(this)">Dom</span>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+                            <div>
+                                <label class="bld-label">Hora inicio</label>
+                                <input type="time" id="agenda-inicio" class="form-control" value="08:00">
+                            </div>
+                            <div>
+                                <label class="bld-label">Hora fin</label>
+                                <input type="time" id="agenda-fin" class="form-control" value="17:00">
+                            </div>
+                            <div>
+                                <label class="bld-label">Duración (min)</label>
+                                <input type="number" id="agenda-duracion" class="form-control" min="5" step="5" value="30">
+                            </div>
+                            <div>
+                                <label class="bld-label">Máx. por franja</label>
+                                <input type="number" id="agenda-max" class="form-control" min="1" value="1">
+                            </div>
+                        </div>
+                        <div class="info-chip" style="margin-top:10px;">
+                            Al crear un registro se mostrará un selector de fecha y hora disponible según esta configuración.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ─── MÓDULO 6: Encuesta automática ─── #}
+            <div class="modulo-item" id="card-encuesta">
+                <div class="modulo-item__header" onclick="toggleModulo('encuesta')">
+                    <span class="modulo-item__icon">⭐</span>
+                    <div class="modulo-item__info">
+                        <span class="modulo-item__title">Encuesta automática de cierre</span>
+                        <span class="modulo-item__desc">Se activa al cerrar un registro — captura retroalimentación del servicio prestado</span>
+                    </div>
+                    <div class="bld-toggle" id="sw-encuesta"><div class="bld-toggle__thumb"></div></div>
+                </div>
+                <div class="modulo-item__body" id="cfg-encuesta">
+                    <div class="modulo-item__inner">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <span style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Preguntas</span>
+                            <button type="button" class="btn btn--sm" onclick="agregarPregunta()">+ Pregunta</button>
+                        </div>
+                        <div id="lista-preguntas" style="display:flex;flex-direction:column;gap:6px;"></div>
+                        <p id="preguntas-vacio" style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;border:1px dashed #e2e8f0;border-radius:8px;display:none;">
+                            Sin preguntas. Pulsa <strong>+ Pregunta</strong>.
                         </p>
-
+                        <div class="info-chip" style="margin-top:10px;">
+                            Tipos: <strong>Calificación 1–5</strong> (estrellas) y <strong>Texto libre</strong>.
+                        </div>
                     </div>
                 </div>
             </div>
 
         </div>{# /modulos-list #}
-    </div>
+    </div>{# /bld-section módulos #}
 
-    {# ── Error bar ── #}
-    <div id="builder-error" style="display:none;margin:0 0 16px;padding:12px 16px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#991b1b;font-weight:600;font-size:13px;"></div>
-
-    {# ── Acciones ── #}
-    <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid #e2e8f0;flex-wrap:wrap;">
-        <a href="{% if desde_wizard %}{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd.pk %}{% else %}{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}{% endif %}" class="btn btn-secondary">← Cancelar</a>
-        <button type="button" onclick="guardarFuncion()" id="btn-guardar" class="btn">
+    {# ── Guardar ── #}
+    <div class="bld-section" style="display:flex;justify-content:flex-end;gap:10px;align-items:center;padding:16px 24px;">
+        <div id="save-error" style="color:#dc2626;font-size:13px;display:none;flex:1;"></div>
+        <a href="{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}" class="btn btn-secondary">Cancelar</a>
+        <button type="button" class="btn" id="btn-guardar" onclick="guardarFuncion()">
             {% if funcion %}Guardar cambios{% else %}Crear función{% endif %}
         </button>
     </div>
 </div>
-
 </form>
 
-<style>
-/* ── Secciones ── */
-.bld-section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:16px;}
-.bld-section__title{font-size:13px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
-.bld-label{font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;}
-
-/* ── Lista de módulos ── */
-.modulos-list{display:flex;flex-direction:column;gap:10px;}
-
-.modulo-item{border:2px solid #e2e8f0;border-radius:10px;overflow:hidden;transition:border-color .2s;}
-.modulo-item--active{border-color:#1e40af;}
-
-.modulo-item__header{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .15s;}
-.modulo-item__header:hover{background:#f8fafc;}
-.modulo-item__icon{font-size:20px;flex-shrink:0;line-height:1;}
-.modulo-item__info{flex:1;min-width:0;}
-.modulo-item__title{font-size:13px;font-weight:700;color:#1e293b;display:block;}
-.modulo-item__desc{font-size:11px;color:#64748b;display:block;margin-top:1px;}
-
-/* ── Toggle compacto ── */
-.bld-toggle{flex-shrink:0;width:36px;height:20px;background:#cbd5e1;border-radius:10px;position:relative;transition:background .2s;}
-.bld-toggle__thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.18);}
-.bld-toggle--on{background:#1e40af;}
-.bld-toggle--on .bld-toggle__thumb{transform:translateX(16px);}
-
-/* ── Cuerpo expandible ── */
-.modulo-item__body{max-height:0;overflow:hidden;transition:max-height .35s ease;}
-.modulo-item__body--open{max-height:900px;}
-.modulo-item__inner{padding:14px 16px;border-top:1px solid #e2e8f0;background:#f8fafc;}
-
-/* ── Fila de campo ── */
-.campo-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:6px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;}
-.campo-row input[type="text"],.campo-row select{border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;background:#f8fafc;width:100%;}
-.campo-row input[type="text"]:focus,.campo-row select:focus{outline:none;border-color:#1e40af;}
-.campo-row__nombre{min-width:0;}
-.campo-opciones-row{margin:2px 0 4px 10px;}
-.campo-opciones-row input{width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:11px;background:#fff;}
-.campo-opciones-row input:focus{outline:none;border-color:#1e40af;}
-
-/* ── Fila de estado ── */
-.estado-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;}
-.estado-row input[type="text"]{flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;background:#f8fafc;}
-.estado-row input[type="text"]:focus{outline:none;border-color:#1e40af;}
-.color-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s;flex-shrink:0;}
-.color-dot--sel{border-color:#1e293b !important;}
-.color-picker-popup{position:absolute;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);display:flex;gap:6px;flex-wrap:wrap;width:180px;z-index:200;}
-.terminal-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;white-space:nowrap;cursor:pointer;padding:2px 7px;border-radius:20px;border:1px solid #e2e8f0;transition:all .15s;user-select:none;}
-.terminal-badge--on{background:#fef2f2;border-color:#fca5a5;color:#dc2626;font-weight:700;}
-.terminal-badge--off{background:#f8fafc;color:#64748b;}
-</style>
-
-{% block extra_scripts %}
+{# ─── Script del builder ─── #}
 <script>
-const DESDE_WIZARD = {% if desde_wizard %}true{% else %}false{% endif %};
-const URL_GUARDAR = "{% if funcion %}{% url 'modulo_puntos:editar_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=funcion.pk %}{% else %}{% url 'modulo_puntos:crear_funcion' pvd_id=pvd.pk svc_id=svc.pk %}{% endif %}";
-const URL_VOLVER  = DESDE_WIZARD
-    ? "{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd.pk %}"
-    : "{% url 'modulo_puntos:gestionar_servicio_custom' svc_id=svc.pk %}";
-const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+// ── Datos iniciales desde Django ──────────────────────────────────────────
+const CAMPOS_INIT    = {{ funcion.campos|default:funcion_base.campos|default:"[]"|safe }};
+const ESTADOS_INIT   = {{ funcion.estados|default:funcion_base.estados|default:"[]"|safe }};
+const AGENDA_INIT    = {{ funcion.agenda_config|default:funcion_base.agenda_config|default:"{}"|safe }};
+const ENCUESTA_INIT  = {{ funcion.encuesta_config|default:funcion_base.encuesta_config|default:"[]"|safe }};
+const STOCK_ITEMS_INIT = {{ funcion.stock_items|default:funcion_base.stock_items|default:"[]"|safe }};
 
-const COLORES_ESTADO = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#64748b','#f97316','#14b8a6','#ec4899','#0ea5e9'];
-const modActivos = { formulario: false, estados: false, ciudadano: false, stock: false };
+const MODS = {
+    formulario: {{ funcion.mod_formulario|default:funcion_base.mod_formulario|default:"False"|lower }},
+    estados:    {{ funcion.mod_estados|default:funcion_base.mod_estados|default:"False"|lower }},
+    ciudadano:  {{ funcion.mod_ciudadano|default:funcion_base.mod_ciudadano|default:"False"|lower }},
+    stock:      {{ funcion.mod_stock|default:funcion_base.mod_stock|default:"False"|lower }},
+    agenda:     {{ funcion.mod_agenda|default:funcion_base.mod_agenda|default:"False"|lower }},
+    encuesta:   {{ funcion.mod_encuesta|default:funcion_base.mod_encuesta|default:"False"|lower }},
+};
 
-// ── Toggle módulo ──────────────────────────────────────────────────────────
-function toggleModulo(mod) {
-    modActivos[mod] = !modActivos[mod];
-    document.getElementById('sw-' + mod).classList.toggle('bld-toggle--on', modActivos[mod]);
-    document.getElementById('cfg-' + mod).classList.toggle('modulo-item__body--open', modActivos[mod]);
-    document.getElementById('card-' + mod).classList.toggle('modulo-item--active', modActivos[mod]);
-    actualizarVacios();
-}
+const CIU_ETIQUETA    = '{{ funcion.ciudadano_rol_etiqueta|default:funcion_base.ciudadano_rol_etiqueta|default:"Ciudadano"|escapejs }}';
+const CIU_REQUERIDO   = {{ funcion.ciudadano_requerido|default:funcion_base.ciudadano_requerido|default:"False"|lower }};
+const CIU_INLINE      = {{ funcion.ciudadano_permite_inline|default:funcion_base.ciudadano_permite_inline|default:"False"|lower }};
+const CIU_CAMPOS_INLINE = {{ funcion.ciudadano_campos_inline|default:funcion_base.ciudadano_campos_inline|default:"[]"|safe }};
 
-function activarModulo(mod) {
-    if (!modActivos[mod]) toggleModulo(mod);
-}
+const STOCK_NOMBRE  = '{{ funcion.stock_nombre|default:funcion_base.stock_nombre|default:""|escapejs }}';
+const STOCK_TOTAL   = {{ funcion.stock_total|default:funcion_base.stock_total|default:0 }};
+const STOCK_UNIDAD  = '{{ funcion.stock_unidad|default:funcion_base.stock_unidad|default:"unidades"|escapejs }}';
+const STOCK_ALERTA  = {{ funcion.stock_alerta_en|default:funcion_base.stock_alerta_en|default:"null" }};
 
-// ── Campos del formulario ──────────────────────────────────────────────────
-let campoIdx = 0;
+const SAVE_URL = '{% if funcion %}{% url "modulo_puntos:editar_funcion" pvd_id=pvd.pk svc_id=svc.pk fun_id=funcion.pk %}{% else %}{% url "modulo_puntos:crear_funcion" pvd_id=pvd.pk svc_id=svc.pk %}{% endif %}';
+const BACK_URL = '{% url "modulo_puntos:gestionar_servicio_custom" svc_id=svc.pk %}';
+const GESTIONAR_URL_BASE = '{% url "modulo_puntos:gestionar_servicio_custom" svc_id=svc.pk %}';
+
+// ── Tipos de campo disponibles ────────────────────────────────────────────
 const TIPOS_CAMPO = [
-    ['texto',    'Texto corto'],
-    ['textarea', 'Texto largo'],
-    ['numero',   'Número entero'],
-    ['decimal',  'Número decimal'],
-    ['fecha',    'Fecha'],
-    ['hora',     'Hora'],
-    ['email',    'Correo electrónico'],
-    ['telefono', 'Teléfono'],
-    ['booleano', 'Sí / No'],
-    ['lista',    'Lista de opciones'],
+    {v:'texto',       l:'Texto corto'},
+    {v:'textarea',    l:'Texto largo'},
+    {v:'numero',      l:'Número entero'},
+    {v:'decimal',     l:'Número decimal'},
+    {v:'fecha',       l:'Fecha'},
+    {v:'hora',        l:'Hora'},
+    {v:'email',       l:'Correo electrónico'},
+    {v:'telefono',    l:'Teléfono'},
+    {v:'booleano',    l:'Sí / No'},
+    {v:'lista',       l:'Lista desplegable'},
+    {v:'multiselect', l:'Selección múltiple'},
+    {v:'calificacion',l:'Calificación (1–5)'},
 ];
 
-function agregarCampo(nombre='', tipo='texto', requerido=false, opciones='') {
-    const idx  = campoIdx++;
-    const lista = document.getElementById('lista-campos');
-    const div  = document.createElement('div');
-    div.className = 'campo-row';
-    div.dataset.idx = idx;
-    div.innerHTML = `
-        <input type="text" class="campo-row__nombre" placeholder="Nombre del campo" value="${esc(nombre)}">
-        <select class="campo-tipo" style="font-size:12px;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;background:#f8fafc;" onchange="onTipoCambio(this,${idx})">
-            ${TIPOS_CAMPO.map(([v,l]) => `<option value="${v}"${tipo===v?' selected':''}>${l}</option>`).join('')}
-        </select>
-        <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;padding:4px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
-            <input type="checkbox" ${requerido?'checked':''} style="accent-color:#1e40af;"> Req.
-        </label>
-        <button type="button" onclick="eliminarCampo(this,${idx})" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;padding:0 2px;line-height:1;transition:color .15s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">×</button>`;
-    lista.appendChild(div);
-
-    if (tipo === 'lista') {
-        insertarInputOpciones(div, idx, opciones);
-    }
-    actualizarVacios();
-}
-
-function eliminarCampo(btn, idx) {
-    const lista = document.getElementById('lista-campos');
-    btn.closest('.campo-row').remove();
-    lista.querySelector(`.campo-opciones-row[data-for-idx="${idx}"]`)?.remove();
-    actualizarVacios();
-}
-
-function insertarInputOpciones(campoRow, idx, valor='') {
-    const lista = document.getElementById('lista-campos');
-    const opDiv = document.createElement('div');
-    opDiv.className = 'campo-opciones-row';
-    opDiv.dataset.forIdx = idx;
-    opDiv.innerHTML = `
-        <input type="text" placeholder="Opciones separadas por coma: Opción A, Opción B, Opción C"
-               value="${esc(valor)}" style="font-size:12px;">`;
-    campoRow.insertAdjacentElement('afterend', opDiv);
-}
-
-function onTipoCambio(sel, idx) {
-    const lista = document.getElementById('lista-campos');
-    const existing = lista.querySelector(`.campo-opciones-row[data-for-idx="${idx}"]`);
-    if (sel.value === 'lista') {
-        if (!existing) insertarInputOpciones(sel.closest('.campo-row'), idx);
-    } else {
-        existing?.remove();
-    }
-}
-
-function recolectarCampos() {
-    const lista = document.getElementById('lista-campos');
-    const result = [];
-    lista.querySelectorAll('.campo-row').forEach(row => {
-        const idx    = row.dataset.idx;
-        const nombre = row.querySelector('.campo-row__nombre').value.trim();
-        const tipo   = row.querySelector('.campo-tipo').value;
-        const req    = row.querySelector('input[type="checkbox"]').checked;
-        if (!nombre) return;
-        const opRow  = lista.querySelector(`.campo-opciones-row[data-for-idx="${idx}"]`);
-        const opciones = opRow ? opRow.querySelector('input').value.split(',').map(s=>s.trim()).filter(Boolean) : [];
-        result.push({ nombre, tipo, requerido: req, opciones });
-    });
-    return result;
-}
-
-// ── Estados ───────────────────────────────────────────────────────────────
+// ── Plantillas de estados ────────────────────────────────────────────────
 const PLANTILLAS_ESTADOS = {
     solicitud: [
-        { nombre: 'Pendiente',    color: '#f59e0b', es_terminal: false },
-        { nombre: 'En revisión',  color: '#3b82f6', es_terminal: false },
-        { nombre: 'Aprobado',     color: '#10b981', es_terminal: true  },
-        { nombre: 'Rechazado',    color: '#ef4444', es_terminal: true  },
+        {nombre:'Solicitado', color:'#3b82f6', emoji:'📋', es_inicial:true,  es_terminal:false, puede_ir_a:['En revisión','Rechazado'], requiere_nota:false},
+        {nombre:'En revisión',color:'#f59e0b', emoji:'🔍', es_inicial:false, es_terminal:false, puede_ir_a:['Aprobado','Rechazado'],   requiere_nota:false},
+        {nombre:'Aprobado',   color:'#10b981', emoji:'✅', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:false},
+        {nombre:'Rechazado',  color:'#ef4444', emoji:'❌', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:true},
     ],
     prestamo: [
-        { nombre: 'Entregado',    color: '#3b82f6', es_terminal: false },
-        { nombre: 'Devuelto',     color: '#10b981', es_terminal: true  },
-        { nombre: 'Con retraso',  color: '#f59e0b', es_terminal: false },
-        { nombre: 'Perdido',      color: '#ef4444', es_terminal: true  },
+        {nombre:'Entregado',  color:'#8b5cf6', emoji:'📤', es_inicial:true,  es_terminal:false, puede_ir_a:['Devuelto','Con retraso'], requiere_nota:false},
+        {nombre:'Con retraso',color:'#f59e0b', emoji:'⚠️', es_inicial:false, es_terminal:false, puede_ir_a:['Devuelto'],              requiere_nota:true},
+        {nombre:'Devuelto',   color:'#10b981', emoji:'✔️', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:false},
     ],
     aprobacion: [
-        { nombre: 'Enviado',      color: '#64748b', es_terminal: false },
-        { nombre: 'En proceso',   color: '#3b82f6', es_terminal: false },
-        { nombre: 'Aprobado',     color: '#10b981', es_terminal: true  },
-        { nombre: 'Denegado',     color: '#ef4444', es_terminal: true  },
+        {nombre:'Borrador',   color:'#64748b', emoji:'📝', es_inicial:true,  es_terminal:false, puede_ir_a:['Enviado'], requiere_nota:false},
+        {nombre:'Enviado',    color:'#3b82f6', emoji:'📨', es_inicial:false, es_terminal:false, puede_ir_a:['En revisión','Devuelto para corrección'], requiere_nota:false},
+        {nombre:'En revisión',color:'#f59e0b', emoji:'🔍', es_inicial:false, es_terminal:false, puede_ir_a:['Aprobado','Devuelto para corrección','Rechazado'], requiere_nota:false},
+        {nombre:'Devuelto para corrección',color:'#f97316',emoji:'↩️',es_inicial:false,es_terminal:false,puede_ir_a:['Enviado'],requiere_nota:true},
+        {nombre:'Aprobado',   color:'#10b981', emoji:'✅', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:false},
+        {nombre:'Rechazado',  color:'#ef4444', emoji:'❌', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:true},
     ],
     visita: [
-        { nombre: 'Programado',   color: '#8b5cf6', es_terminal: false },
-        { nombre: 'En curso',     color: '#3b82f6', es_terminal: false },
-        { nombre: 'Completado',   color: '#10b981', es_terminal: true  },
-        { nombre: 'Cancelado',    color: '#64748b', es_terminal: true  },
+        {nombre:'Programada', color:'#3b82f6', emoji:'📅', es_inicial:true,  es_terminal:false, puede_ir_a:['En camino','Cancelada'], requiere_nota:false},
+        {nombre:'En camino',  color:'#8b5cf6', emoji:'🚗', es_inicial:false, es_terminal:false, puede_ir_a:['Realizada','No realizada'], requiere_nota:false},
+        {nombre:'Realizada',  color:'#10b981', emoji:'✅', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:false},
+        {nombre:'No realizada',color:'#f59e0b',emoji:'⚠️',es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:true},
+        {nombre:'Cancelada',  color:'#ef4444', emoji:'❌', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:true},
+    ],
+    capacitacion: [
+        {nombre:'Inscrito',   color:'#3b82f6', emoji:'📝', es_inicial:true,  es_terminal:false, puede_ir_a:['Asistió','No asistió'], requiere_nota:false},
+        {nombre:'Asistió',    color:'#10b981', emoji:'✅', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:false},
+        {nombre:'No asistió', color:'#f59e0b', emoji:'❌', es_inicial:false, es_terminal:true,  puede_ir_a:[], requiere_nota:true},
     ],
 };
 
-function cargarPlantillaEstados(clave) {
-    if (document.querySelectorAll('#lista-estados .estado-row').length > 0) {
-        if (!confirm('Esto reemplazará los estados actuales. ¿Continuar?')) return;
-    }
-    document.getElementById('lista-estados').innerHTML = '';
-    PLANTILLAS_ESTADOS[clave].forEach(e => agregarEstado(e.nombre, e.color, e.es_terminal));
-    actualizarVacios();
+// ── Estado interno ────────────────────────────────────────────────────────
+let campos   = [];
+let estados  = [];
+let items    = [];
+let preguntas = [];
+let camposInline = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function slug(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9_]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'')||'campo'; }
+function csrfToken(){ return document.querySelector('[name=csrfmiddlewaretoken]').value; }
+
+// ── Toggle módulo ─────────────────────────────────────────────────────────
+function toggleModulo(m){
+    const card = document.getElementById('card-'+m);
+    const sw   = document.getElementById('sw-'+m);
+    const isOn = sw.classList.contains('bld-toggle--on');
+    sw.classList.toggle('bld-toggle--on', !isOn);
+    card.classList.toggle('modulo-item--active', !isOn);
+    document.getElementById('cfg-'+m).style.display = !isOn ? 'block' : 'none';
+}
+function setModulo(m, on){
+    const card = document.getElementById('card-'+m);
+    const sw   = document.getElementById('sw-'+m);
+    sw.classList.toggle('bld-toggle--on', on);
+    card.classList.toggle('modulo-item--active', on);
+    document.getElementById('cfg-'+m).style.display = on ? 'block' : 'none';
+}
+function isOn(m){ return document.getElementById('sw-'+m).classList.contains('bld-toggle--on'); }
+
+// ══ MÓDULO FORMULARIO ═════════════════════════════════════════════════════
+
+function renderCampos(){
+    const ul = document.getElementById('lista-campos');
+    const vacio = document.getElementById('campos-vacio');
+    if(!campos.length){ ul.innerHTML=''; vacio.style.display='block'; return; }
+    vacio.style.display='none';
+    ul.innerHTML = campos.map((c,i)=>{
+        if(c.tipo === 'separador'){
+            return `<div class="campo-row" style="background:#f8fafc;">
+                <span class="drag-handle">⠿</span>
+                <input class="form-control" style="flex:1;font-weight:700;color:#6d28d9;" placeholder="Título del separador"
+                    value="${esc(c.label||c.nombre)}" oninput="campos[${i}].label=this.value;campos[${i}].nombre=slug(this.value)">
+                <span style="font-size:12px;color:#94a3b8;padding:0 4px;white-space:nowrap;">— separador —</span>
+                <button class="btn-remove" onclick="quitarCampo(${i})">×</button>
+            </div>`;
+        }
+        const tiposOpts = TIPOS_CAMPO.map(t=>`<option value="${t.v}" ${c.tipo===t.v?'selected':''}>${t.l}</option>`).join('');
+        const necesitaOpciones = (c.tipo==='lista'||c.tipo==='multiselect');
+        return `<div class="campo-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+            <div style="display:flex;gap:6px;align-items:flex-start;">
+                <span class="drag-handle">⠿</span>
+                <input class="form-control" style="flex:1;" placeholder="Nombre del campo"
+                    value="${esc(c.label||c.nombre)}"
+                    oninput="campos[${i}].label=this.value;campos[${i}].nombre=slug(this.value)">
+                <select onchange="campos[${i}].tipo=this.value;renderCampos()">${tiposOpts}</select>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;padding-top:7px;">
+                    <input type="checkbox" ${c.requerido?'checked':''} onchange="campos[${i}].requerido=this.checked">Req.
+                </label>
+                <button class="btn-remove" onclick="quitarCampo(${i})">×</button>
+            </div>
+            ${necesitaOpciones ? `<div style="padding-left:24px;">
+                <input class="form-control" style="font-size:12px;" placeholder="Opciones separadas por coma"
+                    value="${esc((c.opciones||[]).join(', '))}"
+                    oninput="campos[${i}].opciones=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
+            </div>` : ''}
+            <div style="padding-left:24px;display:flex;gap:8px;align-items:center;">
+                <span style="font-size:11px;color:#94a3b8;">Visible si:</span>
+                <select style="font-size:11px;border:1px solid #e2e8f0;border-radius:4px;padding:2px 6px;" onchange="campos[${i}].visible_si_campo=this.value||null;renderCampos()">
+                    <option value="">— siempre —</option>
+                    ${campos.filter((_,j)=>j!==i&&_.tipo!=='separador').map(c2=>`<option value="${esc(c2.nombre)}" ${(c.visible_si_campo===c2.nombre)?'selected':''}>${esc(c2.label||c2.nombre)}</option>`).join('')}
+                </select>
+                ${c.visible_si_campo ? `<span style="font-size:11px;color:#94a3b8;">= </span>
+                <input class="form-control" style="width:100px;font-size:11px;padding:3px 6px;" placeholder="valor"
+                    value="${esc(c.visible_si_valor||'')}"
+                    oninput="campos[${i}].visible_si_valor=this.value">` : ''}
+            </div>
+        </div>`;
+    }).join('');
 }
 
-function agregarEstado(nombre='', color='#64748b', esTerminal=false) {
-    const lista = document.getElementById('lista-estados');
-    const div   = document.createElement('div');
-    div.className = 'estado-row';
-    const dotId = 'dot-' + Math.random().toString(36).slice(2);
-    const badgeClass = esTerminal ? 'terminal-badge terminal-badge--on' : 'terminal-badge terminal-badge--off';
-    div.innerHTML = `
-        <input type="text" placeholder="Nombre del estado" value="${esc(nombre)}">
-        <div class="color-dot" id="${dotId}" style="background:${color};border-color:${color}22;" data-color="${color}"
-             onclick="abrirColorPicker(this)" title="Cambiar color"></div>
-        <span class="terminal-badge ${esTerminal?'terminal-badge--on':'terminal-badge--off'}"
-              onclick="toggleTerminal(this)" title="Clic para marcar/desmarcar como estado final">
-            ${esTerminal ? '✅ Cierra el proceso' : '⬜ En curso'}
-        </span>
-        <button type="button" onclick="this.closest('.estado-row').remove(); actualizarVacios();"
-                style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;padding:0 2px;line-height:1;"
-                onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">×</button>`;
-    lista.appendChild(div);
-    actualizarVacios();
+function agregarCampo(){
+    campos.push({nombre:'campo_'+(campos.length+1), label:'', tipo:'texto', requerido:false, opciones:[], visible_si_campo:null, visible_si_valor:''});
+    if(!isOn('formulario')) toggleModulo('formulario');
+    renderCampos();
+}
+function agregarSeparador(){
+    campos.push({nombre:'sep_'+(campos.length+1), label:'', tipo:'separador'});
+    if(!isOn('formulario')) toggleModulo('formulario');
+    renderCampos();
+}
+function quitarCampo(i){ campos.splice(i,1); renderCampos(); }
+
+// ══ MÓDULO ESTADOS ════════════════════════════════════════════════════════
+
+function renderEstados(){
+    const ul = document.getElementById('lista-estados');
+    const vacio = document.getElementById('estados-vacio');
+    if(!estados.length){ ul.innerHTML=''; vacio.style.display='block'; return; }
+    vacio.style.display='none';
+    const nombresEstados = estados.map(e=>e.nombre).filter(Boolean);
+    ul.innerHTML = estados.map((e,i)=>{
+        const transOpts = nombresEstados.filter(n=>n!==e.nombre).map(n=>`<option value="${esc(n)}" ${(e.puede_ir_a||[]).includes(n)?'selected':''}>${esc(n)}</option>`).join('');
+        return `<div class="estado-row" style="flex-direction:column;align-items:stretch;">
+            <div style="display:flex;gap:6px;align-items:center;">
+                <span class="drag-handle">⠿</span>
+                <input type="color" value="${e.color||'#64748b'}" style="width:32px;height:32px;border:none;padding:0;cursor:pointer;border-radius:6px;"
+                    oninput="estados[${i}].color=this.value">
+                <input class="form-control" style="width:26px;text-align:center;padding:4px;" placeholder="🔔"
+                    value="${esc(e.emoji||'')}" oninput="estados[${i}].emoji=this.value">
+                <input class="form-control" style="flex:1;" placeholder="Nombre del estado"
+                    value="${esc(e.nombre)}" oninput="estados[${i}].nombre=this.value;renderEstados()">
+                <span class="inicial-badge inicial-badge--${e.es_inicial?'on':'off'}" onclick="marcarInicial(${i})" title="Marcar como estado inicial">
+                    ${e.es_inicial?'🟢 Inicial':'⬜ Inicio'}
+                </span>
+                <span class="terminal-badge terminal-badge--${e.es_terminal?'on':'off'}" onclick="toggleTerminal(${i})" title="Este estado cierra el proceso">
+                    ${e.es_terminal?'✅ Terminal':'⬜ En curso'}
+                </span>
+                <span class="nota-badge nota-badge--${e.requiere_nota?'on':'off'}" onclick="toggleNotaEstado(${i})" title="Requerir nota al llegar a este estado">
+                    ${e.requiere_nota?'📝 Nota req.':'📝 Nota opt.'}
+                </span>
+                <button class="btn-remove" onclick="quitarEstado(${i})">×</button>
+            </div>
+            ${nombresEstados.length > 1 ? `<div style="padding-left:28px;margin-top:4px;display:flex;align-items:center;gap:6px;">
+                <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">Puede ir a:</span>
+                <select multiple style="font-size:11px;border:1px solid #e2e8f0;border-radius:6px;padding:3px 6px;min-width:180px;max-height:60px;"
+                    onchange="estados[${i}].puede_ir_a=Array.from(this.selectedOptions).map(o=>o.value)">
+                    ${transOpts}
+                </select>
+                <span style="font-size:10px;color:#94a3b8;">(vacío = libre)</span>
+            </div>` : ''}
+        </div>`;
+    }).join('');
 }
 
-function toggleTerminal(badge) {
-    const esTerminal = !badge.classList.contains('terminal-badge--on');
-    badge.classList.toggle('terminal-badge--on', esTerminal);
-    badge.classList.toggle('terminal-badge--off', !esTerminal);
-    badge.textContent = esTerminal ? '✅ Cierra el proceso' : '⬜ En curso';
+function agregarEstado(){
+    estados.push({nombre:'Estado '+(estados.length+1),color:'#64748b',emoji:'',es_inicial:estados.length===0,es_terminal:false,puede_ir_a:[],requiere_nota:false});
+    if(!isOn('estados')) toggleModulo('estados');
+    renderEstados();
+}
+function quitarEstado(i){ estados.splice(i,1); renderEstados(); }
+function toggleTerminal(i){ estados[i].es_terminal=!estados[i].es_terminal; if(estados[i].es_terminal) estados[i].es_inicial=false; renderEstados(); }
+function marcarInicial(i){ estados.forEach((e,j)=>e.es_inicial=(j===i)); renderEstados(); }
+function toggleNotaEstado(i){ estados[i].requiere_nota=!estados[i].requiere_nota; renderEstados(); }
+
+function cargarPlantillaEstados(sel){
+    const key=sel.value; sel.value='';
+    if(!key||!PLANTILLAS_ESTADOS[key]) return;
+    if(estados.length && !confirm('¿Reemplazar los estados actuales con la plantilla "'+key+'"?')) return;
+    estados = PLANTILLAS_ESTADOS[key].map(e=>Object.assign({},e));
+    if(!isOn('estados')) toggleModulo('estados');
+    renderEstados();
 }
 
-function abrirColorPicker(dot) {
-    document.querySelectorAll('.color-picker-popup').forEach(p => p.remove());
-    const popup = document.createElement('div');
-    popup.className = 'color-picker-popup';
-    COLORES_ESTADO.forEach(c => {
-        const s = document.createElement('div');
-        s.className = 'color-dot' + (dot.dataset.color === c ? ' color-dot--sel' : '');
-        s.style.cssText = `background:${c};width:24px;height:24px;`;
-        s.title = c;
-        s.onclick = (e) => {
-            e.stopPropagation();
-            dot.style.background = c;
-            dot.dataset.color = c;
-            popup.remove();
-        };
-        popup.appendChild(s);
+// ══ MÓDULO CIUDADANO ══════════════════════════════════════════════════════
+
+function toggleCiuInline(cb){
+    document.getElementById('ciu-inline-campos').style.display = cb.checked ? 'block':'none';
+}
+
+function renderCamposInline(){
+    const ul = document.getElementById('lista-campos-inline');
+    ul.innerHTML = camposInline.map((c,i)=>`<div class="campo-row">
+        <input class="form-control" style="flex:1;" placeholder="Nombre del campo"
+            value="${esc(c.label||c.nombre)}" oninput="camposInline[${i}].label=this.value;camposInline[${i}].nombre=slug(this.value)">
+        <select onchange="camposInline[${i}].tipo=this.value">
+            ${['texto','numero','fecha','telefono','email'].map(t=>`<option value="${t}" ${c.tipo===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+        <button class="btn-remove" onclick="quitarCampoInline(${i})">×</button>
+    </div>`).join('');
+}
+function agregarCampoInline(){ camposInline.push({nombre:'ci_'+(camposInline.length+1),label:'',tipo:'texto'}); renderCamposInline(); }
+function quitarCampoInline(i){ camposInline.splice(i,1); renderCamposInline(); }
+
+// ══ MÓDULO STOCK ══════════════════════════════════════════════════════════
+
+function toggleStockModo(modo){
+    document.getElementById('stock-simple').style.display = modo==='simple'?'block':'none';
+    document.getElementById('stock-multi').style.display  = modo==='multi' ?'block':'none';
+}
+
+function renderItems(){
+    const ul = document.getElementById('lista-items');
+    ul.innerHTML = items.map((it,i)=>`<div class="item-row">
+        <span class="drag-handle">⠿</span>
+        <input class="form-control" style="flex:2;" placeholder="Nombre del ítem"
+            value="${esc(it.nombre)}" oninput="items[${i}].nombre=this.value">
+        <input type="number" class="form-control" style="width:80px;" min="0" placeholder="Total"
+            value="${it.total||0}" oninput="items[${i}].total=+this.value">
+        <input class="form-control" style="width:90px;" placeholder="Unidad"
+            value="${esc(it.unidad||'unidades')}" oninput="items[${i}].unidad=this.value">
+        <input type="number" class="form-control" style="width:80px;" min="0" placeholder="Alerta ≤"
+            value="${it.alerta_en!=null?it.alerta_en:''}" oninput="items[${i}].alerta_en=this.value===''?null:+this.value">
+        <button class="btn-remove" onclick="quitarItem(${i})">×</button>
+    </div>`).join('');
+}
+function agregarItem(){ items.push({nombre:'',total:0,unidad:'unidades',alerta_en:null}); renderItems(); }
+function quitarItem(i){ items.splice(i,1); renderItems(); }
+
+// ══ MÓDULO AGENDA ══════════════════════════════════════════════════════════
+
+function toggleDia(btn){
+    btn.classList.toggle('active');
+}
+function getDiasSeleccionados(){
+    return Array.from(document.querySelectorAll('#agenda-dias .dia-btn.active')).map(b=>+b.dataset.dia);
+}
+function setDiasSeleccionados(dias){
+    document.querySelectorAll('#agenda-dias .dia-btn').forEach(b=>{
+        b.classList.toggle('active', dias.includes(+b.dataset.dia));
     });
-    dot.style.position = 'relative';
-    dot.appendChild(popup);
-    setTimeout(() => document.addEventListener('click', function h(e){
-        if (!popup.contains(e.target) && e.target !== dot){ popup.remove(); document.removeEventListener('click',h); }
-    }), 10);
 }
 
-function recolectarEstados() {
-    const result = [];
-    document.querySelectorAll('#lista-estados .estado-row').forEach(row => {
-        const nombre = row.querySelector('input[type="text"]').value.trim();
-        const color  = row.querySelector('.color-dot').dataset.color || '#64748b';
-        const term   = row.querySelector('.terminal-badge').classList.contains('terminal-badge--on');
-        if (!nombre) return;
-        result.push({ nombre, color, es_terminal: term });
-    });
-    return result;
-}
+// ══ MÓDULO ENCUESTA ════════════════════════════════════════════════════════
 
-// ── Guardar ───────────────────────────────────────────────────────────────
-function mostrarError(msg) {
-    const bar = document.getElementById('builder-error');
-    bar.textContent = msg;
-    bar.style.display = 'block';
-    bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function renderPreguntas(){
+    const ul = document.getElementById('lista-preguntas');
+    const vacio = document.getElementById('preguntas-vacio');
+    if(!preguntas.length){ ul.innerHTML=''; vacio.style.display='block'; return; }
+    vacio.style.display='none';
+    ul.innerHTML = preguntas.map((p,i)=>`<div class="preg-row">
+        <span class="drag-handle">⠿</span>
+        <input class="form-control" style="flex:1;" placeholder="¿Cómo calificaría el servicio?"
+            value="${esc(p.pregunta)}" oninput="preguntas[${i}].pregunta=this.value">
+        <select onchange="preguntas[${i}].tipo=this.value">
+            <option value="calificacion" ${p.tipo==='calificacion'?'selected':''}>⭐ Calificación 1–5</option>
+            <option value="texto"        ${p.tipo==='texto'?'selected':''}>✏️ Texto libre</option>
+        </select>
+        <button class="btn-remove" onclick="quitarPregunta(${i})">×</button>
+    </div>`).join('');
 }
+function agregarPregunta(){ preguntas.push({pregunta:'',tipo:'calificacion'}); if(!isOn('encuesta')) toggleModulo('encuesta'); renderPreguntas(); }
+function quitarPregunta(i){ preguntas.splice(i,1); renderPreguntas(); }
 
-function guardarFuncion() {
-    document.getElementById('builder-error').style.display = 'none';
+// ══ GUARDAR ════════════════════════════════════════════════════════════════
+
+async function guardarFuncion(){
     const nombre = document.getElementById('fun-nombre').value.trim();
-    if (!nombre) {
-        document.getElementById('fun-nombre-error').style.display = 'block';
+    const errDiv = document.getElementById('save-error');
+    errDiv.style.display='none';
+
+    if(!nombre){
+        document.getElementById('fun-nombre-error').style.display='block';
         document.getElementById('fun-nombre').focus();
         return;
     }
-    document.getElementById('fun-nombre-error').style.display = 'none';
+    document.getElementById('fun-nombre-error').style.display='none';
 
-    if (modActivos.stock) {
-        if (!document.getElementById('stock-nombre').value.trim()) {
-            mostrarError('Inventario: indica qué ítem se controla.');
-            return;
-        }
-        if (!document.getElementById('stock-total').value || parseInt(document.getElementById('stock-total').value) < 1) {
-            mostrarError('Inventario: la cantidad total debe ser al menos 1.');
-            return;
-        }
+    // Validar stock
+    const stockModo = document.querySelector('input[name="stock-modo"]:checked')?.value||'simple';
+    if(isOn('stock') && stockModo==='multi' && !items.length){
+        errDiv.textContent='El módulo de inventario multi-ítem requiere al menos un ítem.';
+        errDiv.style.display='block'; return;
     }
 
+    // Validar agenda
+    if(isOn('agenda')){
+        const dias = getDiasSeleccionados();
+        if(!dias.length){ errDiv.textContent='Selecciona al menos un día de atención para la agenda.'; errDiv.style.display='block'; return; }
+        const ini = document.getElementById('agenda-inicio').value;
+        const fin = document.getElementById('agenda-fin').value;
+        if(fin <= ini){ errDiv.textContent='La hora fin debe ser posterior a la hora inicio.'; errDiv.style.display='block'; return; }
+    }
+
+    const agendaConfig = isOn('agenda') ? {
+        dias: getDiasSeleccionados(),
+        hora_inicio: document.getElementById('agenda-inicio').value,
+        hora_fin: document.getElementById('agenda-fin').value,
+        duracion_min: +document.getElementById('agenda-duracion').value||30,
+        max_por_franja: +document.getElementById('agenda-max').value||1,
+    } : {};
+
+    const stockAlertaRaw = document.getElementById('stock-alerta').value;
     const payload = {
         nombre,
-        descripcion:         document.getElementById('fun-desc').value.trim(),
-        mod_formulario:      modActivos.formulario,
-        mod_estados:         modActivos.estados,
-        mod_ciudadano:       modActivos.ciudadano,
-        mod_stock:           modActivos.stock,
-        campos:              modActivos.formulario ? recolectarCampos() : [],
-        estados:             modActivos.estados    ? recolectarEstados() : [],
-        ciudadano_requerido: modActivos.ciudadano ? document.getElementById('ciudadano-requerido').checked : false,
-        stock_nombre:        modActivos.stock ? document.getElementById('stock-nombre').value.trim() : '',
-        stock_total:         modActivos.stock ? (parseInt(document.getElementById('stock-total').value) || 0) : 0,
-        stock_unidad:        modActivos.stock ? (document.getElementById('stock-unidad').value.trim() || 'unidades') : 'unidades',
+        descripcion: document.getElementById('fun-desc').value.trim(),
+        mod_formulario: isOn('formulario'),
+        mod_estados:    isOn('estados'),
+        mod_ciudadano:  isOn('ciudadano'),
+        mod_stock:      isOn('stock'),
+        mod_agenda:     isOn('agenda'),
+        mod_encuesta:   isOn('encuesta'),
+        campos: campos.map(c=>({
+            nombre: c.nombre,
+            label:  c.label||c.nombre,
+            tipo:   c.tipo,
+            requerido: !!c.requerido,
+            opciones: c.opciones||[],
+            visible_si: (c.visible_si_campo && c.visible_si_valor) ? {campo:c.visible_si_campo, valor:c.visible_si_valor} : null,
+        })),
+        estados: estados.map(e=>({
+            nombre: e.nombre,
+            color: e.color||'#64748b',
+            emoji: e.emoji||'',
+            es_inicial: !!e.es_inicial,
+            es_terminal: !!e.es_terminal,
+            puede_ir_a: e.puede_ir_a||[],
+            requiere_nota: !!e.requiere_nota,
+        })),
+        ciudadano_requerido:      document.getElementById('ciu-requerido').checked,
+        ciudadano_rol_etiqueta:   document.getElementById('ciu-etiqueta').value.trim()||'Ciudadano',
+        ciudadano_permite_inline: document.getElementById('ciu-inline').checked,
+        ciudadano_campos_inline:  camposInline,
+        stock_nombre: document.getElementById('stock-nombre').value.trim(),
+        stock_total:  +document.getElementById('stock-total').value||0,
+        stock_unidad: document.getElementById('stock-unidad').value.trim()||'unidades',
+        stock_alerta_en: stockAlertaRaw!==''?+stockAlertaRaw:null,
+        stock_items: stockModo==='multi' ? items : [],
+        agenda_config:   agendaConfig,
+        encuesta_config: preguntas,
     };
 
     const btn = document.getElementById('btn-guardar');
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
-
-    fetch(URL_GUARDAR, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-        body: JSON.stringify(payload),
-    })
-    .then(r => r.text().then(text => ({ status: r.status, text })))
-    .then(({ status, text }) => {
-        btn.disabled = false;
-        btn.textContent = '{% if funcion %}Guardar cambios{% else %}Crear función{% endif %}';
-        let data;
-        try { data = JSON.parse(text); } catch { mostrarError('Error inesperado del servidor (' + status + ').'); return; }
-        if (!data.ok) { mostrarError(data.error || 'Error desconocido.'); return; }
-        window.location.href = URL_VOLVER;
-    })
-    .catch(() => {
-        btn.disabled = false;
-        btn.textContent = '{% if funcion %}Guardar cambios{% else %}Crear función{% endif %}';
-        mostrarError('No se pudo conectar con el servidor.');
-    });
+    btn.disabled=true; btn.textContent='Guardando…';
+    try {
+        const r = await fetch(SAVE_URL, {method:'POST', headers:{'X-CSRFToken':csrfToken(),'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        const d = await r.json();
+        if(d.ok){
+            window.location.href = GESTIONAR_URL_BASE;
+        } else {
+            errDiv.textContent = d.error||'Error al guardar.';
+            errDiv.style.display='block';
+        }
+    } catch(e){
+        errDiv.textContent='Error de red al guardar.'; errDiv.style.display='block';
+    } finally {
+        btn.disabled=false; btn.textContent='{% if funcion %}Guardar cambios{% else %}Crear función{% endif %}';
+    }
 }
 
-function actualizarVacios() {
-    const nCampos  = document.querySelectorAll('#lista-campos .campo-row').length;
-    document.getElementById('campos-vacio').style.display  = nCampos  === 0 ? 'block' : 'none';
-    const nEstados = document.querySelectorAll('#lista-estados .estado-row').length;
-    document.getElementById('estados-vacio').style.display = nEstados === 0 ? 'block' : 'none';
-}
+// ══ INICIALIZACIÓN ══════════════════════════════════════════════════════════
 
-function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.addEventListener('DOMContentLoaded', ()=>{
+    // Módulos
+    Object.keys(MODS).forEach(m=>{ if(MODS[m]) setModulo(m, true); });
 
-// ── Inicialización ────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    {% if funcion %}
-    {% if funcion.mod_formulario %}activarModulo('formulario');{% endif %}
-    {% if funcion.mod_estados    %}activarModulo('estados');{% endif %}
-    {% if funcion.mod_ciudadano  %}activarModulo('ciudadano');{% endif %}
-    {% if funcion.mod_stock      %}activarModulo('stock');{% endif %}
+    // Campos
+    campos = CAMPOS_INIT.map(c=>({
+        nombre: c.nombre, label: c.label||c.nombre, tipo: c.tipo||'texto',
+        requerido: !!c.requerido, opciones: c.opciones||[],
+        visible_si_campo: c.visible_si?.campo||null,
+        visible_si_valor: c.visible_si?.valor||'',
+    }));
+    renderCampos();
 
-    {% for c in funcion.campos %}
-    agregarCampo('{{ c.nombre|escapejs }}', '{{ c.tipo|escapejs }}', {{ c.requerido|yesno:"true,false" }},
-        '{% for o in c.opciones %}{{ o|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}');
-    {% endfor %}
+    // Estados
+    estados = ESTADOS_INIT.map(e=>Object.assign({puede_ir_a:[]},e));
+    renderEstados();
 
-    {% for e in funcion.estados %}
-    agregarEstado('{{ e.nombre|escapejs }}', '{{ e.color|escapejs }}', {{ e.es_terminal|yesno:"true,false" }});
-    {% endfor %}
-    {% else %}
-    actualizarVacios();
-    {% endif %}
+    // Ciudadano
+    document.getElementById('ciu-etiqueta').value = CIU_ETIQUETA||'Ciudadano';
+    document.getElementById('ciu-requerido').checked = CIU_REQUERIDO;
+    document.getElementById('ciu-inline').checked = CIU_INLINE;
+    if(CIU_INLINE) document.getElementById('ciu-inline-campos').style.display='block';
+    camposInline = CIU_CAMPOS_INLINE.map(c=>Object.assign({},c));
+    renderCamposInline();
+
+    // Stock
+    if(STOCK_ITEMS_INIT && STOCK_ITEMS_INIT.length){
+        document.querySelector('input[name="stock-modo"][value="multi"]').checked=true;
+        toggleStockModo('multi');
+        items = STOCK_ITEMS_INIT.map(it=>Object.assign({},it));
+        renderItems();
+    } else {
+        document.getElementById('stock-nombre').value = STOCK_NOMBRE;
+        document.getElementById('stock-total').value  = STOCK_TOTAL;
+        document.getElementById('stock-unidad').value = STOCK_UNIDAD;
+        document.getElementById('stock-alerta').value = STOCK_ALERTA!=null?STOCK_ALERTA:'';
+    }
+
+    // Agenda
+    if(AGENDA_INIT && AGENDA_INIT.dias){
+        setDiasSeleccionados(AGENDA_INIT.dias||[]);
+        document.getElementById('agenda-inicio').value = AGENDA_INIT.hora_inicio||'08:00';
+        document.getElementById('agenda-fin').value    = AGENDA_INIT.hora_fin||'17:00';
+        document.getElementById('agenda-duracion').value = AGENDA_INIT.duracion_min||30;
+        document.getElementById('agenda-max').value    = AGENDA_INIT.max_por_franja||1;
+    }
+
+    // Encuesta
+    preguntas = ENCUESTA_INIT.map(p=>Object.assign({},p));
+    renderPreguntas();
 });
 </script>
-{% endblock %}
 {% endblock %}

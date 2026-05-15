@@ -104,7 +104,17 @@ urlpatterns = [
     path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/nuevo/', views.crear_registro_funcion_view, name='crear_registro_funcion'),
     path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/estado/', views.cambiar_estado_registro_funcion_view, name='cambiar_estado_registro_funcion'),
     path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/cerrar/', views.cerrar_registro_funcion_view, name='cerrar_registro_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/reabrir/', views.reabrir_registro_funcion_view, name='reabrir_registro_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/nota/', views.agregar_nota_registro_view, name='agregar_nota_registro'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/slots/', views.api_slots_agenda_view, name='api_slots_agenda'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/plantilla/', views.crear_plantilla_desde_funcion_view, name='crear_plantilla_desde_funcion'),
+    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/instalar-plantilla/<int:plantilla_id>/', views.instalar_plantilla_view, name='instalar_plantilla'),
     path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/eliminar/', views.eliminar_funcion_view, name='eliminar_funcion'),
+
+    # ==========================================================================
+    # PLANTILLAS DE FUNCIONES (biblioteca de red)
+    # ==========================================================================
+    path('plantillas/', views.lista_plantillas_view, name='lista_plantillas'),
 
     # ==========================================================================
     # GESTIÓN DE SERVICIOS PERSONALIZADOS

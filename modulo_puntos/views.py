@@ -19,6 +19,7 @@ from .models import (
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
     MantenimientoEquipo, ServicioPersonalizado, FuncionServicio, RegistroFuncion,
+    PlantillaFuncion,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
@@ -2748,7 +2749,9 @@ def accesos_temporales(request):
 # ══════════════════════════════════════════════════════════════════════════════
 
 import json as _json
+import re as _re
 from django.utils import timezone as _tz
+from django.db import transaction as _tx
 
 
 def _verificar_acceso_pvd_svc(request, pvd, svc):
@@ -2760,6 +2763,85 @@ def _verificar_acceso_pvd_svc(request, pvd, svc):
         raise Http404
 
 
+def _slug(texto):
+    """Convierte texto a slug seguro para nombres de campo."""
+    s = texto.lower().strip()
+    s = _re.sub(r'[áàäâ]', 'a', s)
+    s = _re.sub(r'[éèëê]', 'e', s)
+    s = _re.sub(r'[íìïî]', 'i', s)
+    s = _re.sub(r'[óòöô]', 'o', s)
+    s = _re.sub(r'[úùüû]', 'u', s)
+    s = _re.sub(r'ñ', 'n', s)
+    s = _re.sub(r'[^a-z0-9_]', '_', s)
+    s = _re.sub(r'_+', '_', s).strip('_')
+    return s or 'campo'
+
+
+def _leer_funcion_desde_post(data, fun=None):
+    """Extrae y valida todos los campos de FuncionServicio desde data JSON."""
+    nombre = data.get('nombre', '').strip()
+    if not nombre:
+        raise ValueError('El nombre de la función es requerido.')
+
+    # Sanitizar nombres de campos a slug
+    campos = []
+    for c in data.get('campos', []):
+        c = dict(c)
+        c['nombre'] = _slug(c.get('nombre', '')) or _slug(c.get('label', 'campo'))
+        c.setdefault('label', c['nombre'])
+        campos.append(c)
+
+    # Validar agenda_config
+    agenda_cfg = data.get('agenda_config') or {}
+    if agenda_cfg:
+        try:
+            agenda_cfg = {
+                'dias': [int(d) for d in agenda_cfg.get('dias', [])],
+                'hora_inicio': str(agenda_cfg.get('hora_inicio', '08:00')),
+                'hora_fin': str(agenda_cfg.get('hora_fin', '17:00')),
+                'duracion_min': max(5, int(agenda_cfg.get('duracion_min', 30))),
+                'max_por_franja': max(1, int(agenda_cfg.get('max_por_franja', 1))),
+            }
+        except (TypeError, ValueError):
+            agenda_cfg = {}
+
+    # Validar stock_items
+    stock_items = []
+    for it in data.get('stock_items', []):
+        if not it.get('nombre', '').strip():
+            continue
+        stock_items.append({
+            'nombre': it['nombre'].strip(),
+            'total': max(0, int(it.get('total', 0))),
+            'unidad': (it.get('unidad', '') or 'unidades').strip(),
+            'alerta_en': int(it['alerta_en']) if it.get('alerta_en') not in (None, '', 'null') else None,
+        })
+
+    return {
+        'nombre': nombre,
+        'descripcion': data.get('descripcion', '').strip(),
+        'mod_formulario': bool(data.get('mod_formulario')),
+        'mod_estados':    bool(data.get('mod_estados')),
+        'mod_ciudadano':  bool(data.get('mod_ciudadano')),
+        'mod_stock':      bool(data.get('mod_stock')),
+        'mod_agenda':     bool(data.get('mod_agenda')),
+        'mod_encuesta':   bool(data.get('mod_encuesta')),
+        'campos':  campos,
+        'estados': data.get('estados', []),
+        'ciudadano_requerido':      bool(data.get('ciudadano_requerido')),
+        'ciudadano_rol_etiqueta':   (data.get('ciudadano_rol_etiqueta', '') or 'Ciudadano').strip(),
+        'ciudadano_permite_inline': bool(data.get('ciudadano_permite_inline')),
+        'ciudadano_campos_inline':  data.get('ciudadano_campos_inline', []),
+        'stock_nombre': data.get('stock_nombre', '').strip(),
+        'stock_total':  max(0, int(data.get('stock_total') or 0)),
+        'stock_unidad': (data.get('stock_unidad', '') or 'unidades').strip(),
+        'stock_alerta_en': int(data['stock_alerta_en']) if data.get('stock_alerta_en') not in (None, '', 'null') else None,
+        'stock_items':    stock_items,
+        'agenda_config':  agenda_cfg,
+        'encuesta_config': data.get('encuesta_config', []),
+    }
+
+
 @login_required(login_url='/login/')
 def crear_funcion_view(request, pvd_id, svc_id):
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
@@ -2769,34 +2851,27 @@ def crear_funcion_view(request, pvd_id, svc_id):
     if request.method == 'POST':
         try:
             data = _json.loads(request.body)
-            nombre = data.get('nombre', '').strip()
-            if not nombre:
-                return JsonResponse({'ok': False, 'error': 'El nombre de la función es requerido.'})
-            fun = FuncionServicio(
-                servicio=svc,
-                nombre=nombre,
-                descripcion=data.get('descripcion', '').strip(),
-                mod_formulario=bool(data.get('mod_formulario')),
-                mod_estados=bool(data.get('mod_estados')),
-                mod_ciudadano=bool(data.get('mod_ciudadano')),
-                mod_stock=bool(data.get('mod_stock')),
-                campos=data.get('campos', []),
-                estados=data.get('estados', []),
-                ciudadano_requerido=bool(data.get('ciudadano_requerido')),
-                stock_nombre=data.get('stock_nombre', '').strip(),
-                stock_total=max(0, int(data.get('stock_total') or 0)),
-                stock_unidad=(data.get('stock_unidad', '') or 'unidades').strip(),
-            )
+            kwargs = _leer_funcion_desde_post(data)
+            fun = FuncionServicio(servicio=svc, **kwargs)
             fun.save()
             return JsonResponse({'ok': True, 'fun_id': fun.pk, 'fun_nombre': fun.nombre})
         except Exception as exc:
             return JsonResponse({'ok': False, 'error': str(exc)})
 
     desde_wizard = request.GET.get('from_wizard', '0') == '1'
+    plantilla_id = request.GET.get('plantilla')
+    funcion_base = None
+    if plantilla_id:
+        try:
+            pl = PlantillaFuncion.objects.get(pk=plantilla_id, activa=True)
+            funcion_base = pl  # template will read its fields pre-populated
+        except PlantillaFuncion.DoesNotExist:
+            pass
     return render(request, 'modulo_puntos/builder_funcion.html', {
         'pvd': pvd,
         'svc': svc,
         'funcion': None,
+        'funcion_base': funcion_base,
         'desde_wizard': desde_wizard,
     })
 
@@ -2811,21 +2886,9 @@ def editar_funcion_view(request, pvd_id, svc_id, fun_id):
     if request.method == 'POST':
         try:
             data = _json.loads(request.body)
-            nombre = data.get('nombre', '').strip()
-            if not nombre:
-                return JsonResponse({'ok': False, 'error': 'El nombre de la función es requerido.'})
-            fun.nombre = nombre
-            fun.descripcion = data.get('descripcion', '').strip()
-            fun.mod_formulario = bool(data.get('mod_formulario'))
-            fun.mod_estados    = bool(data.get('mod_estados'))
-            fun.mod_ciudadano  = bool(data.get('mod_ciudadano'))
-            fun.mod_stock      = bool(data.get('mod_stock'))
-            fun.campos         = data.get('campos', [])
-            fun.estados        = data.get('estados', [])
-            fun.ciudadano_requerido = bool(data.get('ciudadano_requerido'))
-            fun.stock_nombre   = data.get('stock_nombre', '').strip()
-            fun.stock_total    = max(0, int(data.get('stock_total') or 0))
-            fun.stock_unidad   = (data.get('stock_unidad', '') or 'unidades').strip()
+            kwargs = _leer_funcion_desde_post(data, fun)
+            for k, v in kwargs.items():
+                setattr(fun, k, v)
             fun.save()
             return JsonResponse({'ok': True, 'fun_id': fun.pk, 'fun_nombre': fun.nombre})
         except Exception as exc:
@@ -2836,6 +2899,7 @@ def editar_funcion_view(request, pvd_id, svc_id, fun_id):
         'pvd': pvd,
         'svc': svc,
         'funcion': fun,
+        'funcion_base': None,
         'desde_wizard': desde_wizard,
     })
 
@@ -2861,6 +2925,18 @@ def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
                 estados_map[key] = {'config': {'nombre': key, 'color': '#64748b', 'es_terminal': False}, 'registros': []}
             estados_map[key]['registros'].append(reg)
 
+    # Alertas de stock
+    alertas_stock = []
+    if fun.mod_stock:
+        if fun.usa_multi_stock:
+            for item in fun.stock_items:
+                disp = fun.stock_item_disponible(item['nombre'])
+                alerta = item.get('alerta_en')
+                if alerta is not None and disp <= alerta:
+                    alertas_stock.append({'nombre': item['nombre'], 'disponible': disp, 'alerta_en': alerta})
+        elif fun.stock_alerta_activa:
+            alertas_stock.append({'nombre': fun.stock_nombre, 'disponible': fun.stock_disponible, 'alerta_en': fun.stock_alerta_en})
+
     return render(request, 'modulo_puntos/gestionar_funcion.html', {
         'pvd': pvd,
         'svc': svc,
@@ -2869,6 +2945,9 @@ def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
         'registros_cerrados': registros_cerrados,
         'ciudadanos': ciudadanos,
         'estados_map': estados_map,
+        'alertas_stock': alertas_stock,
+        'estados_json': _json.dumps(fun.estados),
+        'campos_json': _json.dumps(fun.campos),
     })
 
 
@@ -2882,29 +2961,77 @@ def crear_registro_funcion_view(request, pvd_id, svc_id, fun_id):
     if request.method != 'POST':
         return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
 
+    # ── Formulario libre ──────────────────────────────────────────────────────
     datos = {}
     if fun.mod_formulario:
         for campo in fun.campos:
-            key = 'campo_' + campo['nombre']
-            datos[campo['nombre']] = request.POST.get(key, '').strip()
+            if campo.get('tipo') == 'separador':
+                continue
+            slug = campo['nombre']
+            val = request.POST.get(f'campo_{slug}', '').strip()
+            if campo.get('tipo') == 'booleano':
+                val = '1' if request.POST.get(f'campo_{slug}') else '0'
+            datos[slug] = val
 
+    # ── Ciudadano ─────────────────────────────────────────────────────────────
     ciudadano = None
+    nombre_persona = request.POST.get('nombre_persona', '').strip()
     if fun.mod_ciudadano:
         ciu_id = request.POST.get('ciudadano_id', '').strip()
         if ciu_id:
             ciudadano = Ciudadano.objects.filter(pk=ciu_id).first()
-
-    nombre_persona = request.POST.get('nombre_persona', '').strip()
-    stock_cantidad = 1
-    if fun.mod_stock:
-        try:
-            stock_cantidad = max(1, int(request.POST.get('stock_cantidad') or 1))
-        except (ValueError, TypeError):
-            stock_cantidad = 1
-        if stock_cantidad > fun.stock_disponible:
-            messages.error(request, f'Solo hay {fun.stock_disponible} {fun.stock_unidad} disponibles.')
+        if fun.ciudadano_requerido and not ciudadano:
+            messages.error(request, f'Debes seleccionar un/a {fun.ciudadano_rol_etiqueta} para este registro.')
             return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
 
+    # ── Stock (con bloqueo para evitar race condition) ────────────────────────
+    stock_cantidad  = 1
+    stock_seleccion = {}
+    if fun.mod_stock:
+        with _tx.atomic():
+            fun_lock = FuncionServicio.objects.select_for_update().get(pk=fun.pk)
+            if fun_lock.usa_multi_stock:
+                for item in fun_lock.stock_items:
+                    try:
+                        cant = max(0, int(request.POST.get(f'stock_item_{_slug(item["nombre"])}') or 0))
+                    except (ValueError, TypeError):
+                        cant = 0
+                    if cant > 0:
+                        disp = fun_lock.stock_item_disponible(item['nombre'])
+                        if cant > disp:
+                            messages.error(request, f'Solo hay {disp} {item.get("unidad","unidades")} de "{item["nombre"]}" disponibles.')
+                            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+                        stock_seleccion[item['nombre']] = cant
+            else:
+                try:
+                    stock_cantidad = max(1, int(request.POST.get('stock_cantidad') or 1))
+                except (ValueError, TypeError):
+                    stock_cantidad = 1
+                if stock_cantidad > fun_lock.stock_disponible:
+                    messages.error(request, f'Solo hay {fun_lock.stock_disponible} {fun_lock.stock_unidad} disponibles.')
+                    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+    # ── Agenda ────────────────────────────────────────────────────────────────
+    agenda_fecha = None
+    agenda_hora  = None
+    if fun.mod_agenda:
+        raw_af = request.POST.get('agenda_fecha', '').strip()
+        raw_ah = request.POST.get('agenda_hora', '').strip()
+        if raw_af:
+            try:
+                from datetime import date as _date
+                agenda_fecha = _date.fromisoformat(raw_af)
+            except ValueError:
+                pass
+        if raw_ah:
+            try:
+                from datetime import time as _time
+                h, m = raw_ah.split(':')
+                agenda_hora = _time(int(h), int(m))
+            except (ValueError, AttributeError):
+                pass
+
+    # ── Fecha fin esperada ────────────────────────────────────────────────────
     fecha_fin_esperada = None
     raw_fecha = request.POST.get('fecha_fin_esperada', '').strip()
     if raw_fecha:
@@ -2913,17 +3040,23 @@ def crear_registro_funcion_view(request, pvd_id, svc_id, fun_id):
         except ValueError:
             pass
 
-    RegistroFuncion.objects.create(
+    # ── Crear registro ────────────────────────────────────────────────────────
+    reg = RegistroFuncion(
         funcion=fun,
         ciudadano=ciudadano,
         nombre_persona=nombre_persona,
         estado_actual=fun.estado_inicial,
         datos=datos,
         stock_cantidad=stock_cantidad,
+        stock_seleccion=stock_seleccion,
+        agenda_fecha=agenda_fecha,
+        agenda_hora=agenda_hora,
         fecha_fin_esperada=fecha_fin_esperada,
         notas=request.POST.get('notas', '').strip(),
         creado_por=request.user,
     )
+    reg.agregar_evento('apertura', 'Registro creado.', request.user)
+    reg.save()
     messages.success(request, 'Registro creado correctamente.')
     return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
 
@@ -2933,20 +3066,44 @@ def cambiar_estado_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
     svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
     fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
+    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun, activo=True)
     _verificar_acceso_pvd_svc(request, pvd, svc)
 
     if request.method == 'POST':
         nuevo = request.POST.get('nuevo_estado', '').strip()
         nombres = [e['nombre'] for e in fun.estados]
-        if nuevo in nombres:
-            reg.estado_actual = nuevo
-            cfg = next((e for e in fun.estados if e['nombre'] == nuevo), {})
-            if cfg.get('es_terminal'):
-                reg.activo = False
-                reg.fecha_fin_real = _tz.now()
-            reg.save()
-            messages.success(request, f'Estado cambiado a "{nuevo}".')
+        if nuevo not in nombres:
+            messages.error(request, 'Estado inválido.')
+            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+        # Validar transición controlada
+        cfg_actual = next((e for e in fun.estados if e['nombre'] == reg.estado_actual), {})
+        puede_ir_a = cfg_actual.get('puede_ir_a', [])
+        if puede_ir_a and nuevo not in puede_ir_a:
+            messages.error(request, f'No se puede pasar de "{reg.estado_actual}" a "{nuevo}".')
+            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+        cfg_nuevo = next((e for e in fun.estados if e['nombre'] == nuevo), {})
+
+        # Validar nota requerida
+        if cfg_nuevo.get('requiere_nota'):
+            nota = request.POST.get('nota_estado', '').strip()
+            if not nota:
+                messages.error(request, f'El estado "{nuevo}" requiere una nota explicativa.')
+                return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+            reg.agregar_evento('nota', nota, request.user)
+
+        estado_anterior = reg.estado_actual
+        reg.estado_actual = nuevo
+        reg.agregar_evento('estado', f'Estado cambiado: {estado_anterior} → {nuevo}', request.user)
+
+        if cfg_nuevo.get('es_terminal'):
+            reg.activo = False
+            reg.fecha_fin_real = _tz.now()
+            reg.agregar_evento('cierre', 'Registro cerrado por estado terminal.', request.user)
+
+        reg.save()
+        messages.success(request, f'Estado cambiado a "{nuevo}".')
     return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
 
 
@@ -2961,9 +3118,66 @@ def cerrar_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
     if request.method == 'POST':
         reg.activo = False
         reg.fecha_fin_real = _tz.now()
+        reg.agregar_evento('cierre', request.POST.get('nota_cierre', 'Cerrado manualmente.').strip() or 'Cerrado manualmente.', request.user)
         reg.save()
         messages.success(request, 'Registro cerrado.')
     return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def reabrir_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun, activo=False)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        reg.activo = True
+        reg.fecha_fin_real = None
+        reg.agregar_evento('reapertura', request.POST.get('nota_reapertura', 'Registro reabierto.').strip() or 'Registro reabierto.', request.user)
+        reg.save()
+        messages.success(request, 'Registro reabierto correctamente.')
+    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def agregar_nota_registro_view(request, pvd_id, svc_id, fun_id, reg_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if request.method == 'POST':
+        texto = request.POST.get('nota', '').strip()
+        if texto:
+            reg.agregar_evento('nota', texto, request.user)
+            reg.save()
+            messages.success(request, 'Nota añadida a la bitácora.')
+        else:
+            messages.warning(request, 'La nota no puede estar vacía.')
+    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def api_slots_agenda_view(request, pvd_id, svc_id, fun_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    fecha_str = request.GET.get('fecha', '')
+    if not fecha_str:
+        return JsonResponse({'ok': False, 'error': 'Parámetro fecha requerido.'})
+    try:
+        from datetime import date as _date
+        fecha = _date.fromisoformat(fecha_str)
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Formato de fecha inválido (YYYY-MM-DD).'})
+
+    slots = fun.slots_agenda(fecha)
+    return JsonResponse({'ok': True, 'slots': slots})
 
 
 @login_required(login_url='/login/')
@@ -2978,3 +3192,129 @@ def eliminar_funcion_view(request, pvd_id, svc_id, fun_id):
         fun.save()
         messages.success(request, f'Función "{fun.nombre}" eliminada.')
     return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
+
+
+# ── Plantillas de funciones ────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def lista_plantillas_view(request):
+    es_tic = usuario_es_admin_tic(request.user)
+    qs = PlantillaFuncion.objects.filter(activa=True)
+    if not es_tic:
+        qs = qs.filter(solo_admin_tic=False)
+    categoria_filtro = request.GET.get('categoria', '')
+    if categoria_filtro:
+        qs = qs.filter(categoria=categoria_filtro)
+    base_qs = PlantillaFuncion.objects.filter(activa=True) if es_tic else PlantillaFuncion.objects.filter(activa=True, solo_admin_tic=False)
+    categorias = base_qs.values_list('categoria', flat=True).distinct().order_by('categoria')
+
+    # Servicios accesibles para el usuario (para el formulario de instalación)
+    if es_tic:
+        servicios = ServicioPersonalizado.objects.filter(habilitado=True).select_related('punto_vive_digital').order_by('punto_vive_digital__nombre', 'nombre')
+    else:
+        pvd_activo_id = request.session.get('pvd_activo_id')
+        if pvd_activo_id:
+            servicios = ServicioPersonalizado.objects.filter(habilitado=True, punto_vive_digital_id=pvd_activo_id).select_related('punto_vive_digital')
+        else:
+            servicios = ServicioPersonalizado.objects.none()
+
+    return render(request, 'modulo_puntos/lista_plantillas.html', {
+        'plantillas': qs,
+        'categorias': categorias,
+        'categoria_filtro': categoria_filtro,
+        'es_tic': es_tic,
+        'servicios_instalacion': servicios,
+    })
+
+
+@login_required(login_url='/login/')
+def crear_plantilla_desde_funcion_view(request, pvd_id, svc_id, fun_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Solo los administradores TIC pueden crear plantillas de red.')
+        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', fun.nombre).strip()
+        descripcion = request.POST.get('descripcion', fun.descripcion).strip()
+        categoria = request.POST.get('categoria', 'General').strip() or 'General'
+        icono = request.POST.get('icono', '📋').strip() or '📋'
+        solo_tic = bool(request.POST.get('solo_admin_tic'))
+
+        PlantillaFuncion.objects.create(
+            nombre=nombre,
+            descripcion=descripcion,
+            categoria=categoria,
+            icono=icono,
+            solo_admin_tic=solo_tic,
+            creado_por=request.user,
+            mod_formulario=fun.mod_formulario,
+            mod_estados=fun.mod_estados,
+            mod_ciudadano=fun.mod_ciudadano,
+            mod_stock=fun.mod_stock,
+            mod_agenda=fun.mod_agenda,
+            mod_encuesta=fun.mod_encuesta,
+            campos=fun.campos,
+            estados=fun.estados,
+            ciudadano_requerido=fun.ciudadano_requerido,
+            ciudadano_rol_etiqueta=fun.ciudadano_rol_etiqueta,
+            ciudadano_permite_inline=fun.ciudadano_permite_inline,
+            ciudadano_campos_inline=fun.ciudadano_campos_inline,
+            stock_nombre=fun.stock_nombre,
+            stock_total=fun.stock_total,
+            stock_unidad=fun.stock_unidad,
+            stock_alerta_en=fun.stock_alerta_en,
+            stock_items=fun.stock_items,
+            agenda_config=fun.agenda_config,
+            encuesta_config=fun.encuesta_config,
+        )
+        messages.success(request, f'Plantilla "{nombre}" creada en la biblioteca de red.')
+        return redirect('modulo_puntos:lista_plantillas')
+    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+
+
+@login_required(login_url='/login/')
+def instalar_plantilla_view(request, pvd_id, svc_id, plantilla_id):
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
+    plantilla = get_object_or_404(PlantillaFuncion, pk=plantilla_id, activa=True)
+    _verificar_acceso_pvd_svc(request, pvd, svc)
+
+    if plantilla.solo_admin_tic and not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Esta plantilla solo puede instalarla un administrador TIC.')
+        return redirect('modulo_puntos:lista_plantillas')
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', plantilla.nombre).strip() or plantilla.nombre
+        fun = FuncionServicio.objects.create(
+            servicio=svc,
+            nombre=nombre,
+            descripcion=plantilla.descripcion,
+            mod_formulario=plantilla.mod_formulario,
+            mod_estados=plantilla.mod_estados,
+            mod_ciudadano=plantilla.mod_ciudadano,
+            mod_stock=plantilla.mod_stock,
+            mod_agenda=plantilla.mod_agenda,
+            mod_encuesta=plantilla.mod_encuesta,
+            campos=plantilla.campos,
+            estados=plantilla.estados,
+            ciudadano_requerido=plantilla.ciudadano_requerido,
+            ciudadano_rol_etiqueta=plantilla.ciudadano_rol_etiqueta,
+            ciudadano_permite_inline=plantilla.ciudadano_permite_inline,
+            ciudadano_campos_inline=plantilla.ciudadano_campos_inline,
+            stock_nombre=plantilla.stock_nombre,
+            stock_total=plantilla.stock_total,
+            stock_unidad=plantilla.stock_unidad,
+            stock_alerta_en=plantilla.stock_alerta_en,
+            stock_items=plantilla.stock_items,
+            agenda_config=plantilla.agenda_config,
+            encuesta_config=plantilla.encuesta_config,
+        )
+        PlantillaFuncion.objects.filter(pk=plantilla.pk).update(instalaciones=plantilla.instalaciones + 1)
+        messages.success(request, f'Función "{fun.nombre}" instalada desde la plantilla.')
+        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun.pk)
+    return redirect('modulo_puntos:lista_plantillas')

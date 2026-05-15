@@ -1,0 +1,118 @@
+{% extends 'modulo_puntos/base.html' %}
+{% block title %}Plantillas de funciones{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Biblioteca de red</span>
+        <h1 class="page-title">📚 Plantillas de funciones</h1>
+        <p class="muted">Funciones prediseñadas listas para instalar en cualquier servicio. Cada plantilla es una copia editable.</p>
+    </div>
+</div>
+
+{# ── Filtro por categoría ── #}
+<div class="content-section" style="padding:12px 20px;">
+    <form method="get" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">Categoría:</label>
+        <select name="categoria" class="form-control" style="width:auto;min-width:180px;" onchange="this.form.submit()">
+            <option value="">— Todas las categorías —</option>
+            {% for cat in categorias %}
+            <option value="{{ cat }}" {% if cat == categoria_filtro %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+        {% if categoria_filtro %}<a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary btn--sm">✕ Ver todas</a>{% endif %}
+    </form>
+</div>
+
+{# ── Galería de plantillas ── #}
+{% if not plantillas %}
+<div class="content-section" style="text-align:center;padding:48px;">
+    <div style="font-size:48px;margin-bottom:12px;">📚</div>
+    <p style="font-size:14px;color:#94a3b8;margin:0;">
+        No hay plantillas disponibles{% if categoria_filtro %} en "{{ categoria_filtro }}"{% endif %}.
+        {% if es_tic %}Puedes crear una desde cualquier función con el botón "📚 Guardar como plantilla".{% endif %}
+    </p>
+</div>
+{% else %}
+
+{# Agrupar por categoría #}
+{% regroup plantillas by categoria as plantillas_por_categoria %}
+{% for grupo in plantillas_por_categoria %}
+<div class="content-section" style="margin-bottom:16px;">
+    <div class="section-header">
+        <h3 class="section-title">{{ grupo.grouper }}</h3>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding:12px 0;">
+        {% for pl in grupo.list %}
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="font-size:28px;flex-shrink:0;">{{ pl.icono }}</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:14px;font-weight:700;color:#1e293b;">{{ pl.nombre }}</div>
+                    {% if pl.descripcion %}<div style="font-size:12px;color:#64748b;margin-top:2px;">{{ pl.descripcion }}</div>{% endif %}
+                </div>
+            </div>
+
+            {# Módulos #}
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                {% if pl.mod_formulario %}<span class="badge badge-info" style="font-size:10px;">📋 Formulario</span>{% endif %}
+                {% if pl.mod_estados %}<span class="badge badge-info" style="font-size:10px;">🔄 Estados</span>{% endif %}
+                {% if pl.mod_ciudadano %}<span class="badge badge-info" style="font-size:10px;">👤 Ciudadano</span>{% endif %}
+                {% if pl.mod_stock %}<span class="badge badge-info" style="font-size:10px;">📦 Stock</span>{% endif %}
+                {% if pl.mod_agenda %}<span class="badge badge-info" style="font-size:10px;">📅 Agenda</span>{% endif %}
+                {% if pl.mod_encuesta %}<span class="badge badge-info" style="font-size:10px;">⭐ Encuesta</span>{% endif %}
+                {% if pl.solo_admin_tic %}<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fff1f2;padding:2px 8px;border-radius:10px;border:1px solid #fecdd3;">Solo TIC</span>{% endif %}
+            </div>
+
+            {# Stats #}
+            <div style="display:flex;gap:12px;font-size:11px;color:#94a3b8;">
+                <span>📊 {{ pl.instalaciones }} instalación{{ pl.instalaciones|pluralize:"es" }}</span>
+                <span>✍️ {{ pl.creado_por.get_full_name|default:pl.creado_por.username|default:"Sistema" }}</span>
+            </div>
+
+            {# Instalar en un servicio #}
+            {% if servicios_instalacion %}
+            <details style="margin-top:2px;">
+                <summary style="font-size:13px;font-weight:600;color:#6d28d9;cursor:pointer;">⬇ Instalar en un servicio…</summary>
+                <form method="post" id="install-form-{{ pl.pk }}" style="margin-top:8px;padding:12px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe;">
+                    {% csrf_token %}
+                    <input type="hidden" name="nombre" value="{{ pl.nombre }}">
+                    <div style="margin-bottom:8px;">
+                        <label style="font-size:12px;font-weight:700;color:#4c1d95;display:block;margin-bottom:4px;">Servicio destino:</label>
+                        <select name="_svc_redirect" class="form-control" style="font-size:12px;" required>
+                            <option value="">— Seleccionar servicio —</option>
+                            {% for svc_opt in servicios_instalacion %}
+                            <option value="{{ svc_opt.punto_vive_digital.pk }}_{{ svc_opt.pk }}">
+                                {{ svc_opt.punto_vive_digital.nombre }} · {{ svc_opt.icono }} {{ svc_opt.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn--sm" style="font-size:12px;"
+                            onclick="instalarPlantilla({{ pl.pk }}, this.form)">⬇ Instalar copia</button>
+                </form>
+            </details>
+            {% else %}
+            <p style="font-size:12px;color:#94a3b8;margin-top:4px;">
+                {% if es_tic %}No hay servicios personalizados creados aún.{% else %}Selecciona un PVD primero para instalar plantillas.{% endif %}
+            </p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<script>
+function instalarPlantilla(plId, form){
+    const sel = form.querySelector('[name="_svc_redirect"]');
+    if(!sel.value){ alert('Elige un servicio destino.'); return; }
+    const parts = sel.value.split('_');
+    const pvdId = parts[0], svcId = parts[1];
+    form.action = '/pvd/'+pvdId+'/servicio/'+svcId+'/instalar-plantilla/'+plId+'/';
+    form.method = 'POST';
+    form.submit();
+}
+</script>
+{% endblock %}

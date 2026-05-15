@@ -106,7 +106,7 @@
                 <span class="bit-icon">{% if ev.tipo == 'apertura' %}🆕{% elif ev.tipo == 'cierre' %}✅{% elif ev.tipo == 'reapertura' %}🔄{% elif ev.tipo == 'estado' %}🔀{% elif ev.tipo == 'nota' %}📝{% else %}•{% endif %}</span>
                 <div class="bit-body">
                     <div class="bit-text">{{ ev.texto }}</div>
-                    <div class="bit-meta">{{ ev.usuario }} · {{ ev.fecha }}</div>
+                    <div class="bit-meta">{{ ev.usuario }} · {{ ev.fecha|slice:":10" }} {{ ev.fecha|slice:"11:16" }}</div>
                 </div>
             </div>
             {% endfor %}
@@ -116,12 +116,4 @@
     </div>
 </div>
 
-<script>
-function toggleBitacora(id){
-    const el = document.getElementById('bitacora-'+id);
-    const nf = document.getElementById('nota-form-'+id);
-    const vis = el.style.display !== 'none';
-    el.style.display = vis ? 'none':'block';
-    nf.style.display = vis ? 'none':'flex';
-}
-</script>
+{# toggleBitacora and cambiarEstado/submitEstado defined in gestionar_funcion.html #}

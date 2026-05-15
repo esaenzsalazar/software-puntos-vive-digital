@@ -204,7 +204,7 @@
                         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
                             <div style="font-size:13px;font-weight:600;margin-bottom:6px;">{{ item.nombre }}</div>
                             <div style="display:flex;align-items:center;gap:6px;">
-                                <input type="number" name="stock_item_{{ item.nombre|slugify }}"
+                                <input type="number" name="stock_item_{{ forloop.counter0 }}"
                                        class="form-control" style="width:80px;" min="0"
                                        placeholder="0" max="{{ item.total }}">
                                 <span style="font-size:12px;color:#64748b;">{{ item.unidad }}</span>
@@ -363,6 +363,15 @@ const CAMBIO_URL_BASE = '{% url "modulo_puntos:gestionar_funcion" pvd_id=pvd.pk 
 function togglePanel(id){
     const el = document.getElementById(id);
     el.style.display = el.style.display==='none'?'block':'none';
+}
+
+function toggleBitacora(id){
+    const el = document.getElementById('bitacora-'+id);
+    const nf = document.getElementById('nota-form-'+id);
+    if(!el) return;
+    const vis = el.style.display !== 'none';
+    el.style.display = vis ? 'none':'block';
+    if(nf) nf.style.display = vis ? 'none':'flex';
 }
 
 // ── Conditional fields ─────────────────────────────────────────────────────

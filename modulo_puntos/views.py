@@ -2991,9 +2991,9 @@ def crear_registro_funcion_view(request, pvd_id, svc_id, fun_id):
         with _tx.atomic():
             fun_lock = FuncionServicio.objects.select_for_update().get(pk=fun.pk)
             if fun_lock.usa_multi_stock:
-                for item in fun_lock.stock_items:
+                for i, item in enumerate(fun_lock.stock_items):
                     try:
-                        cant = max(0, int(request.POST.get(f'stock_item_{_slug(item["nombre"])}') or 0))
+                        cant = max(0, int(request.POST.get(f'stock_item_{i}') or 0))
                     except (ValueError, TypeError):
                         cant = 0
                     if cant > 0:

@@ -134,6 +134,14 @@ _TOPBAR_ACTIONS = {
     'perfil_usuario':        [('← Volver', '__back__', 'btn-secondary')],
     'crear_admin_tic':       [('← Cancelar', '__back__', 'btn-secondary')],
     'crear_admin_pvd':       [('← Cancelar', '__back__', 'btn-secondary')],
+    # Servicios personalizados y plantillas
+    'lista_servicios_custom':        [('📚 Plantillas', 'lista_plantillas', 'btn-secondary')],
+    'gestionar_servicio_custom':     [('← Volver', '__back__', 'btn-secondary')],
+    'gestionar_funcion':             [('← Volver', '__back__', 'btn-secondary')],
+    'crear_funcion':                 [('← Cancelar', '__back__', 'btn-secondary')],
+    'editar_funcion':                [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_plantillas':              [('← Volver', '__back__', 'btn-secondary')],
+    'crear_plantilla_desde_funcion': [('← Cancelar', '__back__', 'btn-secondary')],
 }
 
 

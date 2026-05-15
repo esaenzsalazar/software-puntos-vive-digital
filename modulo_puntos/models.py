@@ -355,6 +355,11 @@ class FuncionServicio(models.Model):
     def __str__(self):
         return f'{self.servicio.nombre} → {self.nombre}'
 
+    # ── Conteo rápido de registros activos ───────────────────────────────────
+    @property
+    def registros_activos_count(self):
+        return self.registros_funcion.filter(activo=True).count()
+
     # ── Estado inicial ────────────────────────────────────────────────────────
     @property
     def estado_inicial(self):

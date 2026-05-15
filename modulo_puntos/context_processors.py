@@ -60,7 +60,8 @@ _BREADCRUMB_MAP = {
     'inscribir_ciudadano':   ('Inscripción',           'Cursos',                'lista_cursos'),
     'marcar_asistencia':     ('Asistencia',            'Cursos',                'lista_cursos'),
     # Servicios personalizados
-    'gestionar_servicio_custom': ('Gestión de servicio',  'Nuevos servicios', 'panel_control'),
+    'lista_servicios_custom':    ('Servicios Personalizados', 'Panel',          'panel_control'),
+    'gestionar_servicio_custom': ('Gestión de servicio',  'Servicios Personalizados', 'lista_servicios_custom'),
     # Mantenimientos
     'lista_mantenimientos':  ('Mantenimientos',        'Panel',                 'panel_control'),
     'crear_mantenimiento':   ('Nuevo Mantenimiento',   'Mantenimientos',        'lista_mantenimientos'),

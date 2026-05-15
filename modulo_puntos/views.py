@@ -166,6 +166,7 @@ def panel_control(request):
         'total_recursos': Recurso.objects.count(),
         'total_cursos': Curso.objects.count(),
         'total_servicios_custom': ServicioPersonalizado.objects.filter(habilitado=True).count(),
+        'total_registros_custom_activos': RegistroFuncion.objects.filter(activo=True).count(),
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
         'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
@@ -1489,6 +1490,61 @@ _CAPACIDADES_URLS = {
     'mantenimiento':  ('lista_mantenimientos',  '🔧', 'Mantenimiento',     'Mantenimiento preventivo y correctivo'),
     'reportes':       ('reportes',              '📊', 'Reportes',          'Estadísticas, indicadores y exportaciones'),
 }
+
+
+@login_required(login_url='/login/')
+def lista_servicios_custom_view(request):
+    if not (request.user.is_superuser or usuario_es_admin_tic(request.user)):
+        return redirect('modulo_puntos:panel_control')
+
+    pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+    pvd_filtro = request.GET.get('pvd', '')
+    pvd_filtro_obj = None
+
+    servicios_qs = (
+        ServicioPersonalizado.objects
+        .select_related('punto_vive_digital')
+        .annotate(
+            total_funciones=Count('funciones', distinct=True),
+            registros_activos=Count(
+                'funciones__registros_funcion',
+                filter=Q(funciones__registros_funcion__activo=True),
+                distinct=True,
+            ),
+            total_registros=Count('funciones__registros_funcion', distinct=True),
+        )
+        .order_by('punto_vive_digital__nombre', 'nombre')
+    )
+
+    if pvd_filtro:
+        servicios_qs = servicios_qs.filter(punto_vive_digital_id=pvd_filtro)
+        pvd_filtro_obj = pvds.filter(pk=pvd_filtro).first()
+
+    total_servicios = servicios_qs.count()
+    svc_pks = servicios_qs.values('pk')
+    total_funciones = FuncionServicio.objects.filter(servicio__in=svc_pks).count()
+    base_reg = RegistroFuncion.objects.filter(funcion__servicio__in=svc_pks)
+    total_activos = base_reg.filter(activo=True).count()
+    total_historial = base_reg.filter(activo=False).count()
+
+    registros_activos = (
+        RegistroFuncion.objects
+        .filter(activo=True, funcion__servicio__in=svc_pks)
+        .select_related('funcion__servicio__punto_vive_digital', 'ciudadano', 'creado_por')
+        .order_by('-creado_en')[:50]
+    )
+
+    return render(request, 'modulo_puntos/lista_servicios_custom.html', {
+        'servicios': servicios_qs,
+        'pvds': pvds,
+        'pvd_filtro': pvd_filtro,
+        'pvd_filtro_obj': pvd_filtro_obj,
+        'total_servicios': total_servicios,
+        'total_funciones': total_funciones,
+        'total_activos': total_activos,
+        'total_historial': total_historial,
+        'registros_activos': registros_activos,
+    })
 
 
 @login_required(login_url='/login/')

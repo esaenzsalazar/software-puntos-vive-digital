@@ -50,7 +50,6 @@
             <p class="muted" style="margin:4px 0 0;font-size:13px;">Funciones personalizadas creadas para este servicio.</p>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary btn--sm">📚 Instalar desde plantilla</a>
             <a href="{% url 'modulo_puntos:crear_funcion' pvd_id=pvd.pk svc_id=svc.pk %}" class="btn btn--sm">+ Nueva función</a>
         </div>
     </div>
@@ -103,9 +102,8 @@
     {% else %}
     <div style="text-align:center;padding:48px 20px;color:#94a3b8;">
         <div style="font-size:52px;margin-bottom:12px;">⚙️</div>
-        <p style="font-size:14px;margin:0 0 16px;">Aún no hay funciones. Crea la primera o instala una plantilla.</p>
+        <p style="font-size:14px;margin:0 0 16px;">Aún no hay funciones. Crea la primera.</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-            <a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary">📚 Instalar desde plantilla</a>
             <a href="{% url 'modulo_puntos:crear_funcion' pvd_id=pvd.pk svc_id=svc.pk %}" class="btn">+ Crear primera función</a>
         </div>
     </div>

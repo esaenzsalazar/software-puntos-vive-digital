@@ -30,14 +30,6 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 <a href="{% url 'modulo_puntos:editar_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk %}" class="btn btn-secondary btn--sm">✏️ Editar</a>
-                {% if nav_tic or es_superusuario %}
-                <form method="post" action="{% url 'modulo_puntos:crear_plantilla_desde_funcion' pvd_id=pvd.pk svc_id=svc.pk fun_id=fun.pk %}" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="nombre" value="{{ fun.nombre }}">
-                    <input type="hidden" name="descripcion" value="{{ fun.descripcion }}">
-                    <button type="submit" class="btn btn-secondary btn--sm" onclick="return confirm('¿Guardar esta función como plantilla de red?')">📚 Guardar como plantilla</button>
-                </form>
-                {% endif %}
                 <button class="btn btn--sm" id="btn-nuevo-reg" onclick="togglePanel('panel-nuevo-reg')">+ Nuevo registro</button>
             </div>
         </div>

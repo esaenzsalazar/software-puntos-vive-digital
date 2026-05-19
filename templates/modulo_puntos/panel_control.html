@@ -435,7 +435,6 @@
             <p class="muted" style="margin:4px 0 0; font-size:13px;">Flujos de trabajo propios de {{ pvd_activo.nombre }}</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary btn--sm">📚 Plantillas de red</a>
             <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}" class="btn btn--sm">+ Nuevo servicio</a>
         </div>
     </div>
@@ -450,7 +449,6 @@
         </p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
             <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}" class="btn">+ Crear mi primer servicio</a>
-            <a href="{% url 'modulo_puntos:lista_plantillas' %}" class="btn btn-secondary">📚 Ver plantillas disponibles</a>
         </div>
     </div>
     {% else %}
@@ -482,7 +480,6 @@
     {% endif %}
     {% endwith %}
 </div>
-{% endif %}
 {% endwith %}
 {% endif %}
 

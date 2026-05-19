@@ -506,68 +506,6 @@ class RegistroFuncion(models.Model):
         return f'{self.funcion.nombre} — {self.persona_display}'
 
 
-class PlantillaFuncion(models.Model):
-    """
-    Plantilla reutilizable de función creada por Admin TIC o superusuario.
-    Cualquier Admin PVD puede instalarla en sus servicios con un clic,
-    generando una copia local editable de la función.
-    """
-    nombre      = models.CharField(max_length=200, verbose_name='Nombre de la plantilla')
-    descripcion = models.CharField(max_length=500, blank=True, verbose_name='Descripción')
-    icono       = models.CharField(max_length=20, default='📋', verbose_name='Icono (emoji)')
-    categoria   = models.CharField(max_length=100, blank=True, default='General',
-                                   verbose_name='Categoría')
-    # Flags de módulos
-    mod_formulario = models.BooleanField(default=False)
-    mod_estados    = models.BooleanField(default=False)
-    mod_ciudadano  = models.BooleanField(default=False)
-    mod_stock      = models.BooleanField(default=False)
-    mod_agenda     = models.BooleanField(default=False)
-    mod_encuesta   = models.BooleanField(default=False)
-    # Configs (misma estructura que FuncionServicio)
-    campos                   = models.JSONField(default=list)
-    estados                  = models.JSONField(default=list)
-    ciudadano_requerido      = models.BooleanField(default=False)
-    ciudadano_rol_etiqueta   = models.CharField(max_length=50, default='Ciudadano', blank=True)
-    ciudadano_permite_inline = models.BooleanField(default=False)
-    ciudadano_campos_inline  = models.JSONField(default=list)
-    stock_nombre             = models.CharField(max_length=200, blank=True, default='')
-    stock_total              = models.PositiveIntegerField(default=0)
-    stock_unidad             = models.CharField(max_length=50, blank=True, default='unidades')
-    stock_alerta_en          = models.PositiveIntegerField(null=True, blank=True)
-    stock_items              = models.JSONField(default=list)
-    agenda_config            = models.JSONField(default=dict)
-    encuesta_config          = models.JSONField(default=list)
-    # Metadatos
-    solo_admin_tic  = models.BooleanField(default=False,
-                                          verbose_name='Solo Admin TIC puede instalar')
-    instalaciones   = models.PositiveIntegerField(default=0, verbose_name='Veces instalada')
-    activa          = models.BooleanField(default=True, verbose_name='Activa en biblioteca')
-    creado_por      = models.ForeignKey('auth.User', on_delete=models.SET_NULL,
-                                        null=True, blank=True, verbose_name='Creada por')
-    creado_en       = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table  = 'pvd_plantillas_funcion'
-        ordering  = ['categoria', 'nombre']
-        verbose_name = 'Plantilla de función'
-        verbose_name_plural = 'Plantillas de funciones'
-
-    def __str__(self):
-        return f'[{self.categoria}] {self.nombre}'
-
-    @property
-    def modulos_activos(self):
-        m = []
-        if self.mod_formulario: m.append('📋')
-        if self.mod_estados:    m.append('🔄')
-        if self.mod_ciudadano:  m.append('👤')
-        if self.mod_stock:      m.append('📦')
-        if self.mod_agenda:     m.append('📅')
-        if self.mod_encuesta:   m.append('⭐')
-        return m
-
 
 class Satisfaccion(models.Model):
     atencion = models.ForeignKey(

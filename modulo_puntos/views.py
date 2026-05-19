@@ -20,7 +20,6 @@ from .models import (
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
     MantenimientoEquipo, ServicioPersonalizado, FuncionServicio, RegistroFuncion,
-    PlantillaFuncion,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
@@ -2944,35 +2943,11 @@ def crear_funcion_view(request, pvd_id, svc_id):
             return JsonResponse({'ok': False, 'error': str(exc)})
 
     desde_wizard = request.GET.get('from_wizard', '0') == '1'
-    plantilla_id = request.GET.get('plantilla')
-    funcion_base = None
-    if plantilla_id:
-        try:
-            pl = PlantillaFuncion.objects.get(pk=plantilla_id, activa=True)
-            funcion_base = pl
-        except PlantillaFuncion.DoesNotExist:
-            pass
-
-    # El template usa {{ funcion_base.X }} como argumento de |default:, y Django no captura
-    # VariableDoesNotExist en argumentos de filtro. Si funcion_base es None el template
-    # explota con VariableDoesNotExist. Se pasa un objeto con valores vacíos para evitarlo.
-    if funcion_base is None:
-        from types import SimpleNamespace
-        funcion_base = SimpleNamespace(
-            nombre='', descripcion='',
-            campos=[], estados=[], agenda_config={}, encuesta_config=[], stock_items=[],
-            mod_formulario=False, mod_estados=False, mod_ciudadano=False,
-            mod_stock=False, mod_agenda=False, mod_encuesta=False,
-            ciudadano_rol_etiqueta='Ciudadano', ciudadano_requerido=False,
-            ciudadano_permite_inline=False, ciudadano_campos_inline=[],
-            stock_nombre='', stock_total=0, stock_unidad='unidades', stock_alerta_en=None,
-        )
 
     return render(request, 'modulo_puntos/builder_funcion.html', {
         'pvd': pvd,
         'svc': svc,
         'funcion': None,
-        'funcion_base': funcion_base,
         'desde_wizard': desde_wizard,
     })
 
@@ -3000,7 +2975,6 @@ def editar_funcion_view(request, pvd_id, svc_id, fun_id):
         'pvd': pvd,
         'svc': svc,
         'funcion': fun,
-        'funcion_base': None,
         'desde_wizard': desde_wizard,
     })
 
@@ -3337,129 +3311,3 @@ def eliminar_funcion_view(request, pvd_id, svc_id, fun_id):
         fun.save()
         messages.success(request, f'Función "{fun.nombre}" eliminada.')
     return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
-
-
-# ── Plantillas de funciones ────────────────────────────────────────────────────
-
-@login_required(login_url='/login/')
-def lista_plantillas_view(request):
-    es_tic = usuario_es_admin_tic(request.user)
-    qs = PlantillaFuncion.objects.filter(activa=True)
-    if not es_tic:
-        qs = qs.filter(solo_admin_tic=False)
-    categoria_filtro = request.GET.get('categoria', '')
-    if categoria_filtro:
-        qs = qs.filter(categoria=categoria_filtro)
-    base_qs = PlantillaFuncion.objects.filter(activa=True) if es_tic else PlantillaFuncion.objects.filter(activa=True, solo_admin_tic=False)
-    categorias = base_qs.values_list('categoria', flat=True).distinct().order_by('categoria')
-
-    # Servicios accesibles para el usuario (para el formulario de instalación)
-    if es_tic:
-        servicios = ServicioPersonalizado.objects.filter(habilitado=True).select_related('punto_vive_digital').order_by('punto_vive_digital__nombre', 'nombre')
-    else:
-        pvd_activo_id = request.session.get('pvd_activo_id')
-        if pvd_activo_id:
-            servicios = ServicioPersonalizado.objects.filter(habilitado=True, punto_vive_digital_id=pvd_activo_id).select_related('punto_vive_digital')
-        else:
-            servicios = ServicioPersonalizado.objects.none()
-
-    return render(request, 'modulo_puntos/lista_plantillas.html', {
-        'plantillas': qs,
-        'categorias': categorias,
-        'categoria_filtro': categoria_filtro,
-        'es_tic': es_tic,
-        'servicios_instalacion': servicios,
-    })
-
-
-@login_required(login_url='/login/')
-def crear_plantilla_desde_funcion_view(request, pvd_id, svc_id, fun_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'Solo los administradores TIC pueden crear plantillas de red.')
-        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre', fun.nombre).strip()
-        descripcion = request.POST.get('descripcion', fun.descripcion).strip()
-        categoria = request.POST.get('categoria', 'General').strip() or 'General'
-        icono = request.POST.get('icono', '📋').strip() or '📋'
-        solo_tic = bool(request.POST.get('solo_admin_tic'))
-
-        PlantillaFuncion.objects.create(
-            nombre=nombre,
-            descripcion=descripcion,
-            categoria=categoria,
-            icono=icono,
-            solo_admin_tic=solo_tic,
-            creado_por=request.user,
-            mod_formulario=fun.mod_formulario,
-            mod_estados=fun.mod_estados,
-            mod_ciudadano=fun.mod_ciudadano,
-            mod_stock=fun.mod_stock,
-            mod_agenda=fun.mod_agenda,
-            mod_encuesta=fun.mod_encuesta,
-            campos=fun.campos,
-            estados=fun.estados,
-            ciudadano_requerido=fun.ciudadano_requerido,
-            ciudadano_rol_etiqueta=fun.ciudadano_rol_etiqueta,
-            ciudadano_permite_inline=fun.ciudadano_permite_inline,
-            ciudadano_campos_inline=fun.ciudadano_campos_inline,
-            stock_nombre=fun.stock_nombre,
-            stock_total=fun.stock_total,
-            stock_unidad=fun.stock_unidad,
-            stock_alerta_en=fun.stock_alerta_en,
-            stock_items=fun.stock_items,
-            agenda_config=fun.agenda_config,
-            encuesta_config=fun.encuesta_config,
-        )
-        messages.success(request, f'Plantilla "{nombre}" creada en la biblioteca de red.')
-        return redirect('modulo_puntos:lista_plantillas')
-    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-
-@login_required(login_url='/login/')
-def instalar_plantilla_view(request, pvd_id, svc_id, plantilla_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    plantilla = get_object_or_404(PlantillaFuncion, pk=plantilla_id, activa=True)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if plantilla.solo_admin_tic and not usuario_es_admin_tic(request.user):
-        messages.error(request, 'Esta plantilla solo puede instalarla un administrador TIC.')
-        return redirect('modulo_puntos:lista_plantillas')
-
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre', plantilla.nombre).strip() or plantilla.nombre
-        fun = FuncionServicio.objects.create(
-            servicio=svc,
-            nombre=nombre,
-            descripcion=plantilla.descripcion,
-            mod_formulario=plantilla.mod_formulario,
-            mod_estados=plantilla.mod_estados,
-            mod_ciudadano=plantilla.mod_ciudadano,
-            mod_stock=plantilla.mod_stock,
-            mod_agenda=plantilla.mod_agenda,
-            mod_encuesta=plantilla.mod_encuesta,
-            campos=plantilla.campos,
-            estados=plantilla.estados,
-            ciudadano_requerido=plantilla.ciudadano_requerido,
-            ciudadano_rol_etiqueta=plantilla.ciudadano_rol_etiqueta,
-            ciudadano_permite_inline=plantilla.ciudadano_permite_inline,
-            ciudadano_campos_inline=plantilla.ciudadano_campos_inline,
-            stock_nombre=plantilla.stock_nombre,
-            stock_total=plantilla.stock_total,
-            stock_unidad=plantilla.stock_unidad,
-            stock_alerta_en=plantilla.stock_alerta_en,
-            stock_items=plantilla.stock_items,
-            agenda_config=plantilla.agenda_config,
-            encuesta_config=plantilla.encuesta_config,
-        )
-        PlantillaFuncion.objects.filter(pk=plantilla.pk).update(instalaciones=plantilla.instalaciones + 1)
-        messages.success(request, f'Función "{fun.nombre}" instalada desde la plantilla.')
-        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun.pk)
-    return redirect('modulo_puntos:lista_plantillas')

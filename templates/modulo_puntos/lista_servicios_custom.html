@@ -53,11 +53,33 @@
 
 {# ── Tabla de servicios ── #}
 <div class="content-section">
-    <div class="section-header">
-        <h3 class="section-title">
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <h3 class="section-title" style="margin:0;">
             📋 Servicios
             {% if pvd_filtro_obj %}<span style="font-size:13px;font-weight:400;color:#64748b;">— {{ pvd_filtro_obj.nombre }}</span>{% endif %}
         </h3>
+        {% if pvd_filtro_obj %}
+        <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_filtro_obj.pk %}" class="btn btn--sm">+ Crear nuevo servicio</a>
+        {% elif pvd_activo %}
+        <a href="{% url 'modulo_puntos:wizard_servicios_pvd' pvd_id=pvd_activo.pk %}" class="btn btn--sm">+ Crear nuevo servicio</a>
+        {% else %}
+        <div style="display:flex;gap:6px;align-items:center;">
+            <select id="pvd-para-crear" class="form-control" style="font-size:12px;padding:5px 10px;height:auto;width:auto;min-width:180px;">
+                <option value="">— Seleccionar PVD —</option>
+                {% for pvd in pvds %}
+                <option value="{{ pvd.pk }}">{{ pvd.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn--sm" onclick="irACrearServicio()">+ Crear nuevo servicio</button>
+        </div>
+        <script>
+        function irACrearServicio() {
+            var pvdId = document.getElementById('pvd-para-crear').value;
+            if (!pvdId) { document.getElementById('pvd-para-crear').style.borderColor = '#ef4444'; setTimeout(function(){ document.getElementById('pvd-para-crear').style.borderColor = ''; }, 2000); return; }
+            window.location.href = '/pvd/' + pvdId + '/servicios/';
+        }
+        </script>
+        {% endif %}
     </div>
 
     {% if not servicios %}

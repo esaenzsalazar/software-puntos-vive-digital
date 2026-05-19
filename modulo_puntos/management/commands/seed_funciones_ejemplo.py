@@ -9,7 +9,7 @@ Uso:
 """
 
 from django.core.management.base import BaseCommand
-from modulo_puntos.models import PuntoViveDigital, ServicioPersonalizado, FuncionServicio, PlantillaFuncion
+from modulo_puntos.models import PuntoViveDigital, ServicioPersonalizado, FuncionServicio
 
 MARCADOR = "[EJEMPLO]"
 
@@ -216,111 +216,6 @@ SERVICIOS = [
     },
 ]
 
-# Plantillas de ejemplo para la biblioteca de red
-PLANTILLAS = [
-    {
-        "nombre": "Préstamo simple de recurso",
-        "descripcion": "Plantilla base para préstamos: estados de entregado/devuelto y control de stock",
-        "icono": "📤",
-        "categoria": "Inventario",
-        "mod_stock": True, "stock_nombre": "Recurso", "stock_total": 10, "stock_unidad": "unidades", "stock_alerta_en": 2,
-        "stock_items": [],
-        "mod_estados": True,
-        "estados": [
-            {"nombre": "Entregado", "color": "#8b5cf6", "emoji": "📤", "es_inicial": True, "es_terminal": False,
-             "puede_ir_a": ["Devuelto", "Con retraso"], "requiere_nota": False},
-            {"nombre": "Con retraso", "color": "#f97316", "emoji": "⚠️", "es_inicial": False, "es_terminal": False,
-             "puede_ir_a": ["Devuelto"], "requiere_nota": True},
-            {"nombre": "Devuelto", "color": "#10b981", "emoji": "✅", "es_inicial": False, "es_terminal": True,
-             "puede_ir_a": [], "requiere_nota": False},
-        ],
-        "mod_ciudadano": True, "ciudadano_requerido": True, "ciudadano_rol_etiqueta": "Beneficiario",
-        "ciudadano_permite_inline": False, "ciudadano_campos_inline": [],
-        "mod_formulario": False, "campos": [],
-        "mod_agenda": False, "agenda_config": {},
-        "mod_encuesta": False, "encuesta_config": [],
-        "solo_admin_tic": False,
-    },
-    {
-        "nombre": "Cita con agendamiento",
-        "descripcion": "Plantilla para servicios con turnos: agenda semanal, estados de asistencia y encuesta",
-        "icono": "📅",
-        "categoria": "Agenda",
-        "mod_agenda": True,
-        "agenda_config": {
-            "dias": [1, 2, 3, 4, 5],
-            "hora_inicio": "08:00",
-            "hora_fin": "12:00",
-            "duracion_min": 30,
-            "max_por_franja": 3,
-        },
-        "mod_estados": True,
-        "estados": [
-            {"nombre": "Agendado", "color": "#3b82f6", "emoji": "📅", "es_inicial": True, "es_terminal": False,
-             "puede_ir_a": ["Atendido", "No se presentó", "Cancelado"], "requiere_nota": False},
-            {"nombre": "Atendido", "color": "#10b981", "emoji": "✅", "es_inicial": False, "es_terminal": True,
-             "puede_ir_a": [], "requiere_nota": False},
-            {"nombre": "No se presentó", "color": "#f59e0b", "emoji": "⚠️", "es_inicial": False, "es_terminal": True,
-             "puede_ir_a": [], "requiere_nota": True},
-            {"nombre": "Cancelado", "color": "#ef4444", "emoji": "❌", "es_inicial": False, "es_terminal": True,
-             "puede_ir_a": [], "requiere_nota": True},
-        ],
-        "mod_ciudadano": True, "ciudadano_requerido": True, "ciudadano_rol_etiqueta": "Solicitante",
-        "ciudadano_permite_inline": True,
-        "ciudadano_campos_inline": [
-            {"nombre": "ci_nombre", "label": "Nombre completo", "tipo": "texto"},
-            {"nombre": "ci_doc", "label": "Documento", "tipo": "texto"},
-        ],
-        "mod_formulario": True,
-        "campos": [
-            {"nombre": "motivo", "label": "Motivo de la cita", "tipo": "textarea", "requerido": True, "opciones": []},
-        ],
-        "mod_stock": False, "stock_nombre": "", "stock_total": 0, "stock_unidad": "unidades", "stock_alerta_en": None,
-        "stock_items": [],
-        "mod_encuesta": True,
-        "encuesta_config": [
-            {"pregunta": "¿Cómo calificaría el servicio recibido?", "tipo": "calificacion"},
-            {"pregunta": "Comentarios adicionales", "tipo": "texto"},
-        ],
-        "solo_admin_tic": False,
-    },
-    {
-        "nombre": "Flujo de aprobación institucional",
-        "descripcion": "Solicitud multi-etapa: borrador → revisión → aprobación/rechazo con notas obligatorias",
-        "icono": "📋",
-        "categoria": "Gestión documental",
-        "mod_formulario": True,
-        "campos": [
-            {"nombre": "titulo", "label": "Título de la solicitud", "tipo": "texto", "requerido": True, "opciones": []},
-            {"nombre": "descripcion", "label": "Descripción detallada", "tipo": "textarea", "requerido": True, "opciones": []},
-            {"nombre": "urgencia", "label": "Urgencia", "tipo": "lista", "requerido": True,
-             "opciones": ["Alta", "Media", "Baja"]},
-        ],
-        "mod_estados": True,
-        "estados": [
-            {"nombre": "Borrador", "color": "#64748b", "emoji": "📝", "es_inicial": True, "es_terminal": False,
-             "puede_ir_a": ["Enviado"], "requiere_nota": False},
-            {"nombre": "Enviado", "color": "#3b82f6", "emoji": "📨", "es_inicial": False, "es_terminal": False,
-             "puede_ir_a": ["En revisión", "Devuelto"], "requiere_nota": False},
-            {"nombre": "En revisión", "color": "#f59e0b", "emoji": "🔍", "es_inicial": False, "es_terminal": False,
-             "puede_ir_a": ["Aprobado", "Devuelto", "Rechazado"], "requiere_nota": False},
-            {"nombre": "Devuelto", "color": "#f97316", "emoji": "↩️", "es_inicial": False, "es_terminal": False,
-             "puede_ir_a": ["Enviado"], "requiere_nota": True},
-            {"nombre": "Aprobado", "color": "#10b981", "emoji": "✅", "es_inicial": False, "es_terminal": True,
-             "puede_ir_a": [], "requiere_nota": False},
-            {"nombre": "Rechazado", "color": "#ef4444", "emoji": "❌", "es_inicial": False, "es_terminal": True,
-             "puede_ir_a": [], "requiere_nota": True},
-        ],
-        "mod_ciudadano": True, "ciudadano_requerido": False, "ciudadano_rol_etiqueta": "Solicitante",
-        "ciudadano_permite_inline": False, "ciudadano_campos_inline": [],
-        "mod_stock": False, "stock_nombre": "", "stock_total": 0, "stock_unidad": "unidades", "stock_alerta_en": None,
-        "stock_items": [],
-        "mod_agenda": False, "agenda_config": {},
-        "mod_encuesta": False, "encuesta_config": [],
-        "solo_admin_tic": False,
-    },
-]
-
 
 class Command(BaseCommand):
     help = 'Crea servicios y funciones de ejemplo usando todos los módulos disponibles'
@@ -328,37 +223,30 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--pvd-id', type=int, default=None, help='ID del PVD destino')
         parser.add_argument('--borrar', action='store_true', help='Borrar ejemplos existentes antes de crear')
-        parser.add_argument('--solo-plantillas', action='store_true', help='Solo crear plantillas de red, no servicios')
 
     def handle(self, *args, **options):
         pvd_id = options['pvd_id']
         borrar  = options['borrar']
-        solo_plantillas = options['solo_plantillas']
 
         # ── Determinar PVD ──────────────────────────────────────────────────
-        if not solo_plantillas:
-            if pvd_id:
-                try:
-                    pvd = PuntoViveDigital.objects.get(pk=pvd_id)
-                except PuntoViveDigital.DoesNotExist:
-                    raise Exception(f'PVD con id={pvd_id} no existe.')
-            else:
-                pvd = PuntoViveDigital.objects.filter(estado='A').first()
-                if not pvd:
-                    raise Exception('No hay PVDs activos. Crea uno primero.')
-            self.stdout.write(f'PVD: {pvd.nombre} (id={pvd.pk})')
+        if pvd_id:
+            try:
+                pvd = PuntoViveDigital.objects.get(pk=pvd_id)
+            except PuntoViveDigital.DoesNotExist:
+                raise Exception(f'PVD con id={pvd_id} no existe.')
+        else:
+            pvd = PuntoViveDigital.objects.filter(estado='A').first()
+            if not pvd:
+                raise Exception('No hay PVDs activos. Crea uno primero.')
+        self.stdout.write(f'PVD: {pvd.nombre} (id={pvd.pk})')
 
         # ── Borrar ejemplos existentes ──────────────────────────────────────
-        if borrar and not solo_plantillas:
+        if borrar:
             eliminados = ServicioPersonalizado.objects.filter(nombre__startswith=MARCADOR, punto_vive_digital=pvd).delete()
             self.stdout.write(self.style.WARNING(f'Eliminados: {eliminados}'))
-        if borrar:
-            PlantillaFuncion.objects.filter(nombre__in=[p["nombre"] for p in PLANTILLAS]).delete()
-            self.stdout.write(self.style.WARNING('Plantillas de ejemplo eliminadas.'))
 
         # ── Crear servicios y funciones ─────────────────────────────────────
-        if not solo_plantillas:
-            for svc_data in SERVICIOS:
+        for svc_data in SERVICIOS:
                 svc, created = ServicioPersonalizado.objects.get_or_create(
                     nombre=svc_data["nombre"],
                     punto_vive_digital=pvd,
@@ -385,15 +273,5 @@ class Command(BaseCommand):
                         fun.save()
                     ftag = 'CREADA' if fcreated else 'ACTUALIZADA'
                     self.stdout.write(f'    {ftag}: Función "{fun.nombre}"')
-
-        # ── Crear plantillas de red ─────────────────────────────────────────
-        for pl_data in PLANTILLAS:
-            nombre = pl_data["nombre"]
-            pl, created = PlantillaFuncion.objects.update_or_create(
-                nombre=nombre,
-                defaults={k: v for k, v in pl_data.items() if k != "nombre"},
-            )
-            tag = 'CREADA' if created else 'ACTUALIZADA'
-            self.stdout.write(f'  {tag}: Plantilla "{pl.nombre}"')
 
         self.stdout.write(self.style.SUCCESS('¡Listo! Ejemplos creados correctamente.'))

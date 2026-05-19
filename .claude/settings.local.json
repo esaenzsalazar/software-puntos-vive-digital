@@ -59,7 +59,13 @@
       "Bash(\".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py makemigrations modulo_puntos_app --name encuesta_respuestas_registro)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Sort-Object)",
-      "Bash(grep -n \"HttpResponse\\\\|pass$\" \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\modulo_puntos\\\\views.py\")"
+      "Bash(grep -n \"HttpResponse\\\\|pass$\" \"C:\\\\Users\\\\USER\\\\software-puntos-vive-digital\\\\modulo_puntos\\\\views.py\")",
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py showmigrations modulo_puntos 2>&1)",
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py showmigrations 2>&1)",
+      "PowerShell(& \".\\\\entorno\\\\Scripts\\\\python.exe\" manage.py runserver 2>&1 | Select-Object -First 20)",
+      "Skill(update-config)",
+      "Bash(*)",
+      "PowerShell(*)"
     ]
   }
 }

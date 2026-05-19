@@ -11,7 +11,9 @@ from django.db.models import Q, Count, Avg, Max
 from django.db.models.functions import TruncMonth
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 
@@ -86,7 +88,11 @@ def login_usuario(request):
     if request.user.is_authenticated:
         return redirect('modulo_puntos:panel_control')
 
-    next_url = request.GET.get('next') or request.POST.get('next') or reverse('modulo_puntos:panel_control')
+    raw_next = request.GET.get('next') or request.POST.get('next') or ''
+    if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}):
+        next_url = raw_next
+    else:
+        next_url = reverse('modulo_puntos:panel_control')
     form = LoginForm(request=request, data=request.POST or None)
 
     if request.method == 'POST':
@@ -360,6 +366,10 @@ def editar_ciudadano(request, ciu_cdgo):
         return redirect('modulo_puntos:panel_control')
 
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
+    if usuario_necesita_seleccionar_pvd(request.user):
+        pvd_id = request.session.get('pvd_activo_id')
+        if ciudadano.punto_vive_digital_id != pvd_id:
+            raise PermissionDenied('No tienes acceso a este ciudadano.')
     form = CiudadanoForm(request.POST or None, instance=ciudadano)
     if request.method == 'POST':
         if form.is_valid():
@@ -385,6 +395,10 @@ def historial_ciudadano(request, ciu_cdgo):
         return redirect('modulo_puntos:panel_control')
 
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
+    if usuario_necesita_seleccionar_pvd(request.user):
+        pvd_id = request.session.get('pvd_activo_id')
+        if ciudadano.punto_vive_digital_id != pvd_id:
+            raise PermissionDenied('No tienes acceso a este ciudadano.')
 
     atenciones = Atencion.objects.filter(
         ciudadano=ciudadano

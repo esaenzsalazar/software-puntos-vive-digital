@@ -16,7 +16,7 @@ urlpatterns = [
     path('login/', views.login_usuario, name='login'),
     path('', views.login_usuario, name='home'),
     path('logout/', views.logout_usuario, name='logout'),
-    
+
     # ==========================================================================
     # PANEL DE CONTROL Y NAVEGACIÓN
     # ==========================================================================
@@ -24,7 +24,7 @@ urlpatterns = [
     path('seleccionar-pvd/', views.seleccionar_pvd_view, name='seleccionar_pvd_view'),
     path('perfil/', views.perfil_usuario, name='perfil_usuario'),
     path('inicio-pvd/', views.inicio_pvd, name='inicio_pvd'),
-    
+
     # ==========================================================================
     # GESTIÓN DE CIUDADANOS
     # ==========================================================================
@@ -45,15 +45,11 @@ urlpatterns = [
     # ==========================================================================
     # REGISTRO DE ATENCIONES Y SERVICIOS
     # ==========================================================================
-    path('atenciones/', views.lista_atenciones, name='lista_atenciones'),
     path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
-    path('atencion/<int:atencion_id>/', views.detalle_atencion, name='detalle_atencion'),
-    path('atencion/<int:atencion_id>/estado/', views.cambiar_estado_atencion, name='cambiar_estado_atencion'),
     path('servicio/<int:servicio_id>/usar/<int:atencion_id>/', views.formulario_servicio, name='formulario_servicio'),
-    path('servicio/<int:servicio_id>/abrir/', views.abrir_servicio_canvas, name='abrir_servicio_canvas'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
-    
+
     # ==========================================================================
     # GESTIÓN DE RECURSOS Y PRÉSTAMOS
     # ==========================================================================
@@ -62,7 +58,7 @@ urlpatterns = [
     path('registrar-prestamo/', views.registrar_prestamo, name='registrar_prestamo'),
     path('prestamos/<int:prestamo_id>/editar/', views.editar_prestamo, name='editar_prestamo'),
     path('prestamos/<int:prestamo_id>/devolver/', views.devolver_prestamo, name='devolver_prestamo'),
-    
+
     # ==========================================================================
     # REPORTES Y EXPORTACIÓN
     # ==========================================================================
@@ -84,12 +80,11 @@ urlpatterns = [
     path('gestionar-roles/', views.gestionar_roles, name='gestionar_roles'),
     path('asignar-rol/<int:user_id>/', views.asignar_rol_usuario, name='asignar_rol_usuario'),
     path('crear-rol/', views.crear_grupo_rol, name='crear_grupo_rol'),
-    
+
     # ==========================================================================
     # GESTIÓN DE PUNTOS VIVE DIGITAL (Multi-PVD)
     # ==========================================================================
     path('pvd/', views.lista_pvd, name='lista_pvd'),
-    path('pvd/<int:pvd_id>/servicios/', views.gestionar_servicios_pvd, name='gestionar_servicios_pvd'),
     path('pvd/validar-nombre/', views.validar_nombre_pvd, name='validar_nombre_pvd'),
     path('pvd/crear/', views.crear_pvd, name='crear_pvd'),
     path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
@@ -111,7 +106,7 @@ urlpatterns = [
     path('salas/editar/<int:sala_cdgo>/', views.editar_sala, name='editar_sala'),
     path('salas/activar/<int:sala_cdgo>/', views.activar_sala, name='activar_sala'),
     path('salas/eliminar/<int:sala_cdgo>/', views.eliminar_sala, name='eliminar_sala'),
-    
+
     # ==========================================================================
     # HABILITACIÓN DE SALAS
     # ==========================================================================
@@ -148,7 +143,6 @@ urlpatterns = [
     path('mantenimientos/crear/', views.crear_mantenimiento, name='crear_mantenimiento'),
     path('mantenimientos/<int:mant_id>/editar/', views.editar_mantenimiento, name='editar_mantenimiento'),
 
-    # ==========================================================================
     # ==========================================================================
     # ACCESOS TEMPORALES (Superusuario / Admin TIC)
     # ==========================================================================

@@ -1,0 +1,106 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Atenciones{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="page-hero">
+    <span class="eyebrow">Operación</span>
+    <h1 class="page-title">Atenciones al ciudadano</h1>
+    <p class="muted">Consulta y gestiona las atenciones registradas en este PVD.</p>
+  </div>
+
+  {# ── Filtros ── #}
+  <form method="GET" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:20px;">
+    <div style="flex:2; min-width:180px;">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                    color:var(--text-muted);display:block;margin-bottom:4px;">Buscar ciudadano</label>
+      <input type="search" name="q" value="{{ q }}"
+             placeholder="Nombre o documento…"
+             style="width:100%;">
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                    color:var(--text-muted);display:block;margin-bottom:4px;">Estado</label>
+      <select name="estado">
+        <option value="">— Todos —</option>
+        <option value="P" {% if estado_filter == 'P' %}selected{% endif %}>Pendiente</option>
+        <option value="F" {% if estado_filter == 'F' %}selected{% endif %}>Finalizada</option>
+        <option value="C" {% if estado_filter == 'C' %}selected{% endif %}>Cancelada</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                    color:var(--text-muted);display:block;margin-bottom:4px;">Fecha</label>
+      <input type="date" name="fecha" value="{{ fecha_filter }}">
+    </div>
+    <button type="submit" class="btn btn--sm">Filtrar</button>
+    {% if q or estado_filter or fecha_filter %}
+    <a href="{% url 'modulo_puntos:lista_atenciones' %}" class="btn btn-secondary btn--sm">✕ Limpiar</a>
+    {% endif %}
+  </form>
+
+  {# ── Tabla ── #}
+  {% if atenciones %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Ciudadano</th>
+          <th>Fecha</th>
+          <th>Hora inicio</th>
+          <th>Hora fin</th>
+          <th>Estado</th>
+          <th>PVD</th>
+          <th>Registrado por</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for atencion in atenciones %}
+        <tr>
+          <td class="muted" style="font-size:12px;">{{ atencion.pk }}</td>
+          <td>
+            {% if atencion.ciudadano %}
+              <strong>{{ atencion.ciudadano.get_nombre_completo }}</strong>
+              <br><span class="muted" style="font-size:12px;">{{ atencion.ciudadano.numero_documento }}</span>
+            {% else %}
+              <span class="muted">Sin ciudadano</span>
+            {% endif %}
+          </td>
+          <td>{{ atencion.fecha|date:"d/m/Y" }}</td>
+          <td>{{ atencion.hora_inicio|default:"—" }}</td>
+          <td>{{ atencion.hora_fin|default:"—" }}</td>
+          <td>
+            {% if atencion.estado == 'P' %}
+              <span class="badge badge--warning">Pendiente</span>
+            {% elif atencion.estado == 'F' %}
+              <span class="badge badge--success">Finalizada</span>
+            {% elif atencion.estado == 'C' %}
+              <span class="badge badge--danger">Cancelada</span>
+            {% endif %}
+          </td>
+          <td>{{ atencion.punto_vive_digital|default:"—" }}</td>
+          <td>{{ atencion.operador.get_full_name|default:atencion.operador.username|default:"—" }}</td>
+          <td>
+            <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}"
+               class="btn btn--sm" title="Ver detalle">Ver</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="callout" style="text-align:center; padding:32px;">
+    <p class="muted">No hay atenciones que coincidan con los filtros.</p>
+    <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="btn" style="margin-top:12px;">
+      + Registrar nueva atención
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

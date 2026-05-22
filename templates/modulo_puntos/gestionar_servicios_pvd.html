@@ -1,0 +1,126 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Servicios – {{ pvd.nombre }}{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="page-hero">
+    <span class="eyebrow">{{ pvd.nombre }}</span>
+    <h1 class="page-title">Servicios del PVD</h1>
+    <p class="muted">Añade o quita servicios disponibles para este Punto Vive Digital.</p>
+  </div>
+</div>
+
+{# ── Servicios asignados ── #}
+<div class="card">
+  <h3 style="margin-bottom:14px;">Servicios activos ({{ servicios_asignados|length }})</h3>
+
+  {% if servicios_asignados %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:40px;"></th>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Campos</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pvdsvc in servicios_asignados %}
+        <tr>
+          <td style="font-size:22px; text-align:center;">{{ pvdsvc.servicio.icono }}</td>
+          <td>
+            <strong>{{ pvdsvc.servicio.nombre }}</strong>
+            {% if pvdsvc.servicio.descripcion %}
+            <br><span class="muted" style="font-size:12px;">{{ pvdsvc.servicio.descripcion }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if pvdsvc.servicio.tipo == 'redireccion' %}
+              <span class="badge badge--info">Enlace externo</span>
+            {% else %}
+              <span class="badge badge--info">Formulario</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if pvdsvc.servicio.tipo == 'recoleccion' %}
+              {{ pvdsvc.servicio.campos|length }} campo{{ pvdsvc.servicio.campos|length|pluralize:"s" }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>
+            <form method="POST" style="display:inline;"
+                  onsubmit="return confirm('¿Quitar este servicio del PVD?');">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="quitar">
+              <input type="hidden" name="svc_id" value="{{ pvdsvc.servicio.pk }}">
+              <button type="submit" class="btn btn--sm btn-secondary"
+                      style="color:var(--color-danger);" title="Quitar del PVD">✕ Quitar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="callout">
+    <p class="muted">Este PVD no tiene servicios asignados todavía. Añade uno desde el catálogo.</p>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Catálogo disponible ── #}
+{% if servicios_catalogo %}
+<div class="card">
+  <h3 style="margin-bottom:14px;">Catálogo disponible</h3>
+  <p class="muted" style="margin-bottom:16px;">
+    Servicios ya definidos en el sistema que puedes añadir a este PVD con un clic.
+  </p>
+
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    {% for svc in servicios_catalogo %}
+    <div style="display:flex; align-items:center; gap:12px;
+                border:1px solid var(--border-color); border-radius:var(--border-radius);
+                padding:12px 16px; background:var(--surface-raised);">
+      <div style="font-size:24px; flex-shrink:0;">{{ svc.icono }}</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:14px;">{{ svc.nombre }}
+          {% if svc.es_plantilla_sistema %}
+            <span class="badge badge--info" style="margin-left:6px;">Sistema</span>
+          {% endif %}
+        </div>
+        {% if svc.descripcion %}
+        <div class="muted" style="font-size:12px; margin-top:2px;">{{ svc.descripcion }}</div>
+        {% endif %}
+      </div>
+      <div class="muted" style="font-size:12px; white-space:nowrap; flex-shrink:0;">
+        {% if svc.tipo == 'redireccion' %}
+          Enlace externo
+        {% else %}
+          {{ svc.campos|length }} campo{{ svc.campos|length|pluralize:"s" }}
+        {% endif %}
+      </div>
+      <form method="POST" style="flex-shrink:0;">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="asignar">
+        <input type="hidden" name="svc_id" value="{{ svc.pk }}">
+        <button type="submit" class="btn btn--sm">+ Añadir</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="callout">
+    <p class="muted">Todos los servicios del catálogo ya están asignados a este PVD.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

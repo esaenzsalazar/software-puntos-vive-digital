@@ -2,15 +2,8 @@
 Contexto global para navegación según permisos (contrato PVD / roles).
 Proporciona variables de contexto disponibles en todos los templates.
 """
-from .models import PuntoViveDigital, ModuloHabilitado, ServicioPersonalizado
+from .models import PuntoViveDigital
 from django.urls import reverse, NoReverseMatch
-
-_FUNCTION_URL_NAMES = frozenset({
-    'gestionar_servicio_custom', 'gestionar_funcion', 'crear_funcion',
-    'editar_funcion', 'crear_registro_funcion', 'cambiar_estado_registro_funcion',
-    'cerrar_registro_funcion', 'reabrir_registro_funcion', 'agregar_nota_registro',
-    'api_slots_agenda', 'eliminar_funcion',
-})
 
 # (label, parent_label, parent_url_name)
 _BREADCRUMB_MAP = {
@@ -25,7 +18,10 @@ _BREADCRUMB_MAP = {
     'historial_ciudadano':   ('Historial',             'Ciudadanos',            'consultar_ciudadanos'),
     'ciudadanos_pendientes': ('Pendientes',            'Ciudadanos',            'consultar_ciudadanos'),
     # Atenciones
-    'registrar_atencion':    ('Nueva Atención',        'Panel',                 'panel_control'),
+    'lista_atenciones':      ('Atenciones',            'Panel',                 'panel_control'),
+    'registrar_atencion':    ('Nueva Atención',        'Atenciones',            'lista_atenciones'),
+    'detalle_atencion':      ('Detalle Atención',      'Atenciones',            'lista_atenciones'),
+    'formulario_servicio':   ('Formulario de Servicio','Detalle Atención',      'lista_atenciones'),
     'registrar_servicio':    ('Registrar Servicio',    'Panel',                 'panel_control'),
     'registrar_satisfaccion':('Satisfacción',          'Panel',                 'panel_control'),
     # Recursos
@@ -39,6 +35,7 @@ _BREADCRUMB_MAP = {
     'lista_pvd':             ('Puntos Vive Digital',   'Panel',                 'panel_control'),
     'crear_pvd':             ('Nuevo PVD',             'Puntos Vive Digital',   'lista_pvd'),
     'editar_pvd':            ('Editar PVD',            'Puntos Vive Digital',   'lista_pvd'),
+    'gestionar_servicios_pvd': ('Servicios del PVD',  'Puntos Vive Digital',   'lista_pvd'),
     # Salas
     'lista_salas':           ('Salas',                 'Panel',                 'panel_control'),
     'crear_sala':            ('Nueva Sala',            'Salas',                 'lista_salas'),
@@ -60,12 +57,6 @@ _BREADCRUMB_MAP = {
     'crear_sesion_curso':    ('Nueva Sesión',          'Cursos',                'lista_cursos'),
     'inscribir_ciudadano':   ('Inscripción',           'Cursos',                'lista_cursos'),
     'marcar_asistencia':     ('Asistencia',            'Cursos',                'lista_cursos'),
-    # Servicios personalizados y plantillas
-    'lista_servicios_custom':         ('Servicios Personalizados', 'Panel',                     'panel_control'),
-    'gestionar_servicio_custom':      ('Gestión de servicio',      'Servicios Personalizados',  'lista_servicios_custom'),
-    'gestionar_funcion':              ('Gestionar función',        'Servicios Personalizados',  'lista_servicios_custom'),
-    'crear_funcion':                  ('Nueva función',            'Servicios Personalizados',  'lista_servicios_custom'),
-    'editar_funcion':                 ('Editar función',           'Servicios Personalizados',  'lista_servicios_custom'),
     # Mantenimientos
     'lista_mantenimientos':  ('Mantenimientos',        'Panel',                 'panel_control'),
     'crear_mantenimiento':   ('Nuevo Mantenimiento',   'Mantenimientos',        'lista_mantenimientos'),
@@ -77,29 +68,19 @@ _BREADCRUMB_MAP = {
     'accesos_temporales':    ('Accesos Temporales',    'Panel',                 'panel_control'),
 }
 
-# target url_name → cualquier código que permite mostrar el botón al Admin PVD
-_TOPBAR_MODULO_REQUERIDO = {
-    'registrar_atencion':  {'atencion_ciudadana', 'atenciones', 'ciudadanos'},
-    'registrar_ciudadano': {'atencion_ciudadana', 'ciudadanos'},
-    'crear_recurso':       {'recursos_salas', 'recursos'},
-    'registrar_prestamo':  {'recursos_salas', 'prestamos'},
-    'reportes':            {'reportes'},
-    'crear_sala':          {'recursos_salas', 'salas'},
-    'crear_habilitacion':  {'recursos_salas', 'habilitaciones'},
-    'crear_curso':         {'cursos_talleres', 'cursos'},
-    'crear_mantenimiento': {'mantenimiento'},
-}
-
 # (label, url_name_or_sentinel, css_extra)
 # '__back__' = use bc_parent_url resolved at runtime
 # '' = base .btn (blue primary), 'btn-secondary' = light secondary
 _TOPBAR_ACTIONS = {
     'panel_control':         [('↓ Exportar', 'reportes', 'btn-secondary'), ('+ Nueva atención', 'registrar_atencion', '')],
+    'lista_atenciones':      [('+ Nueva atención', 'registrar_atencion', '')],
     'consultar_ciudadanos':  [('+ Registrar ciudadano', 'registrar_ciudadano', '')],
     'registrar_ciudadano':   [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_ciudadano':      [('← Cancelar', '__back__', 'btn-secondary')],
     'historial_ciudadano':   [('← Volver', '__back__', 'btn-secondary')],
     'registrar_atencion':    [('← Cancelar', '__back__', 'btn-secondary')],
+    'detalle_atencion':      [('← Volver', '__back__', 'btn-secondary')],
+    'formulario_servicio':   [('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_servicio':    [('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_satisfaccion':[('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_recurso':     [('+ Préstamo', 'registrar_prestamo', 'btn-secondary'), ('+ Nuevo recurso', 'crear_recurso', '')],
@@ -107,6 +88,7 @@ _TOPBAR_ACTIONS = {
     'registrar_prestamo':    [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_prestamo':       [('← Cancelar', '__back__', 'btn-secondary')],
     'lista_pvd':             [('+ Nuevo PVD', 'crear_pvd', '')],
+    'gestionar_servicios_pvd': [('← Volver', '__back__', 'btn-secondary')],
     'crear_pvd':             [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_pvd':            [('← Cancelar', '__back__', 'btn-secondary')],
     'lista_salas':           [('+ Nueva sala', 'crear_sala', '')],
@@ -131,12 +113,6 @@ _TOPBAR_ACTIONS = {
     'perfil_usuario':        [('← Volver', '__back__', 'btn-secondary')],
     'crear_admin_tic':       [('← Cancelar', '__back__', 'btn-secondary')],
     'crear_admin_pvd':       [('← Cancelar', '__back__', 'btn-secondary')],
-    # Servicios personalizados
-    'lista_servicios_custom':        [],
-    'gestionar_servicio_custom':     [('← Volver', '__back__', 'btn-secondary')],
-    'gestionar_funcion':             [('← Volver', '__back__', 'btn-secondary')],
-    'crear_funcion':                 [('← Cancelar', '__back__', 'btn-secondary')],
-    'editar_funcion':                [('← Cancelar', '__back__', 'btn-secondary')],
 }
 
 
@@ -170,8 +146,6 @@ def pvd_navigation(request):
         'bc_parent_label': bc_parent_label,
         'bc_parent_url': bc_parent_url,
         'topbar_actions': [],
-        'restringir_modulos': False,
-        'modulos_pvd_activo': set(),
     }
 
     u = request.user
@@ -209,42 +183,9 @@ def pvd_navigation(request):
         PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
     )
 
-    # Servicios personalizados para el sidebar (requiere pvd_activo)
-    ctx['es_pagina_servicio_custom'] = url_name in _FUNCTION_URL_NAMES
-    if ctx.get('pvd_activo'):
-        ctx['servicios_custom_nav'] = list(
-            ServicioPersonalizado.objects.filter(
-                punto_vive_digital=ctx['pvd_activo']
-            ).only('pk', 'nombre', 'icono')
-        )
-        _svc_id_raw = (getattr(rm, 'kwargs', None) or {}).get('svc_id')
-        ctx['active_svc_id'] = int(_svc_id_raw) if _svc_id_raw else None
-    else:
-        ctx['servicios_custom_nav'] = []
-        ctx['active_svc_id'] = None
-
-    # Restricción de módulos: solo aplica para Admin PVD con PVD activo seleccionado.
-    # Superusuario y Admin TIC ven todo sin restricción.
-    if ctx.get('es_admin_pvd_only') and ctx.get('pvd_activo'):
-        ctx['restringir_modulos'] = True
-        # Módulos del sistema (coarse-grained)
-        modulos_activos = set(
-            ModuloHabilitado.objects.filter(
-                punto_vive_digital=ctx['pvd_activo'],
-                habilitado=True
-            ).values_list('modulo', flat=True)
-        )
-        # Añadir capacidades granulares de servicios personalizados habilitados
-        for svc in ServicioPersonalizado.objects.filter(
-            punto_vive_digital=ctx['pvd_activo'], habilitado=True
-        ).only('modulos_sistema'):
-            modulos_activos.update(svc.modulos_sistema or [])
-        ctx['modulos_pvd_activo'] = modulos_activos
-
     # Resolver acciones del topbar para la página actual
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])
     resolved = []
-    modulos_activos = ctx.get('modulos_pvd_activo', set())
     for label, target, css in raw_actions:
         if target == '__back__':
             action_url = bc_parent_url
@@ -254,10 +195,6 @@ def pvd_navigation(request):
             except NoReverseMatch:
                 action_url = None
         if action_url:
-            # Ocultar botones que requieren módulos no habilitados
-            if ctx.get('restringir_modulos') and target in _TOPBAR_MODULO_REQUERIDO:
-                if not _TOPBAR_MODULO_REQUERIDO[target].intersection(modulos_activos):
-                    continue
             resolved.append({'label': label, 'url': action_url, 'css': css})
     ctx['topbar_actions'] = resolved
 

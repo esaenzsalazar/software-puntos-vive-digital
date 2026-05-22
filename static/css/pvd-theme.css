@@ -1824,3 +1824,72 @@ hr {
     .app-main { grid-column: 1 / -1; padding: 0; }
     .app-shell { grid-template-columns: 1fr; }
 }
+
+/* ══ COMPATIBILIDAD LEGADA — clases usadas en templates anteriores ══════════
+   Estas definiciones hacen que los templates existentes funcionen correctamente
+   sin necesidad de reescribirlos uno a uno.
+══════════════════════════════════════════════════════════════════════════════ */
+
+/* Wrapper de campo (equivale al bloque label+input) */
+.form-group {
+    margin-bottom: 16px;
+}
+
+/* Mensaje de error de servidor (Django form errors) */
+.form-error {
+    color: #991b1b;
+    font-size: 13px;
+    display: block;
+    margin-top: 4px;
+}
+
+/* Hint / ayuda bajo un campo */
+.form-hint {
+    color: var(--p-text-muted);
+    font-size: 13px;
+    display: block;
+    margin-top: 4px;
+}
+
+/* Estado de error en el input (JS lado-cliente) */
+.input-error {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .12) !important;
+}
+
+/* Fila de dos columnas dentro de un formulario */
+.form-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.form-row > .form-group,
+.form-row > div {
+    flex: 1;
+    min-width: 150px;
+}
+@media (max-width: 600px) {
+    .form-row { flex-direction: column; gap: 0; }
+}
+
+/* btn-warning: variante ámbar (ej: "Cambiar contraseña") */
+.btn-warning {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 20px;
+    height: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--p-radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    background: #d97706;
+    color: #fff;
+    transition: background var(--p-transition);
+}
+.btn-warning:hover { background: #b45309; color: #fff; }

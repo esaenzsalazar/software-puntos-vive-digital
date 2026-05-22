@@ -45,7 +45,12 @@ urlpatterns = [
     # ==========================================================================
     # REGISTRO DE ATENCIONES Y SERVICIOS
     # ==========================================================================
+    path('atenciones/', views.lista_atenciones, name='lista_atenciones'),
     path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
+    path('atencion/<int:atencion_id>/', views.detalle_atencion, name='detalle_atencion'),
+    path('atencion/<int:atencion_id>/estado/', views.cambiar_estado_atencion, name='cambiar_estado_atencion'),
+    path('servicio/<int:servicio_id>/usar/<int:atencion_id>/', views.formulario_servicio, name='formulario_servicio'),
+    path('servicio/<int:servicio_id>/abrir/', views.abrir_servicio_canvas, name='abrir_servicio_canvas'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
     
@@ -67,8 +72,6 @@ urlpatterns = [
     path('exportar-servicios/', views.exportar_servicios_csv, name='exportar_servicios_csv'),
     path('exportar-satisfaccion/', views.exportar_satisfaccion_csv, name='exportar_satisfaccion_csv'),
     path('exportar-prestamos/', views.exportar_prestamos_csv, name='exportar_prestamos_csv'),
-    path('exportar/servicio-custom/<int:svc_id>/', views.exportar_servicio_custom_xlsx, name='exportar_servicio_custom'),
-    
     # ==========================================================================
     # GESTIÓN DE USUARIOS
     # ==========================================================================
@@ -86,38 +89,20 @@ urlpatterns = [
     # GESTIÓN DE PUNTOS VIVE DIGITAL (Multi-PVD)
     # ==========================================================================
     path('pvd/', views.lista_pvd, name='lista_pvd'),
+    path('pvd/<int:pvd_id>/servicios/', views.gestionar_servicios_pvd, name='gestionar_servicios_pvd'),
     path('pvd/validar-nombre/', views.validar_nombre_pvd, name='validar_nombre_pvd'),
     path('pvd/crear/', views.crear_pvd, name='crear_pvd'),
     path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
     path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
     path('pvd/eliminar/<int:pvd_cdgo>/', views.eliminar_pvd, name='eliminar_pvd'),
     path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
-    path('pvd/<int:pvd_id>/servicios/', views.wizard_servicios_pvd, name='wizard_servicios_pvd'),
-    path('pvd/<int:pvd_id>/servicios/personalizado/crear/', views.crear_servicio_personalizado, name='crear_servicio_personalizado'),
-    path('pvd/servicios/personalizado/<int:svc_id>/editar/', views.editar_servicio_personalizado, name='editar_servicio_personalizado'),
-    path('pvd/servicios/personalizado/<int:svc_id>/eliminar/', views.eliminar_servicio_personalizado, name='eliminar_servicio_personalizado'),
-    path('pvd/<int:pvd_id>/admin/', views.wizard_asignar_admin_pvd, name='wizard_asignar_admin_pvd'),
-
-    # ==========================================================================
-    # COMPOSITOR DE MÓDULOS — Funciones de servicios personalizados
-    # ==========================================================================
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/nueva/', views.crear_funcion_view, name='crear_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/editar/', views.editar_funcion_view, name='editar_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/', views.gestionar_funcion_view, name='gestionar_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/nuevo/', views.crear_registro_funcion_view, name='crear_registro_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/estado/', views.cambiar_estado_registro_funcion_view, name='cambiar_estado_registro_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/cerrar/', views.cerrar_registro_funcion_view, name='cerrar_registro_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/reabrir/', views.reabrir_registro_funcion_view, name='reabrir_registro_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/nota/', views.agregar_nota_registro_view, name='agregar_nota_registro'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/slots/', views.api_slots_agenda_view, name='api_slots_agenda'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/eliminar/', views.eliminar_funcion_view, name='eliminar_funcion'),
-    path('pvd/<int:pvd_id>/servicio/<int:svc_id>/funcion/<int:fun_id>/registro/<int:reg_id>/encuesta/', views.encuesta_registro_view, name='encuesta_registro'),
-
-    # ==========================================================================
-    # GESTIÓN DE SERVICIOS PERSONALIZADOS
-    # ==========================================================================
-    path('servicios-custom/', views.lista_servicios_custom_view, name='lista_servicios_custom'),
-    path('servicio-custom/<int:svc_id>/', views.gestionar_servicio_custom, name='gestionar_servicio_custom'),
+    # ── Wizard AJAX ──
+    path('pvd/wizard/paso1/', views.wizard_pvd_paso1, name='wizard_pvd_paso1'),
+    path('pvd/wizard/buscar-admin/', views.wizard_pvd_buscar_admin, name='wizard_pvd_buscar_admin'),
+    path('pvd/<int:pvd_id>/wizard/asignar/', views.wizard_pvd_asignar_servicio, name='wizard_pvd_asignar_servicio'),
+    path('pvd/<int:pvd_id>/wizard/quitar/<int:svc_id>/', views.wizard_pvd_quitar_servicio, name='wizard_pvd_quitar_servicio'),
+    path('pvd/<int:pvd_id>/wizard/servicio/nuevo/', views.wizard_pvd_crear_servicio, name='wizard_pvd_crear_servicio'),
+    path('pvd/<int:pvd_id>/wizard/finalizar/', views.wizard_pvd_finalizar, name='wizard_pvd_finalizar'),
     # ==========================================================================
     # GESTIÓN DE SALAS
     # ==========================================================================

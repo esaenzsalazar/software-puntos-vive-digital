@@ -19,6 +19,7 @@ class PuntoViveDigital(models.Model):
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
     fecha_creacion = models.DateField(auto_now_add=True, null=True, verbose_name='Fecha de creación')
     descripcion = models.TextField(null=True, blank=True, verbose_name='Descripción/Notas')
+    modulos_habilitados = models.JSONField(default=list, blank=True, verbose_name='Módulos habilitados')
     admin_a_cargo = models.ForeignKey(
         'auth.User',
         on_delete=models.SET_NULL,
@@ -219,291 +220,6 @@ class Servicio(models.Model):
 
     def __str__(self):
         return self.nombre
-
-
-class ModuloHabilitado(models.Model):
-    MODULOS_DISPONIBLES = [
-        ('atencion_ciudadana', 'Atención ciudadana'),
-        ('recursos_salas', 'Recursos y Salas'),
-        ('cursos_talleres', 'Cursos y Talleres'),
-        ('mantenimiento', 'Mantenimiento de equipos'),
-        ('reportes', 'Reportes y exportaciones'),
-    ]
-
-    punto_vive_digital = models.ForeignKey(
-        'PuntoViveDigital', on_delete=models.CASCADE,
-        related_name='modulos_habilitados',
-        verbose_name='Punto Vive Digital'
-    )
-    modulo = models.CharField(max_length=32, choices=MODULOS_DISPONIBLES, verbose_name='Módulo')
-    habilitado = models.BooleanField(default=True, verbose_name='Habilitado')
-    fecha_habilitacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de habilitación')
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table = 'pvd_modulos_habilitados'
-        unique_together = [('punto_vive_digital', 'modulo')]
-        verbose_name = 'Módulo Habilitado'
-        verbose_name_plural = 'Módulos Habilitados'
-
-    def __str__(self):
-        return f"{self.get_modulo_display()} — {self.punto_vive_digital.nombre}"
-
-
-class ServicioPersonalizado(models.Model):
-    punto_vive_digital = models.ForeignKey(
-        'PuntoViveDigital', on_delete=models.CASCADE,
-        related_name='servicios_personalizados',
-        verbose_name='Punto Vive Digital'
-    )
-    nombre = models.CharField(max_length=100, verbose_name='Nombre del servicio')
-    icono = models.CharField(max_length=20, default='⚙️', verbose_name='Icono (emoji)')
-    descripcion = models.CharField(max_length=255, blank=True, verbose_name='Descripción')
-    categoria = models.CharField(max_length=100, default='', blank=True, verbose_name='Categoría')
-    color = models.CharField(max_length=7, default='#64748b', blank=True, verbose_name='Color')
-    campos = models.JSONField(default=list, verbose_name='Campos adicionales')
-    requiere_ciudadano = models.BooleanField(default=False, verbose_name='Requiere ciudadano')
-    modulos_sistema = models.JSONField(default=list, verbose_name='Módulos del sistema que activa')
-    incluye_extra = models.JSONField(default=list, verbose_name='Ítems adicionales descriptivos')
-    habilitado = models.BooleanField(default=True, verbose_name='Habilitado')
-    creado_en = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table = 'pvd_servicios_personalizados'
-        ordering = ['nombre']
-        verbose_name = 'Servicio Personalizado'
-        verbose_name_plural = 'Servicios Personalizados'
-
-    def __str__(self):
-        return f"{self.nombre} ({self.punto_vive_digital.nombre})"
-
-
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# COMPOSITOR DE MÓDULOS — Funciones de servicios personalizados
-# ──────────────────────────────────────────────────────────────────────────────
-
-class FuncionServicio(models.Model):
-    """
-    Función creada dentro de un ServicioPersonalizado.
-    Combina hasta 6 módulos pluggables: formulario, estados, ciudadano,
-    stock (inventario), agenda (citas/turnos) y encuesta automática.
-    Cada módulo tiene su propia sección de configuración en JSON.
-    """
-    servicio = models.ForeignKey(
-        'ServicioPersonalizado', on_delete=models.CASCADE,
-        related_name='funciones', verbose_name='Servicio'
-    )
-    nombre      = models.CharField(max_length=200, verbose_name='Nombre de la función')
-    descripcion = models.TextField(blank=True, default='', verbose_name='Descripción')
-
-    # ── Módulos activos ───────────────────────────────────────────────────────
-    mod_formulario = models.BooleanField(default=False, verbose_name='Módulo: Formulario')
-    mod_estados    = models.BooleanField(default=False, verbose_name='Módulo: Estados')
-    mod_ciudadano  = models.BooleanField(default=False, verbose_name='Módulo: Ciudadano')
-    mod_stock      = models.BooleanField(default=False, verbose_name='Módulo: Inventario')
-    mod_agenda     = models.BooleanField(default=False, verbose_name='Módulo: Agenda/Citas')
-    mod_encuesta   = models.BooleanField(default=False, verbose_name='Módulo: Encuesta automática')
-
-    # ── Config: formulario ────────────────────────────────────────────────────
-    # [{nombre, tipo, requerido, opciones:[], visible_si:{campo,valor}|null}]
-    # tipo: texto|textarea|numero|decimal|fecha|hora|email|telefono|booleano|lista|multiselect|calificacion|separador
-    campos = models.JSONField(default=list, verbose_name='Campos del formulario')
-
-    # ── Config: estados ───────────────────────────────────────────────────────
-    # [{nombre, color, emoji, es_terminal, es_inicial, puede_ir_a:[], requiere_nota}]
-    estados = models.JSONField(default=list, verbose_name='Estados del proceso')
-
-    # ── Config: ciudadano ─────────────────────────────────────────────────────
-    ciudadano_requerido      = models.BooleanField(default=False, verbose_name='Ciudadano requerido')
-    ciudadano_rol_etiqueta   = models.CharField(max_length=50, default='Ciudadano', blank=True,
-                                                verbose_name='Etiqueta del rol')
-    ciudadano_permite_inline = models.BooleanField(default=False,
-                                                   verbose_name='Captura datos inline si no está registrado')
-    ciudadano_campos_inline  = models.JSONField(default=list,
-                                                verbose_name='Campos extra a capturar inline')
-
-    # ── Config: stock (ítem único legacy + multi-ítem nuevo) ─────────────────
-    stock_nombre   = models.CharField(max_length=200, blank=True, default='', verbose_name='Nombre del ítem')
-    stock_total    = models.PositiveIntegerField(default=0, verbose_name='Cantidad total')
-    stock_unidad   = models.CharField(max_length=50, blank=True, default='unidades', verbose_name='Unidad')
-    stock_alerta_en = models.PositiveIntegerField(null=True, blank=True,
-                                                  verbose_name='Alerta cuando disponibles ≤')
-    # [{nombre, total, unidad, alerta_en}]  — si no vacío, reemplaza los campos legacy
-    stock_items    = models.JSONField(default=list, verbose_name='Múltiples ítems de inventario')
-
-    # ── Config: agenda ────────────────────────────────────────────────────────
-    # {dias:[0-6], hora_inicio:"HH:MM", hora_fin:"HH:MM", duracion_min:int, max_por_franja:int}
-    agenda_config  = models.JSONField(default=dict, verbose_name='Configuración de agenda')
-
-    # ── Config: encuesta automática ───────────────────────────────────────────
-    # [{pregunta, tipo: "calificacion"|"texto"}]
-    encuesta_config = models.JSONField(default=list, verbose_name='Preguntas de encuesta de cierre')
-
-    activo    = models.BooleanField(default=True, verbose_name='Activo')
-    orden     = models.PositiveIntegerField(default=0, verbose_name='Orden')
-    creado_en = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table  = 'pvd_funciones_servicio'
-        ordering  = ['orden', 'nombre']
-        verbose_name = 'Función de servicio'
-        verbose_name_plural = 'Funciones de servicio'
-
-    def __str__(self):
-        return f'{self.servicio.nombre} → {self.nombre}'
-
-    # ── Conteo rápido de registros activos ───────────────────────────────────
-    @property
-    def registros_activos_count(self):
-        return self.registros_funcion.filter(activo=True).count()
-
-    # ── Estado inicial ────────────────────────────────────────────────────────
-    @property
-    def estado_inicial(self):
-        for e in self.estados:
-            if e.get('es_inicial'):
-                return e['nombre']
-        return self.estados[0]['nombre'] if self.estados else ''
-
-    # ── Stock: soporte legacy (1 ítem) y multi-ítem ───────────────────────────
-    @property
-    def usa_multi_stock(self):
-        return bool(self.stock_items)
-
-    @property
-    def stock_en_uso(self):
-        """Para ítem único legacy."""
-        from django.db.models import Sum
-        return self.registros_funcion.filter(activo=True).aggregate(
-            t=Sum('stock_cantidad'))['t'] or 0
-
-    @property
-    def stock_disponible(self):
-        return max(0, self.stock_total - self.stock_en_uso)
-
-    @property
-    def stock_alerta_activa(self):
-        if not self.mod_stock or self.usa_multi_stock:
-            return False
-        if self.stock_alerta_en is None:
-            return False
-        return self.stock_disponible <= self.stock_alerta_en
-
-    def stock_item_en_uso(self, nombre_item):
-        """Unidades en uso de un ítem específico (multi-stock)."""
-        total = 0
-        for reg in self.registros_funcion.filter(activo=True):
-            sel = reg.stock_seleccion or {}
-            total += sel.get(nombre_item, 0)
-        return total
-
-    def stock_item_disponible(self, nombre_item):
-        item = next((i for i in self.stock_items if i['nombre'] == nombre_item), None)
-        if not item:
-            return 0
-        return max(0, item['total'] - self.stock_item_en_uso(nombre_item))
-
-    # ── Agenda: slots disponibles para una fecha ──────────────────────────────
-    def slots_agenda(self, fecha):
-        """Retorna lista de (hora_str, ocupados, max) para la fecha dada."""
-        import datetime
-        cfg = self.agenda_config or {}
-        if not cfg:
-            return []
-        try:
-            h_ini  = datetime.time.fromisoformat(cfg['hora_inicio'])
-            h_fin  = datetime.time.fromisoformat(cfg['hora_fin'])
-            dur    = int(cfg.get('duracion_min', 30))
-            maximo = int(cfg.get('max_por_franja', 1))
-        except (KeyError, ValueError):
-            return []
-        slots = []
-        actual = datetime.datetime.combine(fecha, h_ini)
-        fin    = datetime.datetime.combine(fecha, h_fin)
-        while actual < fin:
-            hora_str = actual.strftime('%H:%M')
-            ocupados = self.registros_funcion.filter(
-                activo=True, agenda_fecha=fecha,
-                agenda_hora=actual.time()).count()
-            slots.append({'hora': hora_str, 'ocupados': ocupados, 'max': maximo,
-                          'disponible': ocupados < maximo})
-            actual += datetime.timedelta(minutes=dur)
-        return slots
-
-
-class RegistroFuncion(models.Model):
-    """Registro/uso de una FuncionServicio creado por un operador."""
-    funcion = models.ForeignKey(
-        'FuncionServicio', on_delete=models.CASCADE,
-        related_name='registros_funcion', verbose_name='Función'
-    )
-    ciudadano = models.ForeignKey(
-        'Ciudadano', on_delete=models.SET_NULL,
-        null=True, blank=True, verbose_name='Ciudadano'
-    )
-    nombre_persona = models.CharField(
-        max_length=200, blank=True, default='',
-        verbose_name='Nombre (si no es ciudadano registrado)'
-    )
-    estado_actual = models.CharField(
-        max_length=100, blank=True, default='', verbose_name='Estado actual'
-    )
-    datos          = models.JSONField(default=dict, verbose_name='Datos del formulario')
-    stock_cantidad = models.PositiveIntegerField(default=1, verbose_name='Cantidad (ítem único)')
-    # {nombre_item: cantidad} para multi-stock
-    stock_seleccion = models.JSONField(default=dict, verbose_name='Ítems tomados (multi-stock)')
-    fecha_fin_esperada = models.DateTimeField(null=True, blank=True, verbose_name='Fecha fin esperada')
-    fecha_fin_real     = models.DateTimeField(null=True, blank=True, verbose_name='Fecha fin real')
-    notas  = models.TextField(blank=True, default='', verbose_name='Notas')
-    activo = models.BooleanField(default=True, verbose_name='Activo')
-    # Agenda
-    agenda_fecha = models.DateField(null=True, blank=True, verbose_name='Fecha de turno')
-    agenda_hora  = models.TimeField(null=True, blank=True, verbose_name='Hora de turno')
-    # Bitácora de eventos: [{tipo, texto, fecha_iso, usuario}]
-    bitacora = models.JSONField(default=list, verbose_name='Bitácora de eventos')
-    # Respuestas a la encuesta de satisfacción: {pregunta_texto: respuesta}
-    encuesta_respuestas = models.JSONField(default=dict, verbose_name='Respuestas de encuesta')
-    creado_en      = models.DateTimeField(auto_now_add=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(
-        'auth.User', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='registros_funcion_creados',
-        verbose_name='Creado por'
-    )
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table  = 'pvd_registros_funcion'
-        ordering  = ['-creado_en']
-        verbose_name = 'Registro de función'
-        verbose_name_plural = 'Registros de función'
-
-    @property
-    def persona_display(self):
-        if self.ciudadano:
-            n = f"{self.ciudadano.primer_nombre} {self.ciudadano.primer_apellido}".strip()
-            return n or self.ciudadano.numero_documento
-        return self.nombre_persona or '—'
-
-    def agregar_evento(self, tipo, texto, usuario=None):
-        """Añade un evento a la bitácora sin guardar — llama a save() después."""
-        from django.utils import timezone
-        evento = {
-            'tipo':    tipo,
-            'texto':   texto,
-            'fecha':   timezone.now().isoformat(),
-            'usuario': (usuario.get_full_name() or usuario.username) if usuario else 'Sistema',
-        }
-        if not self.bitacora:
-            self.bitacora = []
-        self.bitacora.append(evento)
-
-    def __str__(self):
-        return f'{self.funcion.nombre} — {self.persona_display}'
 
 
 
@@ -908,3 +624,103 @@ class MantenimientoEquipo(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()} – {self.punto_vive_digital.nombre} ({self.fecha})"
 
+
+# ==============================================================================
+# CATÁLOGO DE SERVICIOS Y ASIGNACIÓN A PVDs
+# ==============================================================================
+
+class CatalogoServicio(models.Model):
+    """
+    Definición reutilizable de un servicio — puede ser plantilla del sistema
+    o creada por un administrador durante el wizard de creación de PVD.
+
+    Arquetipos:
+    - canvas: constructor visual; `config_lienzo` almacena el árbol de bloques:
+        {bloques: [{id, tipo, props}]}
+        tipos de bloque: titulo | parrafo | separador | campo | boton
+    - recoleccion: legado; `campos` almacena [{id, nombre, tipo_campo, requerido, placeholder, opciones}]
+    - redireccion: legado; usa `url_externa` y `es_embed`
+    """
+    TIPO_CHOICES = [
+        ('canvas',      'Servicio personalizado (canvas)'),
+        ('recoleccion', 'Formulario de datos (legado)'),
+        ('redireccion', 'Enlace externo (legado)'),
+    ]
+
+    nombre = models.CharField(max_length=100, verbose_name='Nombre del servicio')
+    descripcion = models.CharField(max_length=255, blank=True, verbose_name='Descripción')
+    icono = models.CharField(max_length=10, default='⚙️', verbose_name='Ícono (emoji)')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='canvas', verbose_name='Tipo')
+    campos = models.JSONField(default=list, verbose_name='Esquema de campos (legado)')
+    url_externa = models.CharField(max_length=500, blank=True, verbose_name='URL externa')
+    es_embed = models.BooleanField(default=False, verbose_name='Mostrar como iframe')
+    config_lienzo = models.JSONField(default=dict, blank=True, verbose_name='Lienzo del servicio')
+    es_plantilla_sistema = models.BooleanField(default=False, verbose_name='Plantilla del sistema')
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    creado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='servicios_catalogo_creados', verbose_name='Creado por',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_catalogo_servicios'
+        ordering = ['-es_plantilla_sistema', 'nombre']
+        verbose_name = 'Servicio del Catálogo'
+        verbose_name_plural = 'Catálogo de Servicios'
+
+    def __str__(self):
+        return self.nombre
+
+
+class PVDServicio(models.Model):
+    """Asignación de un servicio del catálogo a un PVD."""
+    pvd = models.ForeignKey(
+        'PuntoViveDigital', on_delete=models.CASCADE,
+        related_name='pvd_servicios', verbose_name='Punto Vive Digital',
+    )
+    servicio = models.ForeignKey(
+        'CatalogoServicio', on_delete=models.CASCADE,
+        related_name='pvd_asignaciones', verbose_name='Servicio',
+    )
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    orden = models.PositiveIntegerField(default=0, verbose_name='Orden')
+    asignado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_pvd_servicios'
+        unique_together = [['pvd', 'servicio']]
+        ordering = ['orden', 'servicio__nombre']
+        verbose_name = 'Servicio del PVD'
+        verbose_name_plural = 'Servicios del PVD'
+
+    def __str__(self):
+        return f"{self.pvd.nombre} → {self.servicio.nombre}"
+
+
+class RespuestaServicio(models.Model):
+    """Respuestas de un ciudadano a un formulario personalizado durante una Atención."""
+    atencion = models.ForeignKey(
+        'Atencion', on_delete=models.CASCADE,
+        related_name='respuestas_servicio',
+        verbose_name='Atención',
+    )
+    servicio = models.ForeignKey(
+        'CatalogoServicio', on_delete=models.SET_NULL,
+        null=True, related_name='respuestas',
+        verbose_name='Servicio',
+    )
+    datos = models.JSONField(default=dict, verbose_name='Datos enviados')
+    enviado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_respuestas_servicio'
+        ordering = ['-enviado_en']
+        verbose_name = 'Respuesta de servicio'
+        verbose_name_plural = 'Respuestas de servicios'
+
+    def __str__(self):
+        return f"Respuesta #{self.pk} – Atención #{self.atencion_id}"

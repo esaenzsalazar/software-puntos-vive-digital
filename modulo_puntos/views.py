@@ -1,3 +1,4 @@
+import json
 import random
 from io import BytesIO
 from datetime import datetime, date as date_type, time as time_type
@@ -15,19 +16,18 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import (
-    Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso,
+    Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso,
     Recurso, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
-    MantenimientoEquipo, ServicioPersonalizado, FuncionServicio, RegistroFuncion,
+    MantenimientoEquipo, CatalogoServicio, PVDServicio, RespuestaServicio,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
-    ModulosHabilitadosForm, AsignarAdminPVDForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
     CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
-    MantenimientoEquipoForm, MODULOS_INFO, CAPACIDADES_INFO, CAPACIDADES_POR_GRUPO,
+    MantenimientoEquipoForm,
 )
 from .utils import registrar_auditoria, tiene_permiso
 
@@ -166,8 +166,6 @@ def panel_control(request):
         'total_pvds': PuntoViveDigital.objects.count(),
         'total_recursos': Recurso.objects.count(),
         'total_cursos': Curso.objects.count(),
-        'total_servicios_custom': ServicioPersonalizado.objects.filter(habilitado=True).count(),
-        'total_registros_custom_activos': RegistroFuncion.objects.filter(activo=True).count(),
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
         'es_admin_pvd_only': user.groups.filter(name='Administrador PVD').exists() and not usuario_es_admin_tic(user),
@@ -187,9 +185,17 @@ def panel_control(request):
             context['pvd_cursos']         = Curso.objects.filter(punto_vive_digital_id=pvd_id).count()
             context['pvd_mantenimientos'] = MantenimientoEquipo.objects.filter(punto_vive_digital_id=pvd_id).count()
             context['pvd_habilitaciones'] = HabilitacionSala.objects.filter(sala__punto_vive_digital_id=pvd_id).count()
-            context['servicios_custom']   = ServicioPersonalizado.objects.filter(punto_vive_digital=pvd_activo)
-    if 'servicios_custom' not in context:
-        context['servicios_custom'] = ServicioPersonalizado.objects.all().select_related('punto_vive_digital')
+
+            # Para Admin PVD: restringir módulos según selección del wizard
+            if usuario_necesita_seleccionar_pvd(user):
+                context['restringir_modulos']  = True
+                context['modulos_pvd_activo']  = pvd_activo.modulos_habilitados or []
+                context['servicios_canvas_pvd'] = (
+                    PVDServicio.objects
+                    .filter(pvd=pvd_activo, activo=True, servicio__activo=True)
+                    .select_related('servicio')
+                    .order_by('orden', 'servicio__nombre')
+                )
     return render(request, 'modulo_puntos/panel_control.html', context)
 
 
@@ -563,14 +569,7 @@ def reportes(request):
         .order_by('-mes')[:12]
     )
 
-    pvd_id_rpt = request.session.get('pvd_activo_id')
-    if pvd_id_rpt:
-        servicios_custom_rpt = list(ServicioPersonalizado.objects.filter(punto_vive_digital_id=pvd_id_rpt).order_by('nombre'))
-    else:
-        servicios_custom_rpt = list(ServicioPersonalizado.objects.all().select_related('punto_vive_digital').order_by('punto_vive_digital__nombre', 'nombre'))
-
     return render(request, 'modulo_puntos/reportes.html', {
-        'servicios_custom_rpt': servicios_custom_rpt,
         'total_ciudadanos': total_ciudadanos,
         'ciudadanos_activos': ciudadanos_activos,
         'total_atenciones': total_atenciones,
@@ -612,9 +611,14 @@ def registrar_atencion(request):
             try:
                 atencion = form.save(commit=False)
                 atencion.operador = request.user
+                pvd_id_sesion = request.session.get('pvd_activo_id')
+                if pvd_id_sesion and not atencion.punto_vive_digital_id:
+                    pvd_sesion = PuntoViveDigital.objects.filter(pk=pvd_id_sesion, estado='A').first()
+                    if pvd_sesion:
+                        atencion.punto_vive_digital = pvd_sesion
                 atencion.save()
-                messages.success(request, 'Atención registrada correctamente en la base de datos.')
-                return redirect('modulo_puntos:panel_control')
+                messages.success(request, 'Atención registrada. Puedes registrar los servicios prestados.')
+                return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
             except Exception as e:
                 messages.error(request, f'Error al guardar en BD: {e}')
         else:
@@ -1135,66 +1139,6 @@ def exportar_prestamos_csv(request):
     return _xlsx_response('Reporte_Prestamos_PVD', wb)
 
 
-@login_required(login_url='/login/')
-def exportar_servicio_custom_xlsx(request, svc_id):
-    """Exporta todos los registros de un ServicioPersonalizado, una hoja por función."""
-    import openpyxl
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
-    pvd = svc.punto_vive_digital
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)  # eliminar hoja vacía por defecto
-
-    for fun in svc.funciones.filter(activo=True).order_by('nombre'):
-        campo_nombres = [c['nombre'] for c in (fun.campos or [])]
-
-        headers = ['PVD', 'Servicio', 'Función', 'Persona', 'Documento']
-        if fun.mod_estados:
-            headers.append('Estado')
-        if fun.mod_stock:
-            headers.append(f'Cantidad ({fun.stock_nombre or "ítem"})')
-        headers += ['Activo', 'Fecha creación', 'Fecha fin esperada', 'Fecha fin real', 'Notas', 'Registrado por']
-        headers += campo_nombres
-
-        filas = []
-        for reg in (RegistroFuncion.objects
-                    .filter(funcion=fun)
-                    .select_related('ciudadano', 'creado_por')
-                    .order_by('-creado_en')):
-            row = [
-                pvd.nombre,
-                svc.nombre,
-                fun.nombre,
-                reg.persona_display,
-                reg.ciudadano.numero_documento if reg.ciudadano else '',
-            ]
-            if fun.mod_estados:
-                row.append(reg.estado_actual or '—')
-            if fun.mod_stock:
-                row.append(reg.stock_cantidad)
-            row += [
-                'Sí' if reg.activo else 'No',
-                reg.creado_en.strftime('%d/%m/%Y %H:%M') if reg.creado_en else '',
-                reg.fecha_fin_esperada.strftime('%d/%m/%Y %H:%M') if reg.fecha_fin_esperada else '',
-                reg.fecha_fin_real.strftime('%d/%m/%Y %H:%M') if reg.fecha_fin_real else '',
-                reg.notas or '',
-                (reg.creado_por.get_full_name() or reg.creado_por.username) if reg.creado_por else '',
-            ]
-            datos = reg.datos or {}
-            for nombre in campo_nombres:
-                row.append(str(datos.get(nombre, '')))
-            filas.append(row)
-
-        _agregar_hoja(wb, fun.nombre, headers, filas)
-
-    if not wb.worksheets:
-        _agregar_hoja(wb, 'Sin funciones', ['Información'], [['Este servicio no tiene funciones activas.']])
-
-    nombre_archivo = 'Servicio_' + svc.nombre.replace(' ', '_').replace('/', '-')
-    return _xlsx_response(nombre_archivo, wb)
-
-
 # ── AYUDA ──────────────────────────────────────────────────────────────────────
 
 @login_required(login_url='/login/')
@@ -1335,7 +1279,9 @@ def lista_pvd(request):
         messages.error(request, 'No tienes permisos para gestionar PVDs.')
         return redirect('modulo_puntos:panel_control')
     pvds = PuntoViveDigital.objects.annotate(
-        total_modulos_habilitados=Count('modulos_habilitados', filter=Q(modulos_habilitados__habilitado=True))
+        total_atenciones=Count('atencion', distinct=True),
+        total_ciudadanos=Count('ciudadano', distinct=True),
+        total_recursos=Count('recurso', distinct=True),
     ).order_by('nombre')
     puede_eliminar_pvd = tiene_permiso(request.user, 'infraestructura.eliminar_pvd')
     return render(request, 'modulo_puntos/lista_pvd.html', {
@@ -1344,29 +1290,79 @@ def lista_pvd(request):
     })
 
 
-@login_required(login_url='/login/')
-def validar_nombre_pvd(request):
-    nombre = request.GET.get('nombre', '').strip()
-    exclude_id = request.GET.get('exclude_id', None)
+# ─────────────────────────────────────────────────────────────────────────────
+# WIZARD — CREACIÓN DE PVD (3 pasos)
+# Flujo: GET /pvd/crear/ → AJAX paso1 → AJAX paso2 (servicios) → AJAX finalizar
+# ─────────────────────────────────────────────────────────────────────────────
 
-    if not nombre:
-        return JsonResponse({'disponible': True})
-
-    nombre_norm = ' '.join(nombre.split()).lower()
-
+def _nombre_pvd_duplicado(nombre, exclude_id=None):
+    """True si ya existe un PVD con ese nombre (normalizado, sin importar mayúsculas ni espacios extra)."""
+    nombre_norm = ' '.join(nombre.lower().split())
     qs = PuntoViveDigital.objects.all()
     if exclude_id:
-        try:
-            qs = qs.exclude(pk=int(exclude_id))
-        except (ValueError, TypeError):
-            pass
+        qs = qs.exclude(pk=exclude_id)
+    return any(
+        ' '.join((n or '').lower().split()) == nombre_norm
+        for n in qs.values_list('nombre', flat=True)
+    )
 
-    for nombre_existente in qs.values_list('nombre', flat=True):
-        if ' '.join(nombre_existente.split()).lower() == nombre_norm:
-            return JsonResponse({'disponible': False})
 
-    return JsonResponse({'disponible': True})
+def _admins_pvd_activos(q=None):
+    """Lista de usuarios del grupo Administrador PVD, con filtro de búsqueda opcional."""
+    try:
+        grp = Group.objects.get(name='Administrador PVD')
+    except Group.DoesNotExist:
+        return []
+    qs = grp.user_set.filter(is_active=True)
+    if q:
+        qs = qs.filter(
+            Q(username__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q)
+        )
+    return [
+        {
+            'id': u.pk,
+            'username': u.username,
+            'nombre': f"{u.first_name} {u.last_name}".strip() or u.username,
+        }
+        for u in qs.order_by('first_name', 'username')[:20]
+    ]
 
+
+MODULOS_SISTEMA = [
+    {
+        'grupo': 'Atención al Ciudadano',
+        'modulos': [
+            {'clave': 'ciudadanos',   'nombre': 'Ciudadanos',    'icono': '👥', 'desc': 'Registro y consulta de ciudadanos atendidos'},
+            {'clave': 'atenciones',   'nombre': 'Atenciones',    'icono': '📋', 'desc': 'Gestionar atenciones y servicios prestados'},
+            {'clave': 'satisfaccion', 'nombre': 'Satisfacción',  'icono': '⭐', 'desc': 'Encuestas de satisfacción del servicio'},
+        ],
+    },
+    {
+        'grupo': 'Recursos y Equipos',
+        'modulos': [
+            {'clave': 'recursos',  'nombre': 'Recursos',  'icono': '🖥️', 'desc': 'Inventario de equipos y recursos del punto'},
+            {'clave': 'prestamos', 'nombre': 'Préstamos', 'icono': '🔑', 'desc': 'Préstamo de recursos a ciudadanos'},
+        ],
+    },
+    {
+        'grupo': 'Espacios y Salas',
+        'modulos': [
+            {'clave': 'salas',          'nombre': 'Salas',          'icono': '🏛️', 'desc': 'Administrar salas del punto'},
+            {'clave': 'habilitaciones', 'nombre': 'Habilitaciones',  'icono': '📅', 'desc': 'Control de habilitaciones de sala'},
+            {'clave': 'mantenimiento',  'nombre': 'Mantenimiento',   'icono': '🔧', 'desc': 'Mantenimiento y soporte de equipos'},
+        ],
+    },
+    {
+        'grupo': 'Formación y Reportes',
+        'modulos': [
+            {'clave': 'cursos',   'nombre': 'Cursos y Formación', 'icono': '🎓', 'desc': 'Gestión de cursos, sesiones e inscripciones'},
+            {'clave': 'reportes', 'nombre': 'Reportes',           'icono': '📊', 'desc': 'Informes y exportaciones de datos'},
+        ],
+    },
+]
+
+
+# ── Página inicial del wizard ─────────────────────────────────────────────────
 
 @login_required(login_url='/login/')
 def crear_pvd(request):
@@ -1374,327 +1370,270 @@ def crear_pvd(request):
         messages.error(request, 'No tienes permisos para crear PVDs.')
         return redirect('modulo_puntos:panel_control')
 
-    form = PuntoViveDigitalForm(request.POST or None, wizard=True)
-    if request.method == 'POST':
-        if form.is_valid():
-            pvd = form.save()
-            Sala.objects.get_or_create(
-                punto_vive_digital=pvd,
-                nombre='Sala Principal',
-                defaults={'descripcion': 'Sala principal del PVD', 'estado': 'A'}
-            )
-            registrar_auditoria(request, 'CREATE', 'PuntoViveDigital', pvd.pk, f'PVD creado: {pvd.nombre}')
-            messages.success(request, f'Paso 1 completado. Ahora configura los servicios de "{pvd.nombre}".')
-            return redirect(reverse('modulo_puntos:wizard_servicios_pvd', args=[pvd.pk]) + '?w=1')
-        messages.error(request, 'Revisa los datos del formulario.')
-
-    return render(request, 'modulo_puntos/form_pvd.html', {
-        'form': form,
-        'titulo': 'Nuevo Punto Vive Digital',
-        'accion': 'crear',
-        'wizard': True,
-        'wizard_paso': 1,
+    return render(request, 'modulo_puntos/crear_pvd_wizard.html', {
+        'modulos_json': json.dumps(MODULOS_SISTEMA),
+        'admins_pvd_json': json.dumps(_admins_pvd_activos()),
     })
 
 
-@login_required(login_url='/login/')
-def wizard_servicios_pvd(request, pvd_id):
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'No tienes permisos.')
-        return redirect('modulo_puntos:panel_control')
-
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    desde_wizard = request.GET.get('w', '0') == '1'
-
-    modulos_actuales = list(
-        pvd.modulos_habilitados.filter(habilitado=True).values_list('modulo', flat=True)
-    )
-    initial = {'modulos': modulos_actuales}
-    form = ModulosHabilitadosForm(request.POST or None, initial=initial)
-
-    if request.method == 'POST':
-        desde_wizard_post = request.POST.get('desde_wizard', '0') == '1'
-        modulos_sel = request.POST.getlist('modulos')
-        custom_ids_raw = request.POST.getlist('servicios_personalizados')
-        custom_ids = [int(x) for x in custom_ids_raw if x.isdigit()]
-
-        if not modulos_sel and not custom_ids:
-            messages.error(request, 'Debes habilitar al menos un servicio funcional para este PVD.')
-        else:
-            pvd.modulos_habilitados.update(habilitado=False)
-            for cod in modulos_sel:
-                ModuloHabilitado.objects.update_or_create(
-                    punto_vive_digital=pvd,
-                    modulo=cod,
-                    defaults={'habilitado': True}
-                )
-            ServicioPersonalizado.objects.filter(punto_vive_digital=pvd).update(habilitado=False)
-            if custom_ids:
-                ServicioPersonalizado.objects.filter(pk__in=custom_ids, punto_vive_digital=pvd).update(habilitado=True)
-
-            nombres_sel = modulos_sel + [str(i) for i in custom_ids]
-            registrar_auditoria(
-                request, 'UPDATE', 'ModuloHabilitado', pvd.pk,
-                f'Servicios configurados para "{pvd.nombre}": {", ".join(nombres_sel)}'
-            )
-            if desde_wizard_post:
-                messages.success(request, 'Paso 2 completado. Ahora asigna el administrador.')
-                return redirect('modulo_puntos:wizard_asignar_admin_pvd', pvd_id=pvd.pk)
-            messages.success(request, f'Servicios de "{pvd.nombre}" actualizados correctamente.')
-            return redirect('modulo_puntos:lista_pvd')
-
-    checked_modulos = (
-        request.POST.getlist('modulos') if request.method == 'POST'
-        else modulos_actuales
-    )
-    servicios_personalizados = list(
-        ServicioPersonalizado.objects.filter(punto_vive_digital=pvd).order_by('nombre')
-    )
-    return render(request, 'modulo_puntos/wizard_servicios_pvd.html', {
-        'form': form,
-        'pvd': pvd,
-        'wizard_paso': 2,
-        'desde_wizard': desde_wizard,
-        'checked_modulos': checked_modulos,
-        'modulos_info': MODULOS_INFO,
-        'capacidades_info': CAPACIDADES_INFO,
-        'capacidades_por_grupo': CAPACIDADES_POR_GRUPO,
-        'servicios_personalizados': servicios_personalizados,
-        'emojis_sugeridos': ['⚙️','📋','🎯','📦','🔑','📅','💻','🛠️','📝','🏷️','🔔','👤','🌐','📊','✅'],
-    })
-
+# ── AJAX: validar nombre en tiempo real ───────────────────────────────────────
 
 @login_required(login_url='/login/')
-def crear_servicio_personalizado(request, pvd_id):
-    if not usuario_es_admin_tic(request.user):
-        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
-    if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
-
-    import json
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
-
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    nombre = (data.get('nombre') or '').strip()
+def validar_nombre_pvd(request):
+    nombre = request.GET.get('nombre', '').strip()
     if not nombre:
-        return JsonResponse({'ok': False, 'error': 'El nombre es requerido'}, status=400)
-
+        return JsonResponse({'disponible': True})
     try:
-        from .forms import CAPACIDADES_INFO
-        codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
-        modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
+        exclude_id = int(request.GET.get('exclude_id')) if request.GET.get('exclude_id') else None
+    except (ValueError, TypeError):
+        exclude_id = None
+    return JsonResponse({'disponible': not _nombre_pvd_duplicado(nombre, exclude_id)})
 
-        svc = ServicioPersonalizado.objects.create(
-            punto_vive_digital=pvd,
-            nombre=nombre,
-            icono='⚙️',
-            descripcion=(data.get('descripcion') or '').strip(),
-            modulos_sistema=modulos_sistema,
-            incluye_extra=[],
-            habilitado=True,
-        )
-        return JsonResponse({
-            'ok': True,
-            'id': svc.pk,
-            'nombre': svc.nombre,
-            'icono': svc.icono,
-            'descripcion': svc.descripcion,
-            'modulos_sistema': svc.modulos_sistema,
-            'incluye_extra': svc.incluye_extra,
-        })
-    except Exception as exc:
-        return JsonResponse({'ok': False, 'error': str(exc)}, status=500)
 
+# ── AJAX Paso 1: guardar datos básicos y crear PVD borrador ──────────────────
 
 @login_required(login_url='/login/')
-def editar_servicio_personalizado(request, svc_id):
+def wizard_pvd_paso1(request):
     if not usuario_es_admin_tic(request.user):
-        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
+        return JsonResponse({'ok': False, 'error': 'Sin permiso'}, status=403)
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
 
-    import json
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
     try:
         data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
+    except (ValueError, TypeError):
         return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
 
     nombre = (data.get('nombre') or '').strip()
     if not nombre:
-        return JsonResponse({'ok': False, 'error': 'El nombre es requerido'}, status=400)
+        return JsonResponse({'ok': False, 'campo': 'nombre', 'error': 'El nombre es obligatorio.'})
+    if _nombre_pvd_duplicado(nombre):
+        return JsonResponse({'ok': False, 'campo': 'nombre', 'error': 'Ya existe un PVD con este nombre.'})
 
-    try:
-        from .forms import CAPACIDADES_INFO
-        codigos_validos = {c['codigo'] for c in CAPACIDADES_INFO}
-        svc.nombre = nombre
-        svc.descripcion = (data.get('descripcion') or '').strip()
-        svc.modulos_sistema = [c for c in (data.get('modulos_sistema') or []) if c in codigos_validos]
-        svc.incluye_extra = []
-        svc.save()
-        return JsonResponse({
-            'ok': True,
-            'id': svc.pk,
-            'nombre': svc.nombre,
-            'icono': svc.icono,
-            'descripcion': svc.descripcion,
-            'modulos_sistema': svc.modulos_sistema,
-            'incluye_extra': svc.incluye_extra,
-        })
-    except Exception as exc:
-        return JsonResponse({'ok': False, 'error': str(exc)}, status=500)
+    pvd = PuntoViveDigital.objects.create(
+        nombre=nombre,
+        direccion=(data.get('direccion') or '').strip() or None,
+        barrio=(data.get('barrio') or '').strip() or None,
+        descripcion=(data.get('descripcion') or '').strip() or None,
+        estado='I',
+    )
+    Sala.objects.get_or_create(
+        punto_vive_digital=pvd,
+        nombre='Sala Principal',
+        defaults={'descripcion': 'Sala principal del PVD', 'estado': 'A'},
+    )
+    registrar_auditoria(request, 'CREATE', 'PuntoViveDigital', pvd.pk, f'PVD borrador creado: {pvd.nombre}')
+    return JsonResponse({'ok': True, 'pvd_id': pvd.pk, 'nombre': pvd.nombre})
 
+
+# ── AJAX Paso 2: asignar plantilla del catálogo al PVD ───────────────────────
 
 @login_required(login_url='/login/')
-def eliminar_servicio_personalizado(request, svc_id):
-    if not usuario_es_admin_tic(request.user):
-        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
+def wizard_pvd_asignar_servicio(request, pvd_id):
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
 
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
-    svc.delete()
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    try:
+        svc_id = int(json.loads(request.body).get('servicio_id', 0))
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Datos inválidos'}, status=400)
+
+    svc = get_object_or_404(CatalogoServicio, pk=svc_id, activo=True)
+    asig, _ = PVDServicio.objects.get_or_create(pvd=pvd, servicio=svc)
+    return JsonResponse({'ok': True, 'asignacion_id': asig.pk,
+                         'servicio': {'id': svc.pk, 'nombre': svc.nombre, 'icono': svc.icono}})
+
+
+# ── AJAX Paso 2: quitar servicio asignado ────────────────────────────────────
+
+@login_required(login_url='/login/')
+def wizard_pvd_quitar_servicio(request, pvd_id, svc_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    PVDServicio.objects.filter(pvd=pvd, servicio_id=svc_id).delete()
     return JsonResponse({'ok': True})
 
 
-# ── GESTIÓN DE ÍTEMS Y REGISTROS DE SERVICIOS PERSONALIZADOS ──────────────────
-
-_CAPACIDADES_URLS = {
-    'ciudadanos':     ('consultar_ciudadanos',  '👤', 'Ciudadanos',        'Ver y registrar ciudadanos atendidos'),
-    'atenciones':     ('registrar_atencion',    '🎯', 'Atenciones',        'Registrar atenciones al ciudadano'),
-    'servicios':      ('registrar_servicio',    '🛠️', 'Servicios',         'Registrar servicios prestados en atenciones'),
-    'satisfaccion':   ('registrar_satisfaccion','⭐', 'Satisfacción',      'Encuestas de satisfacción del ciudadano'),
-    'recursos':       ('registrar_recurso',     '📦', 'Recursos',          'Inventario y equipos del PVD'),
-    'prestamos':      ('registrar_prestamo',    '🔄', 'Préstamos',         'Préstamo de recursos a ciudadanos'),
-    'salas':          ('lista_salas',           '🏛️', 'Salas',            'Gestión de salas y espacios físicos'),
-    'habilitaciones': ('lista_habilitaciones',  '🔓', 'Habilitaciones',    'Habilitar espacios para uso programado'),
-    'cursos':         ('lista_cursos',          '📚', 'Cursos y Talleres', 'Formación ciudadana y control de asistencia'),
-    'mantenimiento':  ('lista_mantenimientos',  '🔧', 'Mantenimiento',     'Mantenimiento preventivo y correctivo'),
-    'reportes':       ('reportes',              '📊', 'Reportes',          'Estadísticas, indicadores y exportaciones'),
-}
-
+# ── AJAX Paso 2: crear un servicio nuevo y asignarlo al PVD ──────────────────
 
 @login_required(login_url='/login/')
-def lista_servicios_custom_view(request):
-    if not (request.user.is_superuser or usuario_es_admin_tic(request.user)):
-        return redirect('modulo_puntos:panel_control')
-
-    pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
-    pvd_filtro = request.GET.get('pvd', '')
-    pvd_filtro_obj = None
-
-    servicios_qs = (
-        ServicioPersonalizado.objects
-        .select_related('punto_vive_digital')
-        .annotate(
-            total_funciones=Count('funciones', distinct=True),
-            registros_activos=Count(
-                'funciones__registros_funcion',
-                filter=Q(funciones__registros_funcion__activo=True),
-                distinct=True,
-            ),
-            total_registros=Count('funciones__registros_funcion', distinct=True),
-        )
-        .order_by('punto_vive_digital__nombre', 'nombre')
-    )
-
-    if pvd_filtro:
-        servicios_qs = servicios_qs.filter(punto_vive_digital_id=pvd_filtro)
-        pvd_filtro_obj = pvds.filter(pk=pvd_filtro).first()
-
-    total_servicios = servicios_qs.count()
-    svc_pks = servicios_qs.values('pk')
-    total_funciones = FuncionServicio.objects.filter(servicio__in=svc_pks).count()
-    base_reg = RegistroFuncion.objects.filter(funcion__servicio__in=svc_pks)
-    total_activos = base_reg.filter(activo=True).count()
-    total_historial = base_reg.filter(activo=False).count()
-
-    registros_activos = (
-        RegistroFuncion.objects
-        .filter(activo=True, funcion__servicio__in=svc_pks)
-        .select_related('funcion__servicio__punto_vive_digital', 'ciudadano', 'creado_por')
-        .order_by('-creado_en')[:50]
-    )
-
-    return render(request, 'modulo_puntos/lista_servicios_custom.html', {
-        'servicios': servicios_qs,
-        'pvds': pvds,
-        'pvd_filtro': pvd_filtro,
-        'pvd_filtro_obj': pvd_filtro_obj,
-        'total_servicios': total_servicios,
-        'total_funciones': total_funciones,
-        'total_activos': total_activos,
-        'total_historial': total_historial,
-        'registros_activos': registros_activos,
-    })
-
-
-@login_required(login_url='/login/')
-def gestionar_servicio_custom(request, svc_id):
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id)
-    pvd = svc.punto_vive_digital
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    funciones_habilitadas = []
-    for codigo in (svc.modulos_sistema or []):
-        if codigo in _CAPACIDADES_URLS:
-            url_name, icono, label, descripcion = _CAPACIDADES_URLS[codigo]
-            try:
-                url = reverse(f'modulo_puntos:{url_name}')
-            except Exception:
-                url = '#'
-            funciones_habilitadas.append({'icono': icono, 'label': label, 'descripcion': descripcion, 'url': url})
-
-    return render(request, 'modulo_puntos/gestionar_servicio_custom.html', {
-        'svc': svc,
-        'pvd': pvd,
-        'funciones_habilitadas': funciones_habilitadas,
-    })
-
-
-@login_required(login_url='/login/')
-def wizard_asignar_admin_pvd(request, pvd_id):
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'No tienes permisos.')
-        return redirect('modulo_puntos:panel_control')
+def wizard_pvd_crear_servicio(request, pvd_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
 
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    form = AsignarAdminPVDForm(request.POST or None, initial={'admin_a_cargo': pvd.admin_a_cargo})
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
 
-    if request.method == 'POST':
-        if form.is_valid():
-            admin = form.cleaned_data['admin_a_cargo']
-            pvd.admin_a_cargo = admin
-            pvd.save(update_fields=['admin_a_cargo'])
+    nombre = (data.get('nombre') or '').strip()[:100]
+    if not nombre:
+        return JsonResponse({'ok': False, 'campo': 'nombre', 'error': 'El nombre es obligatorio.'})
 
-            if admin:
-                perfil, _ = UserProfile.objects.get_or_create(
-                    usuario=admin,
-                    defaults={'rol': 'admin_pvd'}
-                )
-                if not perfil.punto_asignado:
-                    perfil.punto_asignado = pvd
-                    perfil.save(update_fields=['punto_asignado'])
+    # El wizard crea exclusivamente servicios tipo canvas
+    tipo = 'canvas'
 
-            nombre_admin = admin.get_full_name() or admin.username if admin else 'sin administrador'
-            registrar_auditoria(
-                request, 'UPDATE', 'PuntoViveDigital', pvd.pk,
-                f'Admin asignado a "{pvd.nombre}": {nombre_admin}'
+    lienzo_raw = data.get('config_lienzo', {})
+    if not isinstance(lienzo_raw, dict):
+        lienzo_raw = {}
+    bloques = lienzo_raw.get('bloques', [])
+    if not isinstance(bloques, list) or not bloques:
+        return JsonResponse({'ok': False, 'campo': 'canvas',
+                             'error': 'El lienzo debe tener al menos un bloque.'})
+
+    # Sanitize: only keep known block types and safe props
+    _BLOCK_TIPOS = ('titulo', 'parrafo', 'separador', 'campo', 'boton', 'imagen', 'alerta', 'grupo_2col')
+    _DATO_TIPOS  = ('texto', 'parrafo', 'numero', 'fecha', 'email', 'telefono', 'selector', 'si_no')
+
+    def _sanitize_col(raw):
+        td = raw.get('tipo_dato', 'texto')
+        if td not in _DATO_TIPOS:
+            td = 'texto'
+        opciones = raw.get('opciones', [])
+        if not isinstance(opciones, list):
+            opciones = []
+        return {
+            'id': str(raw.get('id', ''))[:36],
+            'etiqueta': str(raw.get('etiqueta', ''))[:100],
+            'tipo_dato': td,
+            'requerido': bool(raw.get('requerido', False)),
+            'placeholder': str(raw.get('placeholder', ''))[:200],
+            'opciones': [str(o)[:80] for o in opciones[:30]],
+        }
+
+    clean_bloques = []
+    for b in bloques:
+        if not isinstance(b, dict) or b.get('tipo') not in _BLOCK_TIPOS:
+            continue
+        btipo = b['tipo']
+        props = b.get('props', {}) if isinstance(b.get('props'), dict) else {}
+        if btipo == 'titulo':
+            props = {'texto': str(props.get('texto', ''))[:200],
+                     'nivel': int(props.get('nivel', 2)) if str(props.get('nivel', 2)).isdigit() else 2}
+        elif btipo == 'parrafo':
+            props = {'texto': str(props.get('texto', ''))[:5000]}
+        elif btipo == 'separador':
+            props = {}
+        elif btipo == 'campo':
+            td = props.get('tipo_dato', 'texto')
+            if td not in _DATO_TIPOS:
+                td = 'texto'
+            opciones = props.get('opciones', [])
+            if not isinstance(opciones, list):
+                opciones = []
+            props = {
+                'etiqueta': str(props.get('etiqueta', ''))[:100],
+                'tipo_dato': td,
+                'requerido': bool(props.get('requerido', False)),
+                'placeholder': str(props.get('placeholder', ''))[:200],
+                'opciones': [str(o)[:80] for o in opciones[:30]],
+            }
+        elif btipo == 'boton':
+            accion = props.get('accion', 'guardar_datos')
+            if accion not in ('guardar_datos', 'redirigir_url'):
+                accion = 'guardar_datos'
+            props = {
+                'texto': str(props.get('texto', 'Enviar'))[:100],
+                'accion': accion,
+                'url': str(props.get('url', ''))[:500] if accion == 'redirigir_url' else '',
+                'estilo': 'primario',
+            }
+        elif btipo == 'imagen':
+            altura = props.get('altura', '200px')
+            if altura not in ('120px', '200px', '300px', 'auto'):
+                altura = '200px'
+            props = {
+                'src': str(props.get('src', ''))[:500],
+                'alt': str(props.get('alt', ''))[:200],
+                'altura': altura,
+            }
+        elif btipo == 'alerta':
+            tipo_alerta = props.get('tipo_alerta', 'info')
+            if tipo_alerta not in ('info', 'warning', 'success', 'danger'):
+                tipo_alerta = 'info'
+            props = {
+                'texto': str(props.get('texto', ''))[:1000],
+                'tipo_alerta': tipo_alerta,
+            }
+        elif btipo == 'grupo_2col':
+            col1_raw = props.get('col1', {}) if isinstance(props.get('col1'), dict) else {}
+            col2_raw = props.get('col2', {}) if isinstance(props.get('col2'), dict) else {}
+            props = {
+                'col1': _sanitize_col(col1_raw),
+                'col2': _sanitize_col(col2_raw),
+            }
+        clean_bloques.append({'id': str(b.get('id', ''))[:36], 'tipo': btipo, 'props': props})
+
+    if not clean_bloques:
+        return JsonResponse({'ok': False, 'campo': 'canvas',
+                             'error': 'El lienzo debe tener al menos un bloque válido.'})
+
+    svc = CatalogoServicio.objects.create(
+        nombre=nombre,
+        descripcion=(data.get('descripcion') or '').strip()[:255],
+        icono=((data.get('icono') or '⚙️').strip()[:10]) or '⚙️',
+        tipo=tipo,
+        config_lienzo={'bloques': clean_bloques},
+        es_plantilla_sistema=False,
+        creado_por=request.user,
+    )
+    PVDServicio.objects.get_or_create(pvd=pvd, servicio=svc)
+    return JsonResponse({'ok': True, 'servicio': {
+        'id': svc.pk, 'nombre': svc.nombre, 'icono': svc.icono,
+        'tipo': svc.tipo, 'descripcion': svc.descripcion,
+    }})
+
+
+# ── AJAX Paso 3: asignar administrador (opcional) y activar el PVD ────────────
+
+@login_required(login_url='/login/')
+def wizard_pvd_finalizar(request, pvd_id):
+    if not usuario_es_admin_tic(request.user):
+        return JsonResponse({'ok': False, 'error': 'Sin permiso'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        data = {}
+
+    admin_id = data.get('admin_id')
+    if admin_id:
+        try:
+            admin_user = User.objects.get(pk=int(admin_id), is_active=True)
+            pvd.admin_a_cargo = admin_user
+            profile, _ = UserProfile.objects.get_or_create(
+                usuario=admin_user,
+                defaults={'rol': 'admin_pvd'},
             )
-            if admin:
-                messages.success(request, f'PVD "{pvd.nombre}" configurado. Administrador: {nombre_admin}.')
-            else:
-                messages.success(request, f'PVD "{pvd.nombre}" configurado sin administrador asignado.')
-            return redirect('modulo_puntos:lista_pvd')
+            if not profile.punto_asignado:
+                profile.punto_asignado = pvd
+                profile.save()
+        except (User.DoesNotExist, ValueError):
+            pass
 
-    return render(request, 'modulo_puntos/wizard_asignar_admin_pvd.html', {
-        'form': form,
-        'pvd': pvd,
-        'wizard_paso': 3,
-    })
+    modulos = data.get('modulos', [])
+    if isinstance(modulos, list):
+        pvd.modulos_habilitados = [m for m in modulos if isinstance(m, str) and len(m) <= 50]
+
+    estado_elegido = data.get('estado', 'A')
+    pvd.estado = estado_elegido if estado_elegido in ('A', 'I', 'M') else 'A'
+    pvd.save()
+    registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pk, f'PVD creado ({pvd.get_estado_display()}): {pvd.nombre}')
+    return JsonResponse({'ok': True, 'redirect': reverse('modulo_puntos:lista_pvd')})
+
+
+# ── AJAX Paso 3: búsqueda de administradores PVD disponibles ─────────────────
+
+@login_required(login_url='/login/')
+def wizard_pvd_buscar_admin(request):
+    q = (request.GET.get('q') or '').strip()
+    return JsonResponse({'resultados': _admins_pvd_activos(q)})
 
 
 @login_required(login_url='/login/')
@@ -2828,486 +2767,283 @@ def accesos_temporales(request):
     })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# COMPOSITOR DE MÓDULOS — Funciones de servicios personalizados
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+# MOTOR NO-CODE: DETALLE DE ATENCIÓN + FORMULARIOS DE SERVICIO
+# ==============================================================================
 
-import json as _json
-import re as _re
-from django.utils import timezone as _tz
-from django.db import transaction as _tx
+@login_required(login_url='/login/')
+def abrir_servicio_canvas(request, servicio_id):
+    """Crea una atención automáticamente y redirige al formulario canvas del servicio."""
+    svc = get_object_or_404(CatalogoServicio, pk=servicio_id, activo=True, tipo='canvas')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if not pvd_id:
+        messages.error(request, 'Selecciona un PVD activo antes de usar un servicio.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id, estado='A')
+
+    # Verificar que el servicio esté asignado a este PVD
+    if not PVDServicio.objects.filter(pvd=pvd, servicio=svc, activo=True).exists():
+        messages.error(request, 'Este servicio no está disponible para el PVD activo.')
+        return redirect('modulo_puntos:panel_control')
+
+    ahora = datetime.now()
+    atencion = Atencion.objects.create(
+        punto_vive_digital=pvd,
+        operador=request.user,
+        fecha=ahora.date(),
+        hora_inicio=ahora.time().replace(second=0, microsecond=0),
+        estado='P',
+    )
+    return redirect('modulo_puntos:formulario_servicio', servicio_id, atencion.pk)
 
 
-def _verificar_acceso_pvd_svc(request, pvd, svc):
-    if request.user.is_superuser or usuario_es_admin_tic(request.user):
-        return
-    pvd_activo_id = request.session.get('pvd_activo_id')
-    if not pvd_activo_id or pvd.pk != pvd_activo_id:
-        from django.http import Http404
-        raise Http404
+@login_required(login_url='/login/')
+def detalle_atencion(request, atencion_id):
+    atencion = get_object_or_404(Atencion, pk=atencion_id)
+
+    pvd = atencion.punto_vive_digital
+    servicios_pvd = []
+    if pvd:
+        servicios_pvd = (
+            PVDServicio.objects
+            .filter(pvd=pvd, activo=True)
+            .select_related('servicio')
+            .order_by('orden', 'servicio__nombre')
+        )
+
+    respuestas = (
+        RespuestaServicio.objects
+        .filter(atencion=atencion)
+        .select_related('servicio')
+        .order_by('-enviado_en')
+    )
+
+    return render(request, 'modulo_puntos/detalle_atencion.html', {
+        'atencion': atencion,
+        'servicios_pvd': servicios_pvd,
+        'respuestas': respuestas,
+    })
 
 
-def _slug(texto):
-    """Convierte texto a slug seguro para nombres de campo."""
-    s = texto.lower().strip()
-    s = _re.sub(r'[áàäâ]', 'a', s)
-    s = _re.sub(r'[éèëê]', 'e', s)
-    s = _re.sub(r'[íìïî]', 'i', s)
-    s = _re.sub(r'[óòöô]', 'o', s)
-    s = _re.sub(r'[úùüû]', 'u', s)
-    s = _re.sub(r'ñ', 'n', s)
-    s = _re.sub(r'[^a-z0-9_]', '_', s)
-    s = _re.sub(r'_+', '_', s).strip('_')
-    return s or 'campo'
+@login_required(login_url='/login/')
+def formulario_servicio(request, servicio_id, atencion_id):
+    svc      = get_object_or_404(CatalogoServicio, pk=servicio_id, activo=True)
+    atencion = get_object_or_404(Atencion, pk=atencion_id)
 
+    ctx_base = {'servicio': svc, 'atencion': atencion}
 
-def _leer_funcion_desde_post(data, fun=None):
-    """Extrae y valida todos los campos de FuncionServicio desde data JSON."""
-    nombre = data.get('nombre', '').strip()
-    if not nombre:
-        raise ValueError('El nombre de la función es requerido.')
+    # ── Legado: enlace externo ────────────────────────────────────────────────
+    if svc.tipo == 'redireccion' and svc.url_externa:
+        return render(request, 'modulo_puntos/formulario_servicio.html',
+                      {**ctx_base, 'es_redireccion': True})
 
-    # Sanitizar nombres de campos a slug
-    campos = []
-    for c in data.get('campos', []):
-        c = dict(c)
-        c['nombre'] = _slug(c.get('nombre', '')) or _slug(c.get('label', 'campo'))
-        c.setdefault('label', c['nombre'])
-        campos.append(c)
+    # ── Canvas: constructor visual ────────────────────────────────────────────
+    if svc.tipo == 'canvas':
+        lienzo = svc.config_lienzo or {}
+        bloques = lienzo.get('bloques', [])
 
-    # Validar agenda_config
-    agenda_cfg = data.get('agenda_config') or {}
-    if agenda_cfg:
-        try:
-            agenda_cfg = {
-                'dias': [int(d) for d in agenda_cfg.get('dias', [])],
-                'hora_inicio': str(agenda_cfg.get('hora_inicio', '08:00')),
-                'hora_fin': str(agenda_cfg.get('hora_fin', '17:00')),
-                'duracion_min': max(5, int(agenda_cfg.get('duracion_min', 30))),
-                'max_por_franja': max(1, int(agenda_cfg.get('max_por_franja', 1))),
+        # Collect all form fields: direct campos + sub-fields inside grupo_2col
+        campos_canvas = []
+        for blq in bloques:
+            if blq.get('tipo') == 'campo':
+                campos_canvas.append({'id': blq['id'], 'props': blq.get('props', {})})
+            elif blq.get('tipo') == 'grupo_2col':
+                for colKey in ('col1', 'col2'):
+                    col = blq.get('props', {}).get(colKey, {})
+                    if col.get('id'):
+                        campos_canvas.append({'id': col['id'], 'props': col})
+
+        if request.method == 'POST':
+            datos = {}
+            for campo in campos_canvas:
+                cid = campo.get('id', '')
+                datos[cid] = request.POST.get(cid, '')
+
+            faltantes = {
+                c['id']: 'Campo obligatorio'
+                for c in campos_canvas
+                if c.get('props', {}).get('requerido') and not datos.get(c.get('id', ''))
             }
-        except (TypeError, ValueError):
-            agenda_cfg = {}
+            if faltantes:
+                return render(request, 'modulo_puntos/formulario_servicio.html', {
+                    **ctx_base, 'es_canvas': True, 'bloques': bloques,
+                    'datos_previos': datos, 'errores': faltantes,
+                })
 
-    # Validar stock_items
-    stock_items = []
-    for it in data.get('stock_items', []):
-        if not it.get('nombre', '').strip():
-            continue
-        stock_items.append({
-            'nombre': it['nombre'].strip(),
-            'total': max(0, int(it.get('total', 0))),
-            'unidad': (it.get('unidad', '') or 'unidades').strip(),
-            'alerta_en': int(it['alerta_en']) if it.get('alerta_en') not in (None, '', 'null') else None,
+            RespuestaServicio.objects.create(atencion=atencion, servicio=svc, datos=datos)
+            registrar_auditoria(
+                request, 'CREATE', 'RespuestaServicio',
+                atencion.pk, f'Servicio canvas "{svc.nombre}" usado en atención #{atencion.pk}'
+            )
+            messages.success(request, f'"{svc.nombre}" registrado correctamente.')
+            return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
+
+        return render(request, 'modulo_puntos/formulario_servicio.html', {
+            **ctx_base, 'es_canvas': True, 'bloques': bloques,
+            'datos_previos': {}, 'errores': {},
         })
 
-    return {
-        'nombre': nombre,
-        'descripcion': data.get('descripcion', '').strip(),
-        'mod_formulario': bool(data.get('mod_formulario')),
-        'mod_estados':    bool(data.get('mod_estados')),
-        'mod_ciudadano':  bool(data.get('mod_ciudadano')),
-        'mod_stock':      bool(data.get('mod_stock')),
-        'mod_agenda':     bool(data.get('mod_agenda')),
-        'mod_encuesta':   bool(data.get('mod_encuesta')),
-        'campos':  campos,
-        'estados': data.get('estados', []),
-        'ciudadano_requerido':      bool(data.get('ciudadano_requerido')),
-        'ciudadano_rol_etiqueta':   (data.get('ciudadano_rol_etiqueta', '') or 'Ciudadano').strip(),
-        'ciudadano_permite_inline': bool(data.get('ciudadano_permite_inline')),
-        'ciudadano_campos_inline':  data.get('ciudadano_campos_inline', []),
-        'stock_nombre': data.get('stock_nombre', '').strip(),
-        'stock_total':  max(0, int(data.get('stock_total') or 0)),
-        'stock_unidad': (data.get('stock_unidad', '') or 'unidades').strip(),
-        'stock_alerta_en': int(data['stock_alerta_en']) if data.get('stock_alerta_en') not in (None, '', 'null') else None,
-        'stock_items':    stock_items,
-        'agenda_config':  agenda_cfg,
-        'encuesta_config': data.get('encuesta_config', []),
-    }
-
-
-@login_required(login_url='/login/')
-def crear_funcion_view(request, pvd_id, svc_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
+    # ── Legado: recoleccion con campos JSONField ───────────────────────────────
+    campos = svc.campos or []
 
     if request.method == 'POST':
-        try:
-            data = _json.loads(request.body)
-            kwargs = _leer_funcion_desde_post(data)
-            fun = FuncionServicio(servicio=svc, **kwargs)
-            fun.save()
-            return JsonResponse({'ok': True, 'fun_id': fun.pk, 'fun_nombre': fun.nombre})
-        except Exception as exc:
-            return JsonResponse({'ok': False, 'error': str(exc)})
-
-    desde_wizard = request.GET.get('from_wizard', '0') == '1'
-
-    return render(request, 'modulo_puntos/builder_funcion.html', {
-        'pvd': pvd,
-        'svc': svc,
-        'funcion': None,
-        'desde_wizard': desde_wizard,
-    })
-
-
-@login_required(login_url='/login/')
-def editar_funcion_view(request, pvd_id, svc_id, fun_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if request.method == 'POST':
-        try:
-            data = _json.loads(request.body)
-            kwargs = _leer_funcion_desde_post(data, fun)
-            for k, v in kwargs.items():
-                setattr(fun, k, v)
-            fun.save()
-            return JsonResponse({'ok': True, 'fun_id': fun.pk, 'fun_nombre': fun.nombre})
-        except Exception as exc:
-            return JsonResponse({'ok': False, 'error': str(exc)})
-
-    desde_wizard = request.GET.get('from_wizard', '0') == '1'
-    return render(request, 'modulo_puntos/builder_funcion.html', {
-        'pvd': pvd,
-        'svc': svc,
-        'funcion': fun,
-        'desde_wizard': desde_wizard,
-    })
-
-
-@login_required(login_url='/login/')
-def gestionar_funcion_view(request, pvd_id, svc_id, fun_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    registros_activos_qs = fun.registros_funcion.filter(activo=True).select_related('ciudadano', 'creado_por')
-    registros_cerrados   = fun.registros_funcion.filter(activo=False).select_related('ciudadano')[:50]
-    ciudadanos = Ciudadano.objects.filter(estado='A').order_by('primer_apellido') if fun.mod_ciudadano else []
-
-    # Anotar cada registro activo con sus transiciones válidas (para filtrar botones en template)
-    cfg_por_estado = {e['nombre']: e for e in fun.estados} if fun.estados else {}
-    registros_activos = list(registros_activos_qs)
-    for reg in registros_activos:
-        cfg = cfg_por_estado.get(reg.estado_actual, {})
-        reg.transiciones_validas = cfg.get('puede_ir_a', [])
-
-    estados_map = {}
-    if fun.mod_estados and fun.estados:
-        for est in fun.estados:
-            estados_map[est['nombre']] = {'config': est, 'registros': []}
-        for reg in registros_activos:
-            key = reg.estado_actual
-            if key not in estados_map:
-                estados_map[key] = {'config': {'nombre': key, 'color': '#64748b', 'es_terminal': False, 'puede_ir_a': []}, 'registros': []}
-            estados_map[key]['registros'].append(reg)
-
-    # Alertas de stock + info de disponibilidad para multi-stock
-    alertas_stock = []
-    stock_items_info = []
-    if fun.mod_stock:
-        if fun.usa_multi_stock:
-            for item in fun.stock_items:
-                disp = fun.stock_item_disponible(item['nombre'])
-                en_uso = fun.stock_item_en_uso(item['nombre'])
-                alerta = item.get('alerta_en')
-                stock_items_info.append({**item, 'disponible': disp, 'en_uso': en_uso})
-                if alerta is not None and disp <= alerta:
-                    alertas_stock.append({'nombre': item['nombre'], 'disponible': disp, 'alerta_en': alerta})
-        elif fun.stock_alerta_activa:
-            alertas_stock.append({'nombre': fun.stock_nombre, 'disponible': fun.stock_disponible, 'alerta_en': fun.stock_alerta_en})
-
-    return render(request, 'modulo_puntos/gestionar_funcion.html', {
-        'pvd': pvd,
-        'svc': svc,
-        'fun': fun,
-        'registros_activos': registros_activos,
-        'registros_cerrados': registros_cerrados,
-        'ciudadanos': ciudadanos,
-        'estados_map': estados_map,
-        'alertas_stock': alertas_stock,
-        'stock_items_info': stock_items_info,
-        'estados_json': _json.dumps(fun.estados),
-        'campos_json': _json.dumps(fun.campos),
-    })
-
-
-@login_required(login_url='/login/')
-def crear_registro_funcion_view(request, pvd_id, svc_id, fun_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if request.method != 'POST':
-        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-    # ── Formulario libre ──────────────────────────────────────────────────────
-    datos = {}
-    if fun.mod_formulario:
-        for campo in fun.campos:
-            if campo.get('tipo') == 'separador':
-                continue
-            slug = campo['nombre']
-            val = request.POST.get(f'campo_{slug}', '').strip()
-            if campo.get('tipo') == 'booleano':
-                val = '1' if request.POST.get(f'campo_{slug}') else '0'
-            datos[slug] = val
-
-    # ── Ciudadano ─────────────────────────────────────────────────────────────
-    ciudadano = None
-    nombre_persona = request.POST.get('nombre_persona', '').strip()
-    if fun.mod_ciudadano:
-        ciu_id = request.POST.get('ciudadano_id', '').strip()
-        if ciu_id:
-            ciudadano = Ciudadano.objects.filter(pk=ciu_id).first()
-        if fun.ciudadano_requerido and not ciudadano:
-            messages.error(request, f'Debes seleccionar un/a {fun.ciudadano_rol_etiqueta} para este registro.')
-            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-    # ── Stock (con bloqueo para evitar race condition) ────────────────────────
-    stock_cantidad  = 1
-    stock_seleccion = {}
-    if fun.mod_stock:
-        with _tx.atomic():
-            fun_lock = FuncionServicio.objects.select_for_update().get(pk=fun.pk)
-            if fun_lock.usa_multi_stock:
-                for i, item in enumerate(fun_lock.stock_items):
-                    try:
-                        cant = max(0, int(request.POST.get(f'stock_item_{i}') or 0))
-                    except (ValueError, TypeError):
-                        cant = 0
-                    if cant > 0:
-                        disp = fun_lock.stock_item_disponible(item['nombre'])
-                        if cant > disp:
-                            messages.error(request, f'Solo hay {disp} {item.get("unidad","unidades")} de "{item["nombre"]}" disponibles.')
-                            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-                        stock_seleccion[item['nombre']] = cant
+        datos = {}
+        for campo in campos:
+            cid  = campo.get('id', '')
+            tipo = campo.get('tipo_campo', 'texto')
+            if tipo == 'multiple':
+                datos[cid] = request.POST.getlist(cid)
             else:
-                try:
-                    stock_cantidad = max(1, int(request.POST.get('stock_cantidad') or 1))
-                except (ValueError, TypeError):
-                    stock_cantidad = 1
-                if stock_cantidad > fun_lock.stock_disponible:
-                    messages.error(request, f'Solo hay {fun_lock.stock_disponible} {fun_lock.stock_unidad} disponibles.')
-                    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+                datos[cid] = request.POST.get(cid, '')
 
-    # ── Agenda ────────────────────────────────────────────────────────────────
-    agenda_fecha = None
-    agenda_hora  = None
-    if fun.mod_agenda:
-        raw_af = request.POST.get('agenda_fecha', '').strip()
-        raw_ah = request.POST.get('agenda_hora', '').strip()
-        if raw_af:
-            try:
-                from datetime import date as _date
-                agenda_fecha = _date.fromisoformat(raw_af)
-            except ValueError:
-                pass
-        if raw_ah:
-            try:
-                from datetime import time as _time
-                h, m = raw_ah.split(':')
-                agenda_hora = _time(int(h), int(m))
-            except (ValueError, AttributeError):
-                pass
+        faltantes = [
+            campo['nombre'] for campo in campos
+            if campo.get('requerido') and not datos.get(campo.get('id', ''))
+        ]
+        if faltantes:
+            return render(request, 'modulo_puntos/formulario_servicio.html', {
+                **ctx_base, 'campos': campos, 'datos_previos': datos,
+                'errores': {c['id']: 'Campo obligatorio' for c in campos if c['nombre'] in faltantes},
+            })
 
-    # ── Fecha fin esperada ────────────────────────────────────────────────────
-    fecha_fin_esperada = None
-    raw_fecha = request.POST.get('fecha_fin_esperada', '').strip()
-    if raw_fecha:
-        try:
-            fecha_fin_esperada = datetime.fromisoformat(raw_fecha)
-        except ValueError:
-            pass
+        RespuestaServicio.objects.create(atencion=atencion, servicio=svc, datos=datos)
+        registrar_auditoria(
+            request, 'CREATE', 'RespuestaServicio',
+            atencion.pk, f'Servicio "{svc.nombre}" registrado en atención #{atencion.pk}'
+        )
+        messages.success(request, f'Servicio "{svc.nombre}" registrado correctamente.')
+        return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
 
-    # ── Crear registro ────────────────────────────────────────────────────────
-    reg = RegistroFuncion(
-        funcion=fun,
-        ciudadano=ciudadano,
-        nombre_persona=nombre_persona,
-        estado_actual=fun.estado_inicial,
-        datos=datos,
-        stock_cantidad=stock_cantidad,
-        stock_seleccion=stock_seleccion,
-        agenda_fecha=agenda_fecha,
-        agenda_hora=agenda_hora,
-        fecha_fin_esperada=fecha_fin_esperada,
-        notas=request.POST.get('notas', '').strip(),
-        creado_por=request.user,
+    return render(request, 'modulo_puntos/formulario_servicio.html',
+                  {**ctx_base, 'campos': campos, 'datos_previos': {}, 'errores': {}})
+
+
+# ==============================================================================
+# LISTA DE ATENCIONES
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def lista_atenciones(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    es_admin_tic = usuario_es_admin_tic(request.user)
+
+    qs = (
+        Atencion.objects
+        .select_related('ciudadano', 'punto_vive_digital', 'operador')
+        .order_by('-fecha', '-hora_inicio')
     )
-    reg.agregar_evento('apertura', 'Registro creado.', request.user)
-    reg.save()
-    messages.success(request, 'Registro creado correctamente.')
-    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
 
+    if not es_admin_tic and not request.user.is_superuser:
+        if not pvd_id:
+            return redirect('modulo_puntos:seleccionar_pvd_view')
+        qs = qs.filter(punto_vive_digital_id=pvd_id)
+    elif pvd_id:
+        qs = qs.filter(punto_vive_digital_id=pvd_id)
 
-@login_required(login_url='/login/')
-def cambiar_estado_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun, activo=True)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
+    estado_filter = request.GET.get('estado', '').strip()
+    fecha_filter  = request.GET.get('fecha', '').strip()
+    q             = request.GET.get('q', '').strip()
 
-    if request.method == 'POST':
-        nuevo = request.POST.get('nuevo_estado', '').strip()
-        nombres = [e['nombre'] for e in fun.estados]
-        if nuevo not in nombres:
-            messages.error(request, 'Estado inválido.')
-            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
+    if estado_filter:
+        qs = qs.filter(estado=estado_filter)
+    if fecha_filter:
+        qs = qs.filter(fecha=fecha_filter)
+    if q:
+        qs = qs.filter(
+            Q(ciudadano__primer_nombre__icontains=q)
+            | Q(ciudadano__primer_apellido__icontains=q)
+            | Q(ciudadano__numero_documento__icontains=q)
+        )
 
-        # Validar transición controlada
-        cfg_actual = next((e for e in fun.estados if e['nombre'] == reg.estado_actual), {})
-        puede_ir_a = cfg_actual.get('puede_ir_a', [])
-        if puede_ir_a and nuevo not in puede_ir_a:
-            messages.error(request, f'No se puede pasar de "{reg.estado_actual}" a "{nuevo}".')
-            return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-        cfg_nuevo = next((e for e in fun.estados if e['nombre'] == nuevo), {})
-
-        # Validar nota requerida
-        if cfg_nuevo.get('requiere_nota'):
-            nota = request.POST.get('nota_estado', '').strip()
-            if not nota:
-                messages.error(request, f'El estado "{nuevo}" requiere una nota explicativa.')
-                return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-            reg.agregar_evento('nota', nota, request.user)
-
-        estado_anterior = reg.estado_actual
-        reg.estado_actual = nuevo
-        reg.agregar_evento('estado', f'Estado cambiado: {estado_anterior} → {nuevo}', request.user)
-
-        if cfg_nuevo.get('es_terminal'):
-            reg.activo = False
-            reg.fecha_fin_real = _tz.now()
-            reg.agregar_evento('cierre', 'Registro cerrado por estado terminal.', request.user)
-
-        reg.save()
-        messages.success(request, f'Estado cambiado a "{nuevo}".')
-    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-
-@login_required(login_url='/login/')
-def cerrar_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if request.method == 'POST':
-        reg.activo = False
-        reg.fecha_fin_real = _tz.now()
-        reg.agregar_evento('cierre', request.POST.get('nota_cierre', 'Cerrado manualmente.').strip() or 'Cerrado manualmente.', request.user)
-        reg.save()
-        messages.success(request, 'Registro cerrado.')
-        if fun.mod_encuesta and fun.encuesta_config:
-            return redirect('modulo_puntos:encuesta_registro', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id, reg_id=reg_id)
-    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-
-@login_required(login_url='/login/')
-def reabrir_registro_funcion_view(request, pvd_id, svc_id, fun_id, reg_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun, activo=False)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if request.method == 'POST':
-        reg.activo = True
-        reg.fecha_fin_real = None
-        reg.agregar_evento('reapertura', request.POST.get('nota_reapertura', 'Registro reabierto.').strip() or 'Registro reabierto.', request.user)
-        reg.save()
-        messages.success(request, 'Registro reabierto correctamente.')
-    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-
-@login_required(login_url='/login/')
-def agregar_nota_registro_view(request, pvd_id, svc_id, fun_id, reg_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    if request.method == 'POST':
-        texto = request.POST.get('nota', '').strip()
-        if texto:
-            reg.agregar_evento('nota', texto, request.user)
-            reg.save()
-            messages.success(request, 'Nota añadida a la bitácora.')
-        else:
-            messages.warning(request, 'La nota no puede estar vacía.')
-    return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-
-@login_required(login_url='/login/')
-def encuesta_registro_view(request, pvd_id, svc_id, fun_id, reg_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    reg = get_object_or_404(RegistroFuncion, pk=reg_id, funcion=fun)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    preguntas = fun.encuesta_config if isinstance(fun.encuesta_config, list) else []
-    ya_respondida = bool(reg.encuesta_respuestas)
-
-    if request.method == 'POST' and not ya_respondida:
-        respuestas = {}
-        for i, pregunta in enumerate(preguntas):
-            texto = pregunta.get('pregunta', '').strip()
-            if texto:
-                respuestas[texto] = request.POST.get(f'preg_{i}', '').strip()
-        reg.encuesta_respuestas = respuestas
-        reg.agregar_evento('encuesta', 'Encuesta de satisfacción completada.', request.user)
-        reg.save()
-        messages.success(request, 'Encuesta registrada. ¡Gracias!')
-        return redirect('modulo_puntos:gestionar_funcion', pvd_id=pvd_id, svc_id=svc_id, fun_id=fun_id)
-
-    return render(request, 'modulo_puntos/encuesta_registro.html', {
-        'pvd': pvd, 'svc': svc, 'fun': fun, 'reg': reg,
-        'preguntas': preguntas,
-        'ya_respondida': ya_respondida,
-        'pvd_id': pvd_id, 'svc_id': svc_id, 'fun_id': fun_id,
+    return render(request, 'modulo_puntos/lista_atenciones.html', {
+        'atenciones':    qs,
+        'estado_filter': estado_filter,
+        'fecha_filter':  fecha_filter,
+        'q':             q,
     })
 
 
-@login_required(login_url='/login/')
-def api_slots_agenda_view(request, pvd_id, svc_id, fun_id):
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc, activo=True)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
-
-    fecha_str = request.GET.get('fecha', '')
-    if not fecha_str:
-        return JsonResponse({'ok': False, 'error': 'Parámetro fecha requerido.'})
-    try:
-        from datetime import date as _date
-        fecha = _date.fromisoformat(fecha_str)
-    except ValueError:
-        return JsonResponse({'ok': False, 'error': 'Formato de fecha inválido (YYYY-MM-DD).'})
-
-    slots = fun.slots_agenda(fecha)
-    return JsonResponse({'ok': True, 'slots': slots})
-
+# ==============================================================================
+# CAMBIAR ESTADO DE ATENCIÓN
+# ==============================================================================
 
 @login_required(login_url='/login/')
-def eliminar_funcion_view(request, pvd_id, svc_id, fun_id):
+def cambiar_estado_atencion(request, atencion_id):
+    if request.method != 'POST':
+        return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
+
+    atencion = get_object_or_404(Atencion, pk=atencion_id)
+    nuevo_estado = request.POST.get('estado', '').strip()
+
+    if nuevo_estado not in ('P', 'F', 'C'):
+        messages.error(request, 'Estado no válido.')
+        return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
+
+    atencion.estado = nuevo_estado
+    if nuevo_estado == 'F' and not atencion.hora_fin:
+        atencion.hora_fin = datetime.now().time()
+    atencion.save()
+
+    registrar_auditoria(
+        request, 'UPDATE', 'Atencion',
+        atencion.pk, f'Estado cambiado a {atencion.get_estado_display()}'
+    )
+    messages.success(request, f'Atención marcada como "{atencion.get_estado_display()}".')
+    return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
+
+
+# ==============================================================================
+# GESTIONAR SERVICIOS DEL PVD (post-wizard)
+# ==============================================================================
+
+@login_required(login_url='/login/')
+def gestionar_servicios_pvd(request, pvd_id):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para gestionar servicios de PVD.')
+        return redirect('modulo_puntos:panel_control')
+
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_id)
-    svc = get_object_or_404(ServicioPersonalizado, pk=svc_id, punto_vive_digital=pvd)
-    fun = get_object_or_404(FuncionServicio, pk=fun_id, servicio=svc)
-    _verificar_acceso_pvd_svc(request, pvd, svc)
 
     if request.method == 'POST':
-        fun.activo = False
-        fun.save()
-        messages.success(request, f'Función "{fun.nombre}" eliminada.')
-    return redirect('modulo_puntos:gestionar_servicio_custom', svc_id=svc_id)
+        accion = request.POST.get('accion', '')
+
+        if accion == 'quitar':
+            svc_id = request.POST.get('svc_id')
+            PVDServicio.objects.filter(pvd=pvd, servicio_id=svc_id).delete()
+            messages.success(request, 'Servicio quitado del PVD.')
+
+        elif accion == 'asignar':
+            svc_id = request.POST.get('svc_id')
+            svc = get_object_or_404(CatalogoServicio, pk=svc_id, activo=True)
+            PVDServicio.objects.get_or_create(pvd=pvd, servicio=svc)
+            messages.success(request, f'Servicio "{svc.nombre}" asignado al PVD.')
+
+        return redirect('modulo_puntos:gestionar_servicios_pvd', pvd_id=pvd_id)
+
+    asignados_ids = set(
+        PVDServicio.objects.filter(pvd=pvd).values_list('servicio_id', flat=True)
+    )
+    servicios_asignados = (
+        PVDServicio.objects
+        .filter(pvd=pvd, activo=True)
+        .select_related('servicio')
+        .order_by('orden', 'servicio__nombre')
+    )
+    servicios_catalogo = (
+        CatalogoServicio.objects
+        .filter(activo=True)
+        .exclude(pk__in=asignados_ids)
+        .order_by('-es_plantilla_sistema', 'nombre')
+    )
+
+    return render(request, 'modulo_puntos/gestionar_servicios_pvd.html', {
+        'pvd':                pvd,
+        'servicios_asignados': servicios_asignados,
+        'servicios_catalogo':  servicios_catalogo,
+    })

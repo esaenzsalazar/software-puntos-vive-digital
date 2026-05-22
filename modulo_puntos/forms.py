@@ -8,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import (
-    Ciudadano, Atencion, Satisfaccion, Servicio, ModuloHabilitado, PrestamoRecurso, Recurso,
+    Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo,
 )
@@ -408,104 +408,6 @@ class ServicioForm(forms.ModelForm):
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
         self.fields['requiere_equipo'].initial = 'N'
         self.fields['estado'].initial = 'A'
-
-
-MODULOS_WIZARD_CHOICES = [
-    ('atencion_ciudadana', 'Atención ciudadana'),
-    ('recursos_salas', 'Recursos y Salas'),
-    ('cursos_talleres', 'Cursos y Talleres'),
-    ('mantenimiento', 'Mantenimiento de equipos'),
-    ('reportes', 'Reportes y exportaciones'),
-]
-
-CAPACIDADES_INFO = [
-    {'codigo': 'ciudadanos',     'label': 'Ciudadanos',            'icono': '👤', 'descripcion': 'Consultar y registrar ciudadanos atendidos',               'grupo': 'Atención ciudadana'},
-    {'codigo': 'atenciones',     'label': 'Atenciones',            'icono': '🎯', 'descripcion': 'Registrar atenciones al ciudadano',                        'grupo': 'Atención ciudadana'},
-    {'codigo': 'servicios',      'label': 'Servicios',             'icono': '🛠️', 'descripcion': 'Registro de servicios prestados en cada atención',          'grupo': 'Atención ciudadana'},
-    {'codigo': 'satisfaccion',   'label': 'Satisfacción',          'icono': '⭐', 'descripcion': 'Encuestas de satisfacción del ciudadano',                  'grupo': 'Atención ciudadana'},
-    {'codigo': 'recursos',       'label': 'Recursos (inventario)', 'icono': '📦', 'descripcion': 'Gestión de equipos e inventario del PVD',                  'grupo': 'Recursos y Salas'},
-    {'codigo': 'prestamos',      'label': 'Préstamos',             'icono': '🔄', 'descripcion': 'Préstamo de recursos y equipos a ciudadanos',              'grupo': 'Recursos y Salas'},
-    {'codigo': 'salas',          'label': 'Salas',                 'icono': '🏛️', 'descripcion': 'Gestión de salas y espacios físicos del PVD',             'grupo': 'Recursos y Salas'},
-    {'codigo': 'habilitaciones', 'label': 'Habilitación de salas', 'icono': '🔓', 'descripcion': 'Habilitar espacios y salas para uso programado',          'grupo': 'Recursos y Salas'},
-    {'codigo': 'cursos',         'label': 'Cursos y Talleres',     'icono': '📚', 'descripcion': 'Formación ciudadana: cursos, inscripciones y asistencia',  'grupo': 'Formación'},
-    {'codigo': 'mantenimiento',  'label': 'Mantenimiento',         'icono': '🔧', 'descripcion': 'Mantenimiento preventivo y correctivo de equipos',        'grupo': 'Mantenimiento'},
-    {'codigo': 'reportes',       'label': 'Reportes',              'icono': '📊', 'descripcion': 'Estadísticas, indicadores y exportación a Excel',         'grupo': 'Reportes'},
-]
-
-def _agrupar_capacidades():
-    from collections import OrderedDict
-    grupos = OrderedDict()
-    for cap in CAPACIDADES_INFO:
-        g = cap['grupo']
-        if g not in grupos:
-            grupos[g] = []
-        grupos[g].append(cap)
-    return [{'grupo': g, 'capacidades': caps} for g, caps in grupos.items()]
-
-CAPACIDADES_POR_GRUPO = _agrupar_capacidades()
-
-MODULOS_INFO = [
-    {
-        'codigo': 'atencion_ciudadana',
-        'label': 'Atención ciudadana',
-        'icono': '👥',
-        'descripcion': 'Registro y seguimiento de atenciones a la comunidad.',
-        'incluye': ['Ciudadanos', 'Registrar ciudadano', 'Atenciones', 'Servicios', 'Satisfacción'],
-    },
-    {
-        'codigo': 'recursos_salas',
-        'label': 'Recursos y Salas',
-        'icono': '💼',
-        'descripcion': 'Inventario de equipos, préstamos y gestión de salas.',
-        'incluye': ['Recursos', 'Préstamos de recursos', 'Salas', 'Habilitación de salas'],
-    },
-    {
-        'codigo': 'cursos_talleres',
-        'label': 'Cursos y Talleres',
-        'icono': '📚',
-        'descripcion': 'Formación ciudadana, sesiones, inscripciones y asistencia.',
-        'incluye': ['Cursos', 'Sesiones', 'Inscripciones', 'Control de asistencia'],
-    },
-    {
-        'codigo': 'mantenimiento',
-        'label': 'Mantenimiento de equipos',
-        'icono': '🔧',
-        'descripcion': 'Registro de mantenimientos preventivos y correctivos.',
-        'incluye': ['Mantenimiento preventivo', 'Mantenimiento correctivo'],
-    },
-    {
-        'codigo': 'reportes',
-        'label': 'Reportes y exportaciones',
-        'icono': '📊',
-        'descripcion': 'Estadísticas, indicadores y exportación de datos a Excel.',
-        'incluye': ['Panel de reportes', 'Exportación a Excel', 'Indicadores KPI'],
-    },
-]
-
-
-class ModulosHabilitadosForm(forms.Form):
-    modulos = forms.MultipleChoiceField(
-        choices=MODULOS_WIZARD_CHOICES,
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
-        label='Servicios funcionales del PVD',
-    )
-
-
-class AsignarAdminPVDForm(forms.Form):
-    admin_a_cargo = forms.ModelChoiceField(
-        queryset=None,
-        required=False,
-        label='Administrador PVD a cargo',
-        empty_label='— Sin asignación (se puede cambiar después) —',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['admin_a_cargo'].queryset = User.objects.filter(
-            groups__name='Administrador PVD'
-        ).order_by('first_name', 'last_name', 'username')
 
 
 class PrestamoRecursoForm(forms.ModelForm):

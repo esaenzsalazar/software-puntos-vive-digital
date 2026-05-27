@@ -23,8 +23,7 @@ urlpatterns = [
     path('panel/', views.panel_control, name='panel_control'),
     path('seleccionar-pvd/', views.seleccionar_pvd_view, name='seleccionar_pvd_view'),
     path('perfil/', views.perfil_usuario, name='perfil_usuario'),
-    path('inicio-pvd/', views.inicio_pvd, name='inicio_pvd'),
-    
+
     # ==========================================================================
     # GESTIÓN DE CIUDADANOS
     # ==========================================================================
@@ -46,6 +45,9 @@ urlpatterns = [
     # REGISTRO DE ATENCIONES Y SERVICIOS
     # ==========================================================================
     path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
+    path('atenciones/', views.lista_atenciones, name='lista_atenciones'),
+    path('atenciones/<int:atencion_id>/', views.detalle_atencion, name='detalle_atencion'),
+    path('atenciones/<int:atencion_id>/estado/', views.cambiar_estado_atencion, name='cambiar_estado_atencion'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
     
@@ -83,10 +85,7 @@ urlpatterns = [
     # ==========================================================================
     # GESTIÓN DE PUNTOS VIVE DIGITAL (Multi-PVD)
     # ==========================================================================
-    path('pvd/', views.lista_pvd, name='lista_pvd'),
-    path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
-    path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
-    path('pvd/eliminar/<int:pvd_cdgo>/', views.eliminar_pvd, name='eliminar_pvd'),
+    path('pvd/crear/', views.crear_pvd, name='crear_pvd'),
     path('pvd/seleccionar/<int:pvd_cdgo>/', views.seleccionar_pvd, name='seleccionar_pvd'),
 
     # ==========================================================================
@@ -96,7 +95,6 @@ urlpatterns = [
     path('salas/crear/', views.crear_sala, name='crear_sala'),
     path('salas/editar/<int:sala_cdgo>/', views.editar_sala, name='editar_sala'),
     path('salas/activar/<int:sala_cdgo>/', views.activar_sala, name='activar_sala'),
-    path('salas/eliminar/<int:sala_cdgo>/', views.eliminar_sala, name='eliminar_sala'),
     
     # ==========================================================================
     # HABILITACIÓN DE SALAS

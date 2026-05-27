@@ -1,55 +1,12 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Ayuda y manual de uso{% endblock %}
+{% block title %}Ayuda{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="page-hero">
-        <span class="eyebrow">Soporte</span>
-        <h2 class="page-title">Ayuda del sistema</h2>
-        <p class="muted">Software de apoyo a la gestión TIC — Punto Vive Digital Bugalagrande.</p>
-        <p class="muted"><strong>Rol actual:</strong> <span class="text-accent">{{ rol_usuario }}</span></p>
-    </div>
-    <div class="actions">
-        <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
-    </div>
-</div>
-
-<div class="card">
-    <h3 class="section-title section-title--rule">Flujo operativo recomendado</h3>
-    <ol class="prose-list">
-        <li><strong>Registrar ciudadano</strong> (caracterización) o <strong>consultar</strong> si ya existe.</li>
-        <li><strong>Registrar atención</strong> vinculando ciudadano al Admin PVD activo.</li>
-        <li><strong>Registrar servicio</strong> asociado a esa atención.</li>
-        <li>Opcional: <strong>préstamo</strong> y <strong>satisfacción</strong> del usuario.</li>
-        <li>En <strong>Reportes</strong> revisa indicadores y descarga CSV para Excel.</li>
-    </ol>
-</div>
-
-<div class="card">
-    <h3 class="section-title section-title--rule">Roles</h3>
-    <ul class="prose-list">
-        <li><strong>Administrador PVD:</strong> módulos operativos y reportes.</li>
-        <li><strong>Administrador TIC:</strong> lo anterior y creación de usuarios PVD.</li>
-        <li><strong>Superusuario:</strong> acceso total, incluidos administradores TIC.</li>
-    </ul>
-</div>
-
-<div class="card">
-    <h3 class="section-title section-title--rule">Exportación de datos</h3>
-    <p class="muted">En <strong>Reportes</strong> puedes descargar CSV (UTF-8 con BOM) para Excel o LibreOffice:</p>
-    <ul class="prose-list">
-        <li><strong>Atenciones, ciudadanos, servicios, satisfacción, préstamos.</strong></li>
-    </ul>
-</div>
-
-<div class="card">
-    <h3 class="section-title section-title--rule">Documentación técnica</h3>
-    <p class="muted">En la carpeta <code>docs/</code> del proyecto:</p>
-    <ul class="prose-list">
-        <li><code>MANUAL_USUARIO.md</code></li>
-        <li><code>DESCRIPCION_FUNCIONAL.md</code></li>
-        <li><code>ESTRUCTURA_BASE_DE_DATOS.md</code></li>
-    </ul>
+<div class="card" style="text-align:center; padding:64px 24px;">
+    <div style="font-size:56px; margin-bottom:16px;">🚧</div>
+    <h2 class="page-title" style="margin:0 0 8px;">Sección en construcción</h2>
+    <p class="muted">La documentación y guías de uso estarán disponibles una vez el sistema esté completamente finalizado.</p>
+    <a href="{% url 'modulo_puntos:panel_control' %}" class="btn" style="margin-top:24px;">Volver al panel</a>
 </div>
 {% endblock %}

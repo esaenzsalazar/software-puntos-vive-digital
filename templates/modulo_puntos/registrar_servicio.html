@@ -1,88 +1,129 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Vincular Servicio Prestado{% endblock %}
+{% block title %}Registrar Servicio{% endblock %}
 
 {% block content %}
 <div class="card card--narrow">
     <div class="page-hero">
-        <span class="eyebrow">Servicios</span>
+        <span class="eyebrow">Operación</span>
         <h2 class="page-title">Registrar servicio</h2>
-        <p class="muted">Vincula el tipo de servicio prestado a una atención.</p>
+        <p class="muted">Vincula el servicio prestado a la atención correspondiente.</p>
     </div>
 
     {% if form.errors %}
-        <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>
+    <div class="callout" style="background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:16px;">
+        <strong style="color:#991b1b;">Revisa los campos marcados en rojo antes de continuar.</strong>
+    </div>
     {% endif %}
 
-    <form method="POST">
+    <form method="POST" id="form-servicio" novalidate>
         {% csrf_token %}
-        <div class="grid form-grid-2">
-            {% for field in form %}
-                <div {% if field.name == 'atencion' or field.name == 'descripcion' or field.name == 'nombre' %}class="span-full"{% endif %}>
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
-                    </label>
-                    {{ field }}
-                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
-                </div>
-            {% endfor %}
+
+        {# ── Atención vinculada ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.atencion.id_for_label }}">
+                Atención Vinculada <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.atencion }}
+            {% if form.atencion.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.atencion.errors.0 }}</span>
+            {% endif %}
         </div>
 
-        <div class="actions" style="justify-content: flex-end; margin-top: 25px;">
+        {# ── Nombre del servicio ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.nombre.id_for_label }}">
+                Nombre del Servicio <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.nombre }}
+            {% if form.nombre.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.nombre.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        {# ── Descripción ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.descripcion.id_for_label }}">
+                Descripción Detallada <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.descripcion }}
+            {% if form.descripcion.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.descripcion.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        {# ── ¿Requiere equipo? ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.requiere_equipo.id_for_label }}">
+                ¿Requiere equipo? <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.requiere_equipo }}
+        </div>
+
+        {# ── Selección de recurso (aparece solo si requiere_equipo = S) ── #}
+        <div id="bloque-recurso" style="display:none; margin-bottom:18px;">
+            <div class="callout" style="background:#eff6ff; border-left:4px solid #3b82f6; margin-bottom:12px; padding:10px 14px;">
+                <strong style="color:#1e40af; font-size:13px;">💻 Equipo requerido</strong>
+                <p style="margin:4px 0 0; font-size:13px; color:#1e40af;">
+                    Selecciona el recurso o equipo que se utilizará en este servicio.
+                </p>
+            </div>
+            <label for="{{ form.recurso.id_for_label }}">
+                Recurso / Equipo disponible
+            </label>
+            {{ form.recurso }}
+            {% if form.recurso.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.recurso.errors.0 }}</span>
+            {% endif %}
+            {% if not recursos %}
+            <p class="muted" style="font-size:13px; margin-top:6px;">
+                No hay recursos activos disponibles en este PVD.
+            </p>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color);">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn">Guardar Servicio</button>
         </div>
     </form>
 </div>
+{% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form[method="POST"]');
-    const nombreInput = document.getElementById('id_nombre');
-    const tipoSelect = document.getElementById('id_tipo');
-    const descrInput = document.getElementById('id_descripcion');
+    const selectEquipo = document.getElementById('id_requiere_equipo');
+    const bloqueRecurso = document.getElementById('bloque-recurso');
+    const selectRecurso = document.getElementById('id_recurso');
 
-    function wrap(input) {
-        if (!input) return;
-        if (!input.closest('.form-group')) {
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            input.parentNode.insertBefore(div, input);
-            div.appendChild(input);
-        }
-    }
-    [nombreInput, tipoSelect, descrInput].forEach(wrap);
-
-    if (nombreInput) {
-        nombreInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, (v) => ValidacionPVD.validarLongitudMinima(v, 3, 'Nombre del servicio'), 'Nombre del servicio');
-        });
-        nombreInput.addEventListener('input', function () {
-            if (this.classList.contains('input-error'))
-                ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Nombre del servicio');
-        });
-    }
-    if (tipoSelect) {
-        tipoSelect.addEventListener('change', function () {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Tipo de servicio');
-        });
-    }
-    if (descrInput) {
-        descrInput.addEventListener('input', function () {
-            ValidacionPVD.validarYMostrar(this, (v) => ValidacionPVD.validarLongitudMaxima(v, 512, 'Descripción'), 'Descripción');
-        });
+    function actualizarRecurso() {
+        const requiere = selectEquipo.value === 'S';
+        bloqueRecurso.style.display = requiere ? 'block' : 'none';
+        if (!requiere && selectRecurso) selectRecurso.value = '';
     }
 
+    if (selectEquipo) {
+        selectEquipo.addEventListener('change', actualizarRecurso);
+        actualizarRecurso();
+    }
+
+    // Validación al enviar
+    const form = document.getElementById('form-servicio');
     if (form) {
         form.addEventListener('submit', function (e) {
             let ok = true;
-            if (nombreInput && !ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre del servicio').valido) ok = false;
-            if (tipoSelect && !ValidacionPVD.validarYMostrar(tipoSelect, ValidacionPVD.validarRequerido, 'Tipo de servicio').valido) ok = false;
+            const atencion = document.getElementById('{{ form.atencion.id_for_label }}');
+            const nombre = document.getElementById('{{ form.nombre.id_for_label }}');
+            const descripcion = document.getElementById('{{ form.descripcion.id_for_label }}');
+
+            if (atencion && !atencion.value) { ok = false; atencion.style.borderColor = '#ef4444'; }
+            if (nombre && !nombre.value.trim()) { ok = false; nombre.style.borderColor = '#ef4444'; }
+            if (descripcion && !descripcion.value.trim()) { ok = false; descripcion.style.borderColor = '#ef4444'; }
+
             if (!ok) e.preventDefault();
         });
     }
 });
 </script>
-{% endblock %}
 {% endblock %}

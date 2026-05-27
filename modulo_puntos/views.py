@@ -27,7 +27,8 @@ from .models import (
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
-    CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
+    CrearUsuarioForm, CrearAdminPVDForm, CrearPVDPaso1Form, CrearPVDPaso2Form,
+    PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
     MantenimientoEquipoForm,
 )
@@ -101,17 +102,9 @@ def login_usuario(request):
             login(request, user)
             messages.success(request, 'Inicio de sesión correcto.')
             if usuario_necesita_seleccionar_pvd(user):
-                try:
-                    profile = user.pvd_profile
-                    if profile.punto_asignado_id and not profile.pvd_temporal_id:
-                        pvd = profile.punto_asignado
-                        if pvd.estado == 'A':
-                            request.session['pvd_activo_id'] = pvd.pk
-                            request.session['pvd_nombre'] = pvd.nombre
-                            messages.success(request, f'Trabajando en: {pvd.nombre}')
-                            return redirect(next_url)
-                except UserProfile.DoesNotExist:
-                    pass
+                # Limpiar PVD previo: cada inicio de sesión obliga a seleccionar
+                request.session.pop('pvd_activo_id', None)
+                request.session.pop('pvd_nombre', None)
                 return redirect('modulo_puntos:seleccionar_pvd_view')
             return redirect(next_url)
         messages.error(request, 'Usuario o contraseña incorrectos.')
@@ -208,9 +201,13 @@ def seleccionar_pvd_view(request):
                 pvd_ids = [profile.punto_asignado_id]
                 if profile.pvd_temporal_id:
                     pvd_ids.append(profile.pvd_temporal_id)
-                pvds = PuntoViveDigital.objects.filter(pk__in=pvd_ids, estado='A').order_by('nombre')
+                pvds_qs = PuntoViveDigital.objects.filter(pk__in=pvd_ids, estado='A').order_by('nombre')
+                # Anotar cada PVD con si es permanente o temporal
+                for pvd in pvds_qs:
+                    pvd.es_permanente = (pvd.pk == profile.punto_asignado_id)
+                    pvd.es_temporal   = (pvd.pk == profile.pvd_temporal_id)
+                pvds = pvds_qs
             else:
-                # Admin PVD sin PVD asignado: bloquear, no mostrar lista
                 pvds = PuntoViveDigital.objects.none()
                 sin_asignacion = True
         except UserProfile.DoesNotExist:
@@ -218,6 +215,9 @@ def seleccionar_pvd_view(request):
             sin_asignacion = True
     else:
         pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+        for pvd in pvds:
+            pvd.es_permanente = False
+            pvd.es_temporal   = False
 
     return render(request, 'modulo_puntos/seleccionar_pvd.html', {
         'pvds': pvds,
@@ -249,21 +249,6 @@ def seleccionar_pvd(request, pvd_cdgo):
     request.session['pvd_nombre'] = pvd.nombre
     messages.success(request, f'Trabajando en: {pvd.nombre}')
     return redirect('modulo_puntos:panel_control')
-
-
-@login_required(login_url='/login/')
-def inicio_pvd(request):
-    pvd_id = request.session.get('pvd_activo_id')
-    pvd = None
-    context = {}
-    if pvd_id:
-        pvd = PuntoViveDigital.objects.filter(pk=pvd_id, estado='A').first()
-    if pvd:
-        context['total_ciudadanos'] = Ciudadano.objects.filter(punto_vive_digital=pvd).count()
-        context['total_atenciones'] = Atencion.objects.filter(punto_vive_digital=pvd).count()
-        context['total_salas'] = Sala.objects.filter(punto_vive_digital=pvd).count()
-    context['pvd'] = pvd
-    return render(request, 'modulo_puntos/inicio_pvd.html', context)
 
 
 # ── GESTIÓN DE CIUDADANOS ──────────────────────────────────────────────────────
@@ -627,6 +612,92 @@ def registrar_atencion(request):
 
 
 @login_required(login_url='/login/')
+def lista_atenciones(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    qs = Atencion.objects.select_related('ciudadano', 'punto_vive_digital', 'operador').order_by('-fecha', '-pk')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and not usuario_es_admin_tic(request.user):
+        qs = qs.filter(punto_vive_digital_id=pvd_id)
+
+    q = request.GET.get('q', '').strip()
+    estado_filter = request.GET.get('estado', '')
+    fecha_filter = request.GET.get('fecha', '')
+
+    if q:
+        qs = qs.filter(
+            Q(ciudadano__primer_nombre__icontains=q) |
+            Q(ciudadano__primer_apellido__icontains=q) |
+            Q(ciudadano__numero_documento__icontains=q)
+        )
+    if estado_filter:
+        qs = qs.filter(estado=estado_filter)
+    if fecha_filter:
+        qs = qs.filter(fecha=fecha_filter)
+
+    paginator = Paginator(qs, 25)
+    atenciones = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'modulo_puntos/lista_atenciones.html', {
+        'atenciones': atenciones,
+        'q': q,
+        'estado_filter': estado_filter,
+        'fecha_filter': fecha_filter,
+    })
+
+
+@login_required(login_url='/login/')
+def detalle_atencion(request, atencion_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    atencion = get_object_or_404(
+        Atencion.objects.select_related('ciudadano', 'punto_vive_digital', 'operador'),
+        pk=atencion_id,
+    )
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and not usuario_es_admin_tic(request.user):
+        if atencion.punto_vive_digital_id != pvd_id:
+            messages.error(request, 'No tienes acceso a esa atención.')
+            return redirect('modulo_puntos:lista_atenciones')
+
+    servicios = Servicio.objects.filter(atencion=atencion).select_related('satisfaccion')
+
+    return render(request, 'modulo_puntos/detalle_atencion.html', {
+        'atencion': atencion,
+        'servicios': servicios,
+    })
+
+
+@login_required(login_url='/login/')
+def cambiar_estado_atencion(request, atencion_id):
+    if request.method != 'POST':
+        return redirect('modulo_puntos:lista_atenciones')
+
+    atencion = get_object_or_404(Atencion, pk=atencion_id)
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and not usuario_es_admin_tic(request.user):
+        if atencion.punto_vive_digital_id != pvd_id:
+            messages.error(request, 'No tienes acceso a esa atención.')
+            return redirect('modulo_puntos:lista_atenciones')
+
+    nuevo_estado = request.POST.get('estado')
+    if nuevo_estado in ('P', 'F', 'C'):
+        atencion.estado = nuevo_estado
+        atencion.save(update_fields=['estado'])
+        etiquetas = {'P': 'Pendiente', 'F': 'Finalizada', 'C': 'Cancelada'}
+        messages.success(request, f'Atención marcada como {etiquetas[nuevo_estado]}.')
+
+    return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
+
+
+@login_required(login_url='/login/')
 def registrar_prestamo(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
@@ -798,19 +869,30 @@ def registrar_servicio(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    form = ServicioForm(request.POST or None)
+    pvd_id = request.session.get('pvd_activo_id')
+    recurso_qs = Recurso.objects.filter(estado='A')
+    if pvd_id and not usuario_es_admin_tic(request.user):
+        recurso_qs = recurso_qs.filter(punto_vive_digital_id=pvd_id)
+    recurso_qs = recurso_qs.order_by('tipo', 'codigo')
+
+    form = ServicioForm(request.POST or None, recurso_queryset=recurso_qs)
     if request.method == 'POST':
         if form.is_valid():
             try:
-                form.save()
-                messages.success(request, 'Servicio registrado correctamente en la base de datos.')
+                servicio = form.save(commit=False)
+                servicio.tipo = servicio.nombre[:64]
+                servicio.save()
+                messages.success(request, 'Servicio registrado correctamente.')
                 return redirect('modulo_puntos:panel_control')
             except Exception as e:
                 messages.error(request, f'Error al guardar en BD: {e}')
         else:
             messages.error(request, 'No se pudo guardar el servicio. Revisa los datos ingresados.')
 
-    return render(request, 'modulo_puntos/registrar_servicio.html', {'form': form})
+    return render(request, 'modulo_puntos/registrar_servicio.html', {
+        'form': form,
+        'recursos': recurso_qs,
+    })
 
 
 # ── EXPORTACIÓN XLSX ───────────────────────────────────────────────────────────
@@ -1179,13 +1261,17 @@ def crear_admin_pvd(request):
         messages.error(request, 'No tienes permisos para crear Administradores PVD.')
         return redirect('modulo_puntos:panel_control')
 
-    form = CrearUsuarioForm(request.POST or None)
+    form = CrearAdminPVDForm(request.POST or None)
     if request.method == 'POST':
         if form.is_valid():
             user = form.save()
             grupo, _ = Group.objects.get_or_create(name='Administrador PVD')
             user.groups.add(grupo)
-
+            pvd = form.cleaned_data.get('pvd')
+            UserProfile.objects.update_or_create(
+                usuario=user,
+                defaults={'punto_asignado': pvd, 'rol': 'admin_pvd'}
+            )
             messages.success(request, f'Administrador PVD "{user.get_full_name() or user.username}" creado correctamente.')
             return redirect('modulo_puntos:panel_control')
         messages.error(request, 'No se pudo crear el usuario. Revisa los errores.')
@@ -1195,6 +1281,90 @@ def crear_admin_pvd(request):
         'titulo': 'Crear Administrador PVD',
         'rol': 'Administrador PVD',
         'rol_tipo': 'admin_pvd',
+    })
+
+
+@login_required(login_url='/login/')
+def crear_pvd(request):
+    if not (request.user.is_superuser or usuario_es_admin_tic(request.user)):
+        messages.error(request, 'No tienes permisos para crear Puntos Vive Digital.')
+        return redirect('modulo_puntos:panel_control')
+
+    paso = request.GET.get('paso', '1') if request.method == 'GET' else request.POST.get('paso', '1')
+
+    if request.method == 'POST':
+        if paso == '1':
+            form1 = CrearPVDPaso1Form(request.POST)
+            if form1.is_valid():
+                request.session['crear_pvd_paso1'] = {
+                    'nombre': form1.cleaned_data['nombre'],
+                    'direccion': form1.cleaned_data['direccion'],
+                }
+                return redirect(reverse('modulo_puntos:crear_pvd') + '?paso=2')
+            return render(request, 'modulo_puntos/crear_pvd.html', {
+                'paso': 1,
+                'form1': form1,
+            })
+
+        elif paso == '2':
+            paso1_data = request.session.get('crear_pvd_paso1')
+            if not paso1_data:
+                messages.error(request, 'Sesión expirada. Completa el paso 1 nuevamente.')
+                return redirect('modulo_puntos:crear_pvd')
+            form2 = CrearPVDPaso2Form(request.POST)
+            if form2.is_valid():
+                admin_user = form2.cleaned_data.get('admin_pvd')
+                pvd = PuntoViveDigital.objects.create(
+                    nombre=paso1_data['nombre'],
+                    direccion=paso1_data['direccion'],
+                    estado='A',
+                    admin_a_cargo=admin_user,
+                )
+                if admin_user:
+                    UserProfile.objects.update_or_create(
+                        usuario=admin_user,
+                        defaults={'punto_asignado': pvd, 'rol': 'admin_pvd'}
+                    )
+                del request.session['crear_pvd_paso1']
+                registrar_auditoria(request, 'CREATE', 'PuntoViveDigital', pvd.pk,
+                                    f'PVD creado: {pvd.nombre}'
+                                    + (f', admin: {admin_user.username}' if admin_user else ' (sin admin asignado)'))
+                if admin_user:
+                    messages.success(
+                        request,
+                        f'PVD "{pvd.nombre}" creado y asignado a '
+                        f'{admin_user.get_full_name() or admin_user.username}.'
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f'PVD "{pvd.nombre}" creado. Recuerda asignar un administrador desde Accesos Temporales.'
+                    )
+                return redirect('modulo_puntos:panel_control')
+            return render(request, 'modulo_puntos/crear_pvd.html', {
+                'paso': 2,
+                'form2': form2,
+                'paso1_data': paso1_data,
+            })
+
+    # GET
+    if paso == '2':
+        paso1_data = request.session.get('crear_pvd_paso1')
+        if not paso1_data:
+            messages.error(request, 'Completa el paso 1 primero.')
+            return redirect('modulo_puntos:crear_pvd')
+        return render(request, 'modulo_puntos/crear_pvd.html', {
+            'paso': 2,
+            'form2': CrearPVDPaso2Form(),
+            'paso1_data': paso1_data,
+        })
+
+    paso1_data = request.session.get('crear_pvd_paso1')
+    initial = {'nombre': paso1_data['nombre']} if paso1_data else {}
+    return render(request, 'modulo_puntos/crear_pvd.html', {
+        'paso': 1,
+        'form1': CrearPVDPaso1Form(initial=initial),
+        'paso1_data': paso1_data,
     })
 
 
@@ -1270,76 +1440,6 @@ def crear_grupo_rol(request):
     return redirect('modulo_puntos:gestionar_roles')
 
 
-# ── GESTIÓN DE PUNTOS VIVE DIGITAL ─────────────────────────────────────────────
-
-@login_required(login_url='/login/')
-def lista_pvd(request):
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'No tienes permisos para gestionar PVDs.')
-        return redirect('modulo_puntos:panel_control')
-    pvds = PuntoViveDigital.objects.order_by('nombre')
-    puede_eliminar_pvd = tiene_permiso(request.user, 'infraestructura.eliminar_pvd')
-    return render(request, 'modulo_puntos/lista_pvd.html', {
-        'pvds': pvds,
-        'puede_eliminar_pvd': puede_eliminar_pvd,
-    })
-
-
-@login_required(login_url='/login/')
-def editar_pvd(request, pvd_cdgo):
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'No tienes permisos para editar PVDs.')
-        return redirect('modulo_puntos:panel_control')
-
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo)
-    form = PuntoViveDigitalForm(request.POST or None, instance=pvd)
-    if request.method == 'POST':
-        if form.is_valid():
-            form.save()
-            registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pk, f'PVD editado: {pvd.nombre}')
-            messages.success(request, f'PVD "{pvd.nombre}" actualizado correctamente.')
-            return redirect('modulo_puntos:lista_pvd')
-        messages.error(request, 'Revisa los datos del formulario.')
-
-    return render(request, 'modulo_puntos/form_pvd.html', {
-        'form': form,
-        'titulo': f'Editar PVD: {pvd.nombre}',
-        'accion': 'editar',
-        'pvd': pvd,
-    })
-
-
-@login_required(login_url='/login/')
-def activar_pvd(request, pvd_cdgo):
-    if not usuario_es_admin_tic(request.user):
-        messages.error(request, 'No tienes permisos.')
-        return redirect('modulo_puntos:panel_control')
-
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo)
-    pvd.estado = 'I' if pvd.estado == 'A' else 'A'
-    pvd.save()
-    estado_str = 'activado' if pvd.estado == 'A' else 'desactivado'
-    messages.success(request, f'PVD "{pvd.nombre}" {estado_str} correctamente.')
-    return redirect('modulo_puntos:lista_pvd')
-
-
-@login_required(login_url='/login/')
-def eliminar_pvd(request, pvd_cdgo):
-    if not tiene_permiso(request.user, 'infraestructura.eliminar_pvd'):
-        messages.error(request, 'No tienes permiso para eliminar Puntos Vive Digital.')
-        return redirect('modulo_puntos:lista_pvd')
-
-    pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo)
-    if request.method == 'POST':
-        nombre = pvd.nombre
-        registrar_auditoria(request, 'DELETE', 'PuntoViveDigital', pvd.pk, f'PVD eliminado: {nombre}')
-        pvd.delete()
-        messages.success(request, f'PVD "{nombre}" eliminado correctamente.')
-        return redirect('modulo_puntos:lista_pvd')
-
-    return redirect('modulo_puntos:lista_pvd')
-
-
 # ── GESTIÓN DE SALAS ───────────────────────────────────────────────────────────
 
 @login_required(login_url='/login/')
@@ -1352,7 +1452,6 @@ def lista_salas(request):
         return redirect('modulo_puntos:panel_control')
 
     es_admin_tic = usuario_es_admin_tic(request.user) or request.user.is_superuser
-    puede_eliminar = tiene_permiso(request.user, 'infraestructura.eliminar_sala')
 
     if es_admin_tic:
         pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
@@ -1374,7 +1473,6 @@ def lista_salas(request):
         'pvd_seleccionado': pvd_seleccionado,
         'pvds': pvds,
         'es_admin_tic': es_admin_tic,
-        'puede_eliminar': puede_eliminar,
     })
 
 
@@ -1454,18 +1552,7 @@ def activar_sala(request, sala_cdgo):
 
 @login_required(login_url='/login/')
 def eliminar_sala(request, sala_cdgo):
-    if not tiene_permiso(request.user, 'infraestructura.eliminar_sala'):
-        messages.error(request, 'No tienes permiso para eliminar salas.')
-        return redirect('modulo_puntos:lista_salas')
-
-    sala = get_object_or_404(Sala, pk=sala_cdgo)
-    if request.method == 'POST':
-        nombre = sala.nombre
-        registrar_auditoria(request, 'DELETE', 'Sala', sala.pk, f'Sala eliminada: {nombre}')
-        sala.delete()
-        messages.success(request, f'Sala "{nombre}" eliminada correctamente.')
-        return redirect('modulo_puntos:lista_salas')
-
+    messages.error(request, 'La eliminación de salas está deshabilitada en esta versión.')
     return redirect('modulo_puntos:lista_salas')
 
 

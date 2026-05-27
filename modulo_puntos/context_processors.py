@@ -28,9 +28,8 @@ _BREADCRUMB_MAP = {
     'editar_prestamo':       ('Editar Préstamo',       'Recursos',              'registrar_recurso'),
     # Reportes
     'reportes':              ('Reportes',              'Panel',                 'panel_control'),
-    # PVDs
-    'lista_pvd':             ('Puntos Vive Digital',   'Panel',                 'panel_control'),
-    'editar_pvd':            ('Editar PVD',            'Puntos Vive Digital',   'lista_pvd'),
+    # PVD
+    'crear_pvd':             ('Crear PVD',             'Panel',                 'panel_control'),
     # Salas
     'lista_salas':           ('Salas',                 'Panel',                 'panel_control'),
     'crear_sala':            ('Nueva Sala',            'Salas',                 'lista_salas'),
@@ -88,8 +87,7 @@ _TOPBAR_ACTIONS = {
     'crear_recurso':         [('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_prestamo':    [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_prestamo':       [('← Cancelar', '__back__', 'btn-secondary')],
-    'lista_pvd':             [],
-    'editar_pvd':            [('← Cancelar', '__back__', 'btn-secondary')],
+    'crear_pvd':             [('← Cancelar', '__back__', 'btn-secondary')],
     'lista_salas':           [('+ Nueva sala', 'crear_sala', '')],
     'crear_sala':            [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_sala':           [('← Cancelar', '__back__', 'btn-secondary')],

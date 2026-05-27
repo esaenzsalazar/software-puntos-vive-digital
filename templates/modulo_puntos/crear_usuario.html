@@ -8,19 +8,9 @@
     <div class="page-hero">
         <span class="eyebrow">Usuarios del sistema</span>
         <h2 class="page-title">{{ titulo }}</h2>
-        {% if rol_tipo == 'admin_pvd' %}
         <p class="muted">
-            Completa los datos del nuevo Administrador PVD.
-            Se recomienda que el nombre de usuario siga el formato
-            <strong>PVD + Nombre</strong> (ej: <em>PVDJuan</em>) y que la contraseña sea
-            <strong>Nombre + adminpvd</strong> (ej: <em>Juanadminpvd</em>), aunque puedes definirlos libremente.
+            Completa los datos del nuevo {{ rol }}. El nombre de usuario y la contraseña son definidos manualmente por ti.
         </p>
-        {% else %}
-        <p class="muted">
-            Completa los datos del nuevo {{ rol }}.
-            El nombre de usuario y la contraseña son definidos manualmente por ti.
-        </p>
-        {% endif %}
     </div>
 
     <form method="POST" id="form-crear-usuario" novalidate>
@@ -55,13 +45,6 @@
                     {{ form.segundo_apellido }}
                 </div>
             </div>
-
-            <div class="form-field">
-                <label for="id_email">Correo Electrónico <span class="opt">(opcional)</span></label>
-                {{ form.email }}
-                <span class="field-hint">Formato: correo@dominio.com</span>
-                {% if form.email.errors %}<span class="field-error">{{ form.email.errors.0 }}</span>{% endif %}
-            </div>
         </fieldset>
 
         <!-- ── Credenciales de Acceso ── -->
@@ -70,27 +53,10 @@
                 <i class="fas fa-key"></i> Credenciales de Acceso
             </legend>
 
-            {% if rol_tipo == 'admin_pvd' %}
-            <div class="info-box info-box--blue" style="margin-bottom:14px;">
-                <i class="fas fa-info-circle"></i>
-                <div>
-                    <strong>Formato recomendado para Administradores PVD:</strong>
-                    <ul style="margin:4px 0 0 0;padding-left:16px;">
-                        <li>Usuario: <code>PVD</code> + primer nombre — ejemplo: <strong>PVDJuan</strong></li>
-                        <li>Contraseña: primer nombre + <code>adminpvd</code> — ejemplo: <strong>Juanadminpvd</strong></li>
-                    </ul>
-                </div>
-            </div>
-            {% endif %}
-
             <div class="form-field">
                 <label for="id_username">Nombre de usuario <span class="req">*</span></label>
                 {{ form.username }}
-                {% if rol_tipo == 'admin_pvd' %}
-                <span class="field-hint">Recomendado: <strong>PVD</strong> seguido del nombre. Ej: <em>PVDJuan</em></span>
-                {% else %}
-                <span class="field-hint">Sin espacios ni caracteres especiales. Ej: <em>admintic_nombre</em></span>
-                {% endif %}
+                <span class="field-hint">Sin espacios ni caracteres especiales.</span>
                 {% if form.username.errors %}<span class="field-error">{{ form.username.errors.0 }}</span>{% endif %}
             </div>
 
@@ -103,11 +69,19 @@
                             <i class="fas fa-eye" id="ico-pwd1"></i>
                         </button>
                     </div>
-                    {% if rol_tipo == 'admin_pvd' %}
-                    <span class="field-hint">Recomendado: nombre + <strong>adminpvd</strong>. Ej: <em>Juanadminpvd</em></span>
-                    {% else %}
-                    <span class="field-hint">Mínimo 8 caracteres. Usa letras y números.</span>
-                    {% endif %}
+                    <div id="pwd-strength-bar" style="height:4px; border-radius:4px; margin-top:6px; background:#e5e7eb; overflow:hidden; display:none;">
+                        <div id="pwd-strength-fill" style="height:100%; width:0; transition:width 0.3s, background 0.3s;"></div>
+                    </div>
+                    <div id="pwd-requirements" style="margin-top:6px; display:none;">
+                        <div style="font-size:11px; color:#6b7280; margin-bottom:4px;">Requisitos de seguridad:</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                            <span class="req-chip" id="req-len">8+ caracteres</span>
+                            <span class="req-chip" id="req-upper">Mayúscula</span>
+                            <span class="req-chip" id="req-lower">Minúscula</span>
+                            <span class="req-chip" id="req-num">Número</span>
+                            <span class="req-chip" id="req-special">Carácter especial</span>
+                        </div>
+                    </div>
                     {% if form.password1.errors %}<span class="field-error">{{ form.password1.errors.0 }}</span>{% endif %}
                 </div>
                 <div class="form-field">
@@ -118,16 +92,32 @@
                             <i class="fas fa-eye" id="ico-pwd2"></i>
                         </button>
                     </div>
+                    <span id="match-feedback" style="font-size:12px; display:none; margin-top:4px;"></span>
                     {% if form.password2.errors %}<span class="field-error">{{ form.password2.errors.0 }}</span>{% endif %}
                 </div>
             </div>
         </fieldset>
 
+        {% if rol_tipo == 'admin_pvd' %}
+        <!-- ── Asignación de PVD ── -->
+        <fieldset class="form-section form-section--green">
+            <legend class="form-section__legend legend--green">
+                <i class="fas fa-map-marker-alt"></i> Asignación de PVD
+            </legend>
+            <div class="form-field">
+                <label for="id_pvd">Punto Vive Digital <span class="req">*</span></label>
+                {{ form.pvd }}
+                <span class="field-hint">El PVD donde este administrador gestionará las operaciones.</span>
+                {% if form.pvd.errors %}<span class="field-error">{{ form.pvd.errors.0 }}</span>{% endif %}
+            </div>
+        </fieldset>
+        {% endif %}
+
         <div class="actions" style="justify-content:flex-end;margin-top:8px;">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">
                 <i class="fas fa-times"></i> Cancelar
             </a>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn">
                 <i class="fas fa-user-plus"></i> Crear usuario
             </button>
         </div>
@@ -147,6 +137,11 @@
     border-color: #bfdbfe;
     border-left: 4px solid #3b82f6;
 }
+.form-section--green {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    border-left: 4px solid #22c55e;
+}
 .form-section__legend {
     font-size: 15px;
     font-weight: 600;
@@ -155,7 +150,8 @@
     align-items: center;
     gap: 6px;
 }
-.legend--blue { color: #1e40af; }
+.legend--blue  { color: #1e40af; }
+.legend--green { color: #15803d; }
 .form-row--2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -167,23 +163,27 @@
 .form-field:last-child { margin-bottom: 0; }
 .req { color: #ef4444; }
 .opt { color: #6b7280; font-size: 12px; font-weight: normal; }
-.field-hint { display: block; font-size: 11px; color: #6b7280; margin-top: 3px; }
+.field-hint  { display: block; font-size: 11px; color: #6b7280; margin-top: 3px; }
 .field-error { display: block; font-size: 12px; color: #ef4444; margin-top: 3px; font-weight: 500; }
-.info-box { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: 6px; font-size: 13px; }
-.info-box--blue { background: #dbeafe; color: #1e3a8a; }
-.info-box i { margin-top: 2px; flex-shrink: 0; }
 .btn--icon { padding: 8px 10px; flex-shrink: 0; }
-/* Feedback de validación en tiempo real */
-.pvd-valid { border-color: #10b981 !important; }
+.pvd-valid   { border-color: #10b981 !important; }
 .pvd-invalid { border-color: #ef4444 !important; }
 .pvd-feedback { font-size: 11px; margin-top: 2px; display: block; }
-.pvd-feedback--ok { color: #10b981; }
+.pvd-feedback--ok    { color: #10b981; }
 .pvd-feedback--error { color: #ef4444; font-weight: 500; }
+.req-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
+    background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb;
+    transition: background 0.2s, color 0.2s;
+}
+.req-chip.ok { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.req-chip.ok::before     { content: '✓ '; }
+.req-chip:not(.ok)::before { content: '○ '; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // ── Toggle visibilidad contraseñas ──────────────────────────────────
     function togglePwd(inputId, iconId) {
         const input = document.getElementById(inputId);
         const icon  = document.getElementById(iconId);
@@ -198,7 +198,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btn1) btn1.addEventListener('click', () => togglePwd('id_password1_visible', 'ico-pwd1'));
     if (btn2) btn2.addEventListener('click', () => togglePwd('id_password2', 'ico-pwd2'));
 
-    // ── Feedback visual ─────────────────────────────────────────────────
     function feedback(campo, valido, msg) {
         if (!campo) return;
         campo.parentElement.querySelectorAll('.pvd-feedback').forEach(e => e.remove());
@@ -214,12 +213,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ── Validar nombres en blur ─────────────────────────────────────────
     [
-        ['id_primer_nombre',   'Primer nombre',   true],
-        ['id_segundo_nombre',  'Segundo nombre',  false],
-        ['id_primer_apellido', 'Primer apellido', true],
-        ['id_segundo_apellido','Segundo apellido',false],
+        ['id_primer_nombre',    'Primer nombre',   true],
+        ['id_segundo_nombre',   'Segundo nombre',  false],
+        ['id_primer_apellido',  'Primer apellido', true],
+        ['id_segundo_apellido', 'Segundo apellido',false],
     ].forEach(([id, label, requerido]) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -235,17 +233,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ── Validar email ───────────────────────────────────────────────────
-    const emailEl = document.getElementById('id_email');
-    if (emailEl) {
-        emailEl.addEventListener('blur', function () {
-            if (!this.value) { feedback(this, false, ''); return; }
-            const ok = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(this.value);
-            feedback(this, ok, ok ? '' : 'Formato de correo inválido');
-        });
-    }
-
-    // ── Validar username ────────────────────────────────────────────────
     const usernameEl = document.getElementById('id_username');
     if (usernameEl) {
         usernameEl.addEventListener('blur', function () {
@@ -256,54 +243,90 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ── Validar coincidencia de contraseñas ─────────────────────────────
     const pwd1 = document.getElementById('id_password1_visible');
     const pwd2El = document.querySelector('[name="password2"]');
+    const barWrap   = document.getElementById('pwd-strength-bar');
+    const barFill   = document.getElementById('pwd-strength-fill');
+    const reqPanel  = document.getElementById('pwd-requirements');
+    const matchFeedback = document.getElementById('match-feedback');
 
-    function validarPwdMatch() {
-        if (!pwd1 || !pwd2El) return;
-        if (pwd2El.value && pwd1.value !== pwd2El.value)
-            feedback(pwd2El, false, 'Las contraseñas no coinciden');
-        else if (pwd2El.value)
-            feedback(pwd2El, true, '');
+    const requisitos = [
+        { id: 'req-len',     test: v => v.length >= 8          },
+        { id: 'req-upper',   test: v => /[A-Z]/.test(v)        },
+        { id: 'req-lower',   test: v => /[a-z]/.test(v)        },
+        { id: 'req-num',     test: v => /[0-9]/.test(v)        },
+        { id: 'req-special', test: v => /[^a-zA-Z0-9]/.test(v) },
+    ];
+    const colores = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'];
+
+    function evaluarContraseña(valor) {
+        const cumplidos = requisitos.filter(r => r.test(valor)).length;
+        requisitos.forEach(r => {
+            const chip = document.getElementById(r.id);
+            if (chip) chip.className = 'req-chip' + (r.test(valor) ? ' ok' : '');
+        });
+        if (barFill) {
+            barFill.style.width = (cumplidos / 5 * 100) + '%';
+            barFill.style.background = colores[cumplidos - 1] || '#e5e7eb';
+        }
+        return cumplidos;
     }
 
-    if (pwd1) pwd1.addEventListener('blur', validarPwdMatch);
-    if (pwd2El) pwd2El.addEventListener('blur', validarPwdMatch);
+    if (pwd1) {
+        pwd1.addEventListener('focus', function () {
+            if (barWrap)  barWrap.style.display  = 'block';
+            if (reqPanel) reqPanel.style.display = 'block';
+        });
+        pwd1.addEventListener('input', function () {
+            evaluarContraseña(this.value);
+            validarPwdMatch();
+        });
+        pwd1.addEventListener('blur', function () { evaluarContraseña(this.value); });
+    }
 
-    // ── Validación al enviar ────────────────────────────────────────────
+    function validarPwdMatch() {
+        if (!pwd1 || !pwd2El || !matchFeedback) return;
+        if (!pwd2El.value) { matchFeedback.style.display = 'none'; return; }
+        if (pwd1.value === pwd2El.value) {
+            matchFeedback.style.display = 'block';
+            matchFeedback.style.color   = '#15803d';
+            matchFeedback.textContent   = '✓ Las contraseñas coinciden';
+            feedback(pwd2El, true, '');
+        } else {
+            matchFeedback.style.display = 'block';
+            matchFeedback.style.color   = '#ef4444';
+            matchFeedback.textContent   = '✗ Las contraseñas no coinciden';
+            feedback(pwd2El, false, '');
+        }
+    }
+
+    if (pwd1)   pwd1.addEventListener('blur', validarPwdMatch);
+    if (pwd2El) pwd2El.addEventListener('input', validarPwdMatch);
+
     const form = document.getElementById('form-crear-usuario');
     if (form) {
         form.addEventListener('submit', function (e) {
             let ok = true;
-
             const primerNombre = document.getElementById('id_primer_nombre');
             if (primerNombre && !primerNombre.value.trim()) {
-                feedback(primerNombre, false, 'El primer nombre es requerido');
-                ok = false;
+                feedback(primerNombre, false, 'El primer nombre es requerido'); ok = false;
             }
             const primerApellido = document.getElementById('id_primer_apellido');
             if (primerApellido && !primerApellido.value.trim()) {
-                feedback(primerApellido, false, 'El primer apellido es requerido');
-                ok = false;
+                feedback(primerApellido, false, 'El primer apellido es requerido'); ok = false;
             }
             if (usernameEl && !usernameEl.value.trim()) {
-                feedback(usernameEl, false, 'El nombre de usuario es requerido');
-                ok = false;
+                feedback(usernameEl, false, 'El nombre de usuario es requerido'); ok = false;
             }
             if (pwd1 && !pwd1.value) {
-                feedback(pwd1, false, 'La contraseña es requerida');
-                ok = false;
+                feedback(pwd1, false, 'La contraseña es requerida'); ok = false;
             }
             if (pwd2El && !pwd2El.value) {
-                feedback(pwd2El, false, 'Confirma la contraseña');
-                ok = false;
+                feedback(pwd2El, false, 'Confirma la contraseña'); ok = false;
             }
             if (pwd1 && pwd2El && pwd1.value && pwd2El.value && pwd1.value !== pwd2El.value) {
-                feedback(pwd2El, false, 'Las contraseñas no coinciden');
-                ok = false;
+                feedback(pwd2El, false, 'Las contraseñas no coinciden'); ok = false;
             }
-
             if (!ok) {
                 e.preventDefault();
                 const firstErr = form.querySelector('.pvd-invalid');

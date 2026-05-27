@@ -346,10 +346,12 @@ class SatisfaccionForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Inicializar campo de atención como opcional."""
         super().__init__(*args, **kwargs)
-        self.fields['atencion'].required = False
+        self.fields['atencion'].required = True
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
+        self.fields['calificacion'].required = True
+        self.fields['fecha'].required = True
+        self.fields['comentario'].required = False
 
     def clean_calificacion(self):
         """Valida que la calificación esté entre 1 y 5."""
@@ -362,49 +364,50 @@ class SatisfaccionForm(forms.ModelForm):
 class ServicioForm(forms.ModelForm):
     """
     Formulario para registrar servicios prestados durante atenciones.
+    Campos: atencion, nombre, descripcion, requiere_equipo, recurso (condicional).
     """
     class Meta:
         model = Servicio
-        fields = [
-            'atencion', 'nombre', 'descripcion',
-            'tipo', 'requiere_equipo', 'estado'
-        ]
+        fields = ['atencion', 'nombre', 'descripcion', 'requiere_equipo', 'recurso']
         labels = {
             'atencion': 'Atención Vinculada',
             'nombre': 'Nombre del Servicio',
             'descripcion': 'Descripción Detallada',
-            'tipo': 'Categoría',
             'requiere_equipo': '¿Requiere equipo?',
-            'estado': 'Estado'
+            'recurso': 'Recurso / Equipo utilizado',
         }
         widgets = {
             'atencion': forms.Select(attrs={'class': 'form-control'}),
-            'nombre': forms.Select(
-                choices=NOMBRE_SERVICIO_CHOICES,
-                attrs={'class': 'form-control'}
-            ),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'tipo': forms.Select(
-                choices=TIPO_SERVICIO_CHOICES,
-                attrs={'class': 'form-control'}
-            ),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Acceso a internet, Impresiones, Trámite en línea…',
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Describe detalladamente el servicio prestado…',
+            }),
             'requiere_equipo': forms.Select(
-                choices=[('S', 'Sí'), ('N', 'No')],
-                attrs={'class': 'form-control'}
+                choices=[('N', 'No'), ('S', 'Sí')],
+                attrs={'class': 'form-control', 'id': 'id_requiere_equipo'},
             ),
-            'estado': forms.Select(
-                choices=[('A', 'Activo'), ('I', 'Inactivo')],
-                attrs={'class': 'form-control'}
-            ),
+            'recurso': forms.Select(attrs={'class': 'form-control', 'id': 'id_recurso'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        """Inicializar campos con valores por defecto."""
+    def __init__(self, *args, recurso_queryset=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['atencion'].required = False
+        self.fields['atencion'].required = True
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
+        self.fields['nombre'].required = True
+        self.fields['descripcion'].required = True
         self.fields['requiere_equipo'].initial = 'N'
-        self.fields['estado'].initial = 'A'
+        self.fields['recurso'].required = False
+        self.fields['recurso'].empty_label = '--- Seleccione un recurso ---'
+        if recurso_queryset is not None:
+            self.fields['recurso'].queryset = recurso_queryset
+        else:
+            from .models import Recurso
+            self.fields['recurso'].queryset = Recurso.objects.filter(estado='A').order_by('tipo', 'codigo')
 
 
 
@@ -620,19 +623,13 @@ class CrearUsuarioForm(UserCreationForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'})
     )
-    email = forms.EmailField(
-        label='Correo electrónico',
-        required=False,
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
-    )
-
     class Meta:
         model = User
         fields = ['username']
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ej: PVDJuan o admintic_nombre',
+                'placeholder': 'Sin espacios ni caracteres especiales',
                 'autocomplete': 'off',
             })
         }
@@ -654,20 +651,94 @@ class CrearUsuarioForm(UserCreationForm):
         self.fields['password1'].label = 'Contraseña'
         self.fields['password2'].label = 'Confirmar contraseña'
 
+    def clean_password1(self):
+        import re
+        password = self.cleaned_data.get('password1', '')
+        errores = []
+        if len(password) < 8:
+            errores.append('al menos 8 caracteres')
+        if not re.search(r'[A-Z]', password):
+            errores.append('una letra mayúscula')
+        if not re.search(r'[a-z]', password):
+            errores.append('una letra minúscula')
+        if not re.search(r'[0-9]', password):
+            errores.append('un número')
+        if not re.search(r'[^a-zA-Z0-9]', password):
+            errores.append('un carácter especial (@, #, !, $, etc.)')
+        if errores:
+            raise ValidationError(
+                f'La contraseña debe contener: {", ".join(errores)}.'
+            )
+        return password
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        primer_nombre  = self.cleaned_data.get('primer_nombre', '')
-        segundo_nombre = self.cleaned_data.get('segundo_nombre', '')
-        primer_apellido  = self.cleaned_data.get('primer_apellido', '')
-        segundo_apellido = self.cleaned_data.get('segundo_apellido', '')
-        user.first_name = f"{primer_nombre} {segundo_nombre}".strip()
-        user.last_name  = f"{primer_apellido} {segundo_apellido}".strip()
-        email = self.cleaned_data.get('email')
-        if email:
-            user.email = email
+        user.first_name = f"{self.cleaned_data.get('primer_nombre', '')} {self.cleaned_data.get('segundo_nombre', '')}".strip()
+        user.last_name  = f"{self.cleaned_data.get('primer_apellido', '')} {self.cleaned_data.get('segundo_apellido', '')}".strip()
         if commit:
             user.save()
         return user
+
+
+class CrearAdminPVDForm(CrearUsuarioForm):
+    pvd = forms.ModelChoiceField(
+        queryset=PuntoViveDigital.objects.filter(estado='A').order_by('nombre'),
+        label='Punto Vive Digital',
+        required=True,
+        empty_label='-- Selecciona un PVD --',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+
+class _AdminPVDChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, user):
+        nombre = user.get_full_name()
+        return f"{nombre}  ({user.username})" if nombre.strip() else user.username
+
+
+class CrearPVDPaso1Form(forms.Form):
+    nombre = forms.CharField(
+        label='Nombre del PVD',
+        max_length=128,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: PVD Centro',
+            'autocomplete': 'off',
+        })
+    )
+    direccion = forms.CharField(
+        label='Dirección',
+        max_length=128,
+        required=True,
+        widget=forms.HiddenInput(attrs={'id': 'id_direccion'})
+    )
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        nombre_norm = nombre.lower().replace(' ', '')
+        for pvd_nombre in PuntoViveDigital.objects.values_list('nombre', flat=True):
+            if pvd_nombre and pvd_nombre.lower().replace(' ', '') == nombre_norm:
+                raise ValidationError(
+                    f'Ya existe un PVD registrado con el nombre "{pvd_nombre}". '
+                    'Cada Punto Vive Digital debe tener un nombre único.'
+                )
+        return nombre
+
+    def clean_direccion(self):
+        direccion = self.cleaned_data.get('direccion', '').strip()
+        if not direccion:
+            raise ValidationError('Construye la dirección antes de continuar.')
+        return direccion
+
+
+class CrearPVDPaso2Form(forms.Form):
+    admin_pvd = _AdminPVDChoiceField(
+        queryset=User.objects.filter(groups__name='Administrador PVD').order_by('first_name', 'last_name', 'username'),
+        label='Administrador PVD a cargo',
+        required=False,
+        empty_label='— Asignar después desde Accesos Temporales —',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
 
 class PuntoViveDigitalForm(forms.ModelForm):

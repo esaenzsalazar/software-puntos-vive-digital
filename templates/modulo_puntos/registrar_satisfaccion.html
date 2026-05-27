@@ -1,95 +1,148 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Evaluar Satisfacción{% endblock %}
+{% block title %}Registrar Satisfacción{% endblock %}
 
 {% block content %}
 <div class="card card--narrow">
     <div class="page-hero">
         <span class="eyebrow">Calidad</span>
         <h2 class="page-title">Registrar satisfacción</h2>
-        <p class="muted">Calificación y comentarios del usuario sobre la atención.</p>
+        <p class="muted">Calificación del ciudadano sobre la atención recibida.</p>
     </div>
 
     {% if form.errors %}
-        <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>
+    <div class="callout" style="background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:16px;">
+        <strong style="color:#991b1b;">Revisa los campos marcados antes de continuar.</strong>
+    </div>
     {% endif %}
 
-    <form method="POST">
+    <form method="POST" id="form-satisfaccion" novalidate>
         {% csrf_token %}
-        <div class="grid form-grid-2">
-            {% for field in form %}
-                <div {% if field.name == 'atencion' or field.name == 'comentario' %}class="span-full"{% endif %}>
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
-                    </label>
-                    {{ field }}
-                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
-                </div>
-            {% endfor %}
+
+        {# ── Atención evaluada ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.atencion.id_for_label }}">
+                Atención Evaluada <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.atencion }}
+            {% if form.atencion.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.atencion.errors.0 }}</span>
+            {% endif %}
         </div>
 
-        <div class="actions" style="justify-content: flex-end; margin-top: 25px;">
+        {# ── Calificación visual ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label>Calificación (1 a 5) <span style="color:#ef4444;">*</span></label>
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;" id="estrellas-container">
+                {% for i in "12345" %}
+                <button type="button" class="estrella-btn"
+                        data-valor="{{ i }}"
+                        style="background:none; border:none; font-size:32px; cursor:pointer; padding:4px; line-height:1; opacity:0.35; transition:opacity 0.15s, transform 0.1s;"
+                        title="{{ i }} estrella{{ i|pluralize }}">⭐</button>
+                {% endfor %}
+            </div>
+            {{ form.calificacion }}
+            {% if form.calificacion.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.calificacion.errors.0 }}</span>
+            {% endif %}
+            <span id="calificacion-texto" class="muted" style="font-size:13px; display:block; margin-top:4px;"></span>
+        </div>
+
+        {# ── Fecha y hora ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.fecha.id_for_label }}">
+                Fecha y Hora del Reporte <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.fecha }}
+            {% if form.fecha.errors %}
+            <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">{{ form.fecha.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        {# ── Comentarios (opcional) ── #}
+        <div class="form-field" style="margin-bottom:18px;">
+            <label for="{{ form.comentario.id_for_label }}">
+                Comentarios del Ciudadano <span class="muted" style="font-size:12px; font-weight:normal;">(opcional)</span>
+            </label>
+            {{ form.comentario }}
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color);">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn">Guardar Calificación</button>
         </div>
     </form>
 </div>
+{% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form[method="POST"]');
-    const califInput = document.getElementById('id_calificacion');
-    const fechaInput = document.getElementById('id_fecha');
-    const comentInput = document.getElementById('id_comentario');
+    const inputCalif = document.getElementById('id_calificacion');
+    const contenedor = document.getElementById('estrellas-container');
+    const textLabel  = document.getElementById('calificacion-texto');
+    const etiquetas  = ['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'];
+    const botones    = contenedor ? Array.from(contenedor.querySelectorAll('.estrella-btn')) : [];
 
-    function wrap(input) {
-        if (!input) return;
-        if (!input.closest('.form-group')) {
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            input.parentNode.insertBefore(div, input);
-            div.appendChild(input);
+    // Ocultar el input numérico (controlado por las estrellas)
+    if (inputCalif) {
+        inputCalif.style.display = 'none';
+        // Si hay valor previo (error de formulario), reflejar estado
+        if (inputCalif.value) actualizarEstrellas(parseInt(inputCalif.value));
+    }
+
+    function actualizarEstrellas(valor) {
+        botones.forEach(function (btn, idx) {
+            btn.style.opacity = idx < valor ? '1' : '0.35';
+            btn.style.transform = idx < valor ? 'scale(1.08)' : 'scale(1)';
+        });
+        if (textLabel) {
+            textLabel.textContent = valor ? etiquetas[valor] + ' (' + valor + '/5)' : '';
         }
-    }
-    [califInput, fechaInput, comentInput].forEach(wrap);
-
-    function validarCalificacion(valor) {
-        if (!valor || valor.trim() === '') return { valido: false, mensaje: 'La calificación es requerida' };
-        const num = parseInt(valor);
-        if (isNaN(num) || num < 1 || num > 5) return { valido: false, mensaje: 'La calificación debe ser un número entre 1 y 5' };
-        return { valido: true, mensaje: '' };
+        if (inputCalif) inputCalif.value = valor || '';
     }
 
-    if (califInput) {
-        califInput.addEventListener('input', function () {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            ValidacionPVD.validarYMostrar(this, validarCalificacion, 'Calificación');
+    botones.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            actualizarEstrellas(parseInt(this.dataset.valor));
         });
-        califInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, validarCalificacion, 'Calificación');
+        btn.addEventListener('mouseenter', function () {
+            const v = parseInt(this.dataset.valor);
+            botones.forEach(function (b, idx) {
+                b.style.opacity = idx < v ? '1' : '0.35';
+            });
         });
-    }
-    if (fechaInput) {
-        fechaInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Fecha');
+        btn.addEventListener('mouseleave', function () {
+            const actual = inputCalif ? parseInt(inputCalif.value) || 0 : 0;
+            actualizarEstrellas(actual);
         });
-    }
-    if (comentInput) {
-        comentInput.addEventListener('input', function () {
-            ValidacionPVD.validarYMostrar(this, (v) => ValidacionPVD.validarLongitudMaxima(v, 512, 'Comentario'), 'Comentario');
-        });
+    });
+
+    // Establecer fecha actual si el campo está vacío
+    const fechaInput = document.getElementById('id_fecha');
+    if (fechaInput && !fechaInput.value) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        fechaInput.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
 
+    // Validación al enviar
+    const form = document.getElementById('form-satisfaccion');
     if (form) {
         form.addEventListener('submit', function (e) {
             let ok = true;
-            if (califInput && !ValidacionPVD.validarYMostrar(califInput, validarCalificacion, 'Calificación').valido) ok = false;
-            if (fechaInput && !ValidacionPVD.validarYMostrar(fechaInput, ValidacionPVD.validarRequerido, 'Fecha').valido) ok = false;
+            const atencion = document.getElementById('id_atencion');
+            if (atencion && !atencion.value) {
+                atencion.style.borderColor = '#ef4444';
+                ok = false;
+            }
+            if (inputCalif && !inputCalif.value) {
+                if (textLabel) { textLabel.textContent = 'Selecciona una calificación.'; textLabel.style.color = '#ef4444'; }
+                ok = false;
+            }
             if (!ok) e.preventDefault();
         });
     }
 });
 </script>
-{% endblock %}
 {% endblock %}

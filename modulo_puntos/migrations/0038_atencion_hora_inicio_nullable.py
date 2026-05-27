@@ -13,4 +13,12 @@ class Migration(migrations.Migration):
             name='hora_inicio',
             field=models.TimeField(blank=True, null=True, verbose_name='Hora de Inicio'),
         ),
+        migrations.AlterField(
+            model_name='puntovivedigital',
+            name='estado',
+            field=models.CharField(
+                choices=[('A', 'Activo'), ('I', 'Inactivo'), ('M', 'En mantenimiento')],
+                default='A', max_length=1, verbose_name='Estado',
+            ),
+        ),
     ]

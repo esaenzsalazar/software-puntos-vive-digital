@@ -23,8 +23,7 @@ urlpatterns = [
     path('panel/', views.panel_control, name='panel_control'),
     path('seleccionar-pvd/', views.seleccionar_pvd_view, name='seleccionar_pvd_view'),
     path('perfil/', views.perfil_usuario, name='perfil_usuario'),
-    path('inicio-pvd/', views.inicio_pvd, name='inicio_pvd'),
-    
+
     # ==========================================================================
     # GESTIÓN DE CIUDADANOS
     # ==========================================================================
@@ -107,7 +106,6 @@ urlpatterns = [
     path('salas/crear/', views.crear_sala, name='crear_sala'),
     path('salas/editar/<int:sala_cdgo>/', views.editar_sala, name='editar_sala'),
     path('salas/activar/<int:sala_cdgo>/', views.activar_sala, name='activar_sala'),
-    path('salas/eliminar/<int:sala_cdgo>/', views.eliminar_sala, name='eliminar_sala'),
     
     # ==========================================================================
     # HABILITACIÓN DE SALAS

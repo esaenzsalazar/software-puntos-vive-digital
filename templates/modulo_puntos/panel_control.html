@@ -207,19 +207,19 @@
             </div>
         </div>
 
+        <div class="menu-card" style="border-left:4px solid #22c55e;">
+            <h3>🏛️ Crear nuevo PVD</h3>
+            <p>Registrar un nuevo Punto Vive Digital y asignar su administrador a cargo.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_pvd' %}">Crear PVD</a>
+            </div>
+        </div>
+
         <div class="menu-card">
             <h3>🔐 Permisos y Roles</h3>
             <p>Gestionar permisos por rol y sobreescrituras individuales.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <h3>🏛️ Edificios PVD</h3>
-            <p>Crear, editar y administrar los Puntos Vive Digital.</p>
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
             </div>
         </div>
 
@@ -342,9 +342,8 @@
 
         <div class="menu-card">
             <h3>🏛️ Infraestructura</h3>
-            <p>Gestionar PVDs, salas y habilitaciones.</p>
+            <p>Gestionar salas y habilitaciones del PVD.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_pvd' %}">Gestionar PVDs</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_salas' %}">Salas</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_habilitaciones' %}">Habilitaciones</a>
             </div>

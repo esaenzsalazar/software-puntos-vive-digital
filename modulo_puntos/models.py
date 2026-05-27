@@ -214,6 +214,10 @@ class Servicio(models.Model):
     tipo = models.CharField(max_length=64, verbose_name='Tipo de Servicio')
     requiere_equipo = models.CharField(max_length=1, default='N', choices=REQUIERE_EQUIPO_CHOICES, verbose_name='¿Requiere Equipo?')
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
+    recurso = models.ForeignKey(
+        'Recurso', models.SET_NULL,
+        null=True, blank=True, verbose_name='Recurso utilizado'
+    )
 
     class Meta:
         app_label = 'modulo_puntos_app'

@@ -8,19 +8,7 @@
     <div class="page-hero">
         <span class="eyebrow">Usuarios del sistema</span>
         <h2 class="page-title">{{ titulo }}</h2>
-        {% if rol_tipo == 'admin_pvd' %}
-        <p class="muted">
-            Completa los datos del nuevo Administrador PVD.
-            Se recomienda que el nombre de usuario siga el formato
-            <strong>PVD + Nombre</strong> (ej: <em>PVDJuan</em>) y que la contraseña sea
-            <strong>Nombre + adminpvd</strong> (ej: <em>Juanadminpvd</em>), aunque puedes definirlos libremente.
-        </p>
-        {% else %}
-        <p class="muted">
-            Completa los datos del nuevo {{ rol }}.
-            El nombre de usuario y la contraseña son definidos manualmente por ti.
-        </p>
-        {% endif %}
+        <p class="muted">Completa los datos del nuevo {{ rol }}. El nombre de usuario y la contraseña son asignados por ti.</p>
     </div>
 
     <form method="POST" id="form-crear-usuario" novalidate>
@@ -70,18 +58,24 @@
                 <i class="fas fa-key"></i> Credenciales de Acceso
             </legend>
 
-            {% if rol_tipo == 'admin_pvd' %}
             <div class="info-box info-box--blue" style="margin-bottom:14px;">
                 <i class="fas fa-info-circle"></i>
                 <div>
-                    <strong>Formato recomendado para Administradores PVD:</strong>
+                    {% if rol_tipo == 'admin_pvd' %}
+                    <strong>Recomendaciones para Administrador PVD:</strong>
                     <ul style="margin:4px 0 0 0;padding-left:16px;">
-                        <li>Usuario: <code>PVD</code> + primer nombre — ejemplo: <strong>PVDJuan</strong></li>
-                        <li>Contraseña: primer nombre + <code>adminpvd</code> — ejemplo: <strong>Juanadminpvd</strong></li>
+                        <li>Usuario: <code>PVD</code> + primer nombre — ej: <strong>PVDJuan</strong></li>
+                        <li>Contraseña: debe cumplir todos los requisitos de seguridad indicados abajo.</li>
                     </ul>
+                    {% else %}
+                    <strong>Recomendaciones para Administrador TIC:</strong>
+                    <ul style="margin:4px 0 0 0;padding-left:16px;">
+                        <li>Usuario: apellido o nombre sin espacios — ej: <strong>tic_martinez</strong>, <strong>admintic_juan</strong></li>
+                        <li>Contraseña: debe cumplir todos los requisitos de seguridad indicados abajo.</li>
+                    </ul>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
 
             <div class="form-field">
                 <label for="id_username">Nombre de usuario <span class="req">*</span></label>
@@ -89,7 +83,7 @@
                 {% if rol_tipo == 'admin_pvd' %}
                 <span class="field-hint">Recomendado: <strong>PVD</strong> seguido del nombre. Ej: <em>PVDJuan</em></span>
                 {% else %}
-                <span class="field-hint">Sin espacios ni caracteres especiales. Ej: <em>admintic_nombre</em></span>
+                <span class="field-hint">Sin espacios ni caracteres especiales. Ej: <em>tic_martinez</em></span>
                 {% endif %}
                 {% if form.username.errors %}<span class="field-error">{{ form.username.errors.0 }}</span>{% endif %}
             </div>
@@ -103,12 +97,31 @@
                             <i class="fas fa-eye" id="ico-pwd1"></i>
                         </button>
                     </div>
-                    {% if rol_tipo == 'admin_pvd' %}
-                    <span class="field-hint">Recomendado: nombre + <strong>adminpvd</strong>. Ej: <em>Juanadminpvd</em></span>
-                    {% else %}
-                    <span class="field-hint">Mínimo 8 caracteres. Usa letras y números.</span>
+
+                    {# Barra de fortaleza #}
+                    <div style="margin-top:8px;">
+                        <div style="display:flex;gap:4px;margin-bottom:6px;">
+                            <div class="pwd-bar" id="bar1"></div>
+                            <div class="pwd-bar" id="bar2"></div>
+                            <div class="pwd-bar" id="bar3"></div>
+                            <div class="pwd-bar" id="bar4"></div>
+                            <div class="pwd-bar" id="bar5"></div>
+                        </div>
+                        <span id="pwd-strength-label" style="font-size:11px;font-weight:600;color:var(--p-text-muted);"></span>
+                    </div>
+
+                    {# Checklist de requisitos #}
+                    <ul class="pwd-checklist" id="pwd-checklist">
+                        <li id="req-len">   <span class="req-icon">○</span> Mínimo 8 caracteres</li>
+                        <li id="req-upper"> <span class="req-icon">○</span> Al menos una mayúscula (A-Z)</li>
+                        <li id="req-lower"> <span class="req-icon">○</span> Al menos una minúscula (a-z)</li>
+                        <li id="req-digit"> <span class="req-icon">○</span> Al menos un número (0-9)</li>
+                        <li id="req-special"><span class="req-icon">○</span> Al menos un carácter especial (!@#$%...)</li>
+                    </ul>
+
+                    {% if form.password1.errors %}
+                    <span class="field-error">{{ form.password1.errors.0 }}</span>
                     {% endif %}
-                    {% if form.password1.errors %}<span class="field-error">{{ form.password1.errors.0 }}</span>{% endif %}
                 </div>
                 <div class="form-field">
                     <label for="id_password2">Confirmar contraseña <span class="req">*</span></label>
@@ -179,6 +192,18 @@
 .pvd-feedback { font-size: 11px; margin-top: 2px; display: block; }
 .pvd-feedback--ok { color: #10b981; }
 .pvd-feedback--error { color: #ef4444; font-weight: 500; }
+
+/* Checklist de contraseña */
+.pwd-checklist {
+    list-style: none; margin: 8px 0 0; padding: 10px 12px;
+    background: #f9fafb; border: 1px solid #e5e7eb;
+    border-radius: 6px; display: flex; flex-direction: column; gap: 4px;
+}
+.pwd-checklist li { font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 6px; transition: color .2s; }
+.pwd-checklist li.ok  { color: #059669; }
+.pwd-checklist li.fail{ color: #dc2626; }
+.req-icon { font-size: 13px; flex-shrink: 0; }
+.pwd-bar { flex: 1; height: 4px; border-radius: 2px; background: #e5e7eb; transition: background .25s; }
 </style>
 
 <script>
@@ -256,9 +281,55 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ── Validar coincidencia de contraseñas ─────────────────────────────
-    const pwd1 = document.getElementById('id_password1_visible');
+    // ── Checklist y fortaleza de contraseña ────────────────────────────
+    const pwd1   = document.getElementById('id_password1_visible');
     const pwd2El = document.querySelector('[name="password2"]');
+
+    const REQS = [
+        { id: 'req-len',     test: p => p.length >= 8 },
+        { id: 'req-upper',   test: p => /[A-Z]/.test(p) },
+        { id: 'req-lower',   test: p => /[a-z]/.test(p) },
+        { id: 'req-digit',   test: p => /\d/.test(p) },
+        { id: 'req-special', test: p => /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/.test(p) },
+    ];
+    const STRENGTH = [
+        { label: '',          color: '#e5e7eb' },
+        { label: 'Muy débil', color: '#ef4444' },
+        { label: 'Débil',     color: '#f97316' },
+        { label: 'Regular',   color: '#eab308' },
+        { label: 'Fuerte',    color: '#22c55e' },
+        { label: 'Muy fuerte',color: '#10b981' },
+    ];
+
+    function evalPassword(pwd) {
+        if (!pwd1) return;
+        const p = pwd || '';
+        let score = 0;
+        REQS.forEach(function(req) {
+            const li = document.getElementById(req.id);
+            if (!li) return;
+            const ok = req.test(p);
+            if (ok) score++;
+            li.className = p.length === 0 ? '' : (ok ? 'ok' : 'fail');
+            li.querySelector('.req-icon').textContent = p.length === 0 ? '○' : (ok ? '✓' : '✗');
+        });
+
+        const bars = [1,2,3,4,5];
+        const s = STRENGTH[p.length === 0 ? 0 : score];
+        bars.forEach(function(i) {
+            const bar = document.getElementById('bar' + i);
+            if (bar) bar.style.background = i <= score ? s.color : '#e5e7eb';
+        });
+        const lbl = document.getElementById('pwd-strength-label');
+        if (lbl) { lbl.textContent = s.label; lbl.style.color = s.color; }
+
+        if (p.length > 0) {
+            if (score === 5) feedback(pwd1, true, '');
+            else feedback(pwd1, false, '');
+        }
+    }
+
+    if (pwd1) pwd1.addEventListener('input', function() { evalPassword(this.value); });
 
     function validarPwdMatch() {
         if (!pwd1 || !pwd2El) return;
@@ -270,6 +341,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (pwd1) pwd1.addEventListener('blur', validarPwdMatch);
     if (pwd2El) pwd2El.addEventListener('blur', validarPwdMatch);
+    if (pwd2El) pwd2El.addEventListener('input', validarPwdMatch);
 
     // ── Validación al enviar ────────────────────────────────────────────
     const form = document.getElementById('form-crear-usuario');
@@ -294,6 +366,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (pwd1 && !pwd1.value) {
                 feedback(pwd1, false, 'La contraseña es requerida');
                 ok = false;
+            } else if (pwd1 && pwd1.value) {
+                const p = pwd1.value;
+                const allOk = p.length >= 8 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p) && /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/.test(p);
+                if (!allOk) { feedback(pwd1, false, 'La contraseña no cumple todos los requisitos'); ok = false; }
             }
             if (pwd2El && !pwd2El.value) {
                 feedback(pwd2El, false, 'Confirma la contraseña');

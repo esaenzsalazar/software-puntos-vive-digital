@@ -273,15 +273,14 @@ class CiudadanoForm(forms.ModelForm):
 
 
 class AtencionForm(forms.ModelForm):
-    """
-    Formulario para registrar atenciones a ciudadanos.
-    """
     class Meta:
         model = Atencion
-        fields = ['ciudadano', 'fecha', 'estado', 'observaciones']
+        fields = ['ciudadano', 'fecha', 'hora_inicio', 'hora_fin', 'estado', 'observaciones']
         labels = {
             'ciudadano': 'Ciudadano Atendido',
             'fecha': 'Fecha de Atención',
+            'hora_inicio': 'Hora de inicio',
+            'hora_fin': 'Hora de fin',
             'estado': 'Estado de la Atención',
             'observaciones': 'Observaciones / Notas',
         }
@@ -290,6 +289,12 @@ class AtencionForm(forms.ModelForm):
             'fecha': forms.DateInput(
                 format='%Y-%m-%d',
                 attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'hora_inicio': forms.TimeInput(
+                attrs={'class': 'form-control', 'type': 'time'}
+            ),
+            'hora_fin': forms.TimeInput(
+                attrs={'class': 'form-control', 'type': 'time'}
             ),
             'estado': forms.Select(
                 choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')],
@@ -309,6 +314,8 @@ class AtencionForm(forms.ModelForm):
         self.fields['ciudadano'].required = True
         self.fields['ciudadano'].empty_label = '--- Seleccione un ciudadano ---'
         self.fields['fecha'].required = True
+        self.fields['hora_inicio'].required = True
+        self.fields['hora_fin'].required = False
         self.fields['estado'].required = True
         self.fields['estado'].initial = 'P'
         self.fields['observaciones'].required = True
@@ -360,14 +367,11 @@ class SatisfaccionForm(forms.ModelForm):
 
 
 class ServicioForm(forms.ModelForm):
-    """
-    Formulario para registrar servicios prestados durante atenciones.
-    """
     class Meta:
         model = Servicio
         fields = [
             'atencion', 'nombre', 'descripcion',
-            'tipo', 'requiere_equipo', 'estado'
+            'tipo', 'requiere_equipo', 'recurso', 'estado'
         ]
         labels = {
             'atencion': 'Atención Vinculada',
@@ -375,7 +379,8 @@ class ServicioForm(forms.ModelForm):
             'descripcion': 'Descripción Detallada',
             'tipo': 'Categoría',
             'requiere_equipo': '¿Requiere equipo?',
-            'estado': 'Estado'
+            'recurso': 'Recurso utilizado',
+            'estado': 'Estado',
         }
         widgets = {
             'atencion': forms.Select(attrs={'class': 'form-control'}),
@@ -390,21 +395,27 @@ class ServicioForm(forms.ModelForm):
             ),
             'requiere_equipo': forms.Select(
                 choices=[('S', 'Sí'), ('N', 'No')],
-                attrs={'class': 'form-control'}
+                attrs={'class': 'form-control', 'id': 'id_requiere_equipo'}
             ),
+            'recurso': forms.Select(attrs={'class': 'form-control', 'id': 'id_recurso'}),
             'estado': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}
             ),
         }
 
-    def __init__(self, *args, **kwargs):
-        """Inicializar campos con valores por defecto."""
+    def __init__(self, *args, recursos_pvd=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['atencion'].required = False
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
         self.fields['requiere_equipo'].initial = 'N'
         self.fields['estado'].initial = 'A'
+        self.fields['recurso'].required = False
+        self.fields['recurso'].empty_label = '--- Selecciona un recurso ---'
+        if recursos_pvd is not None:
+            self.fields['recurso'].queryset = recursos_pvd
+        else:
+            self.fields['recurso'].queryset = Recurso.objects.none()
 
 
 
@@ -654,6 +665,24 @@ class CrearUsuarioForm(UserCreationForm):
         self.fields['password1'].label = 'Contraseña'
         self.fields['password2'].label = 'Confirmar contraseña'
 
+    def clean_password1(self):
+        import re
+        pwd = self.cleaned_data.get('password1', '')
+        errores = []
+        if len(pwd) < 8:
+            errores.append('Debe tener al menos 8 caracteres.')
+        if not re.search(r'[A-Z]', pwd):
+            errores.append('Debe incluir al menos una letra mayúscula.')
+        if not re.search(r'[a-z]', pwd):
+            errores.append('Debe incluir al menos una letra minúscula.')
+        if not re.search(r'\d', pwd):
+            errores.append('Debe incluir al menos un número.')
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>/?]', pwd):
+            errores.append('Debe incluir al menos un carácter especial (!@#$%...).')
+        if errores:
+            raise ValidationError(errores)
+        return pwd
+
     def save(self, commit=True):
         user = super().save(commit=False)
         primer_nombre  = self.cleaned_data.get('primer_nombre', '')
@@ -722,17 +751,21 @@ class PuntoViveDigitalForm(forms.ModelForm):
             del self.fields['admin_a_cargo']
 
     def clean_nombre(self):
-        nombre = self.cleaned_data.get('nombre')
-        if nombre:
-            qs = PuntoViveDigital.objects.filter(nombre__iexact=nombre.strip())
-            if self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
-            if qs.exists():
-                raise ValidationError(
-                    f'Ya existe un PVD con el nombre "{nombre.strip()}". '
-                    'Cada Punto Vive Digital debe tener un nombre único.'
-                )
-        return nombre.strip() if nombre else nombre
+        nombre = self.cleaned_data.get('nombre', '') or ''
+        nombre = nombre.strip()
+        if not nombre.upper().startswith('PVD'):
+            raise ValidationError('El nombre del PVD debe comenzar con "PVD".')
+        if nombre.upper() == 'PVD':
+            raise ValidationError('Escribe el nombre completo, por ejemplo: "PVD Centro".')
+        qs = PuntoViveDigital.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f'Ya existe un PVD con el nombre "{nombre}". '
+                'Cada Punto Vive Digital debe tener un nombre único.'
+            )
+        return nombre
 
     def clean_direccion(self):
         direccion = self.cleaned_data.get('direccion')

@@ -10,6 +10,12 @@
         <span class="eyebrow">Analítica</span>
         <h2 class="page-title">Reportes e indicadores</h2>
         <p class="muted">Consolidados por tipo de servicio, perfiles de usuarios y variables para informes institucionales.</p>
+        {% if pvd_nombre_rpt %}
+        <p style="margin-top:8px; font-size:13px;">
+            <span class="badge badge--info">📍 {{ pvd_nombre_rpt }}</span>
+            <span class="muted" style="margin-left:6px;">Los datos mostrados corresponden únicamente a este PVD.</span>
+        </p>
+        {% endif %}
     </div>
 
     <form method="GET" class="rpt-filter-bar">

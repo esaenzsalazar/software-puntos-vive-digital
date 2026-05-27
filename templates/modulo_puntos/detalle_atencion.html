@@ -51,6 +51,7 @@
     {# ── Acciones de estado ── #}
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; padding-top:16px;
                 border-top:1px solid var(--border-color);">
+        <a href="{% url 'modulo_puntos:editar_atencion' atencion.pk %}" class="btn btn-secondary btn--sm">✎ Editar datos</a>
         {% if atencion.estado == 'P' %}
         <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_atencion' atencion.pk %}">
             {% csrf_token %}
@@ -82,106 +83,111 @@
     </div>
 </div>
 
-{# ── Servicios disponibles del PVD ── #}
+{# ── Servicios registrados ── #}
 <div class="card">
-    <h3>Servicios del PVD</h3>
-    <p class="muted" style="margin-bottom: 16px;">Selecciona un servicio para registrar los datos del ciudadano.</p>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0;">Servicios prestados</h3>
+        {% if atencion.estado == 'P' %}
+        <a href="{% url 'modulo_puntos:registrar_servicio_atencion' atencion.pk %}"
+           class="btn btn--sm">+ Agregar servicio</a>
+        {% endif %}
+    </div>
 
-    {% if servicios_pvd %}
-        <div class="grid">
-            {% for pvd_svc in servicios_pvd %}
-            <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="font-size: 28px;">{{ pvd_svc.servicio.icono }}</div>
-                <div>
-                    <strong style="font-size: 15px;">{{ pvd_svc.servicio.nombre }}</strong>
-                    {% if pvd_svc.servicio.descripcion %}
-                    <p class="muted" style="margin-top: 4px; font-size: 13px;">{{ pvd_svc.servicio.descripcion }}</p>
-                    {% endif %}
-                </div>
-                <div>
-                    {% if pvd_svc.servicio.tipo == 'canvas' %}
-                        <span class="badge badge--info" style="margin-bottom: 6px;">Servicio personalizado</span>
-                    {% elif pvd_svc.servicio.tipo == 'redireccion' %}
-                        <span class="badge badge--info" style="margin-bottom: 6px;">Enlace externo</span>
-                    {% else %}
-                        <span class="badge badge--info" style="margin-bottom: 6px;">
-                            {{ pvd_svc.servicio.campos|length }} campo{{ pvd_svc.servicio.campos|length|pluralize:"s" }}
-                        </span>
-                    {% endif %}
-                    <br>
-                    <a href="{% url 'modulo_puntos:formulario_servicio' pvd_svc.servicio.pk atencion.pk %}"
-                       class="btn btn--sm" style="margin-top: 8px;">
-                        Llenar formulario
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+    {% if servicios %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Servicio</th>
+                    <th>Tipo</th>
+                    <th>¿Requiere equipo?</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for svc in servicios %}
+                <tr>
+                    <td class="muted" style="font-size:12px;">{{ forloop.counter }}</td>
+                    <td><strong>{{ svc.nombre }}</strong></td>
+                    <td>{{ svc.tipo }}</td>
+                    <td>
+                        {% if svc.requiere_equipo == 'S' %}
+                            {% if svc.recurso %}
+                                <span class="badge badge--info">{{ svc.recurso }}</span>
+                            {% else %}
+                                <span class="badge badge--warning">Sí — sin asignar</span>
+                            {% endif %}
+                        {% else %}
+                            No
+                        {% endif %}
+                    </td>
+                    <td>{{ svc.descripcion|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
-        <div class="callout">
-            <p class="muted">Este PVD no tiene servicios personalizados configurados todavía.</p>
-            {% if nav_tic or nav_super %}
-            <p class="muted" style="margin-top: 6px;">Puedes añadir servicios desde la sección
-                <a href="{% url 'modulo_puntos:lista_pvd' %}">Puntos Vive Digital</a>.
-            </p>
-            {% endif %}
-        </div>
+    <div class="callout" style="text-align:center; padding:24px;">
+        <p class="muted">No se han registrado servicios en esta atención.</p>
+        {% if atencion.estado == 'P' %}
+        <a href="{% url 'modulo_puntos:registrar_servicio_atencion' atencion.pk %}"
+           class="btn btn--sm" style="margin-top:12px;">+ Agregar primer servicio</a>
+        {% endif %}
+    </div>
     {% endif %}
 </div>
 
-{# ── Respuestas ya enviadas ── #}
+{# ── Encuesta de satisfacción ── #}
 <div class="card">
-    <h3>Servicios registrados en esta atención</h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0;">Encuesta de satisfacción</h3>
+        {% if atencion.estado == 'F' and not satisfaccion %}
+        <a href="{% url 'modulo_puntos:registrar_satisfaccion_atencion' atencion.pk %}"
+           class="btn btn--sm">+ Registrar</a>
+        {% endif %}
+    </div>
 
-    {% if respuestas %}
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Servicio</th>
-                        <th>Campos registrados</th>
-                        <th>Enviado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for r in respuestas %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>
-                            {% if r.servicio %}
-                                {{ r.servicio.icono }} {{ r.servicio.nombre }}
-                            {% else %}
-                                <span class="muted">Servicio eliminado</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <details>
-                                <summary style="cursor: pointer; color: var(--color-accent);">
-                                    Ver {{ r.datos.keys|length }} campo{{ r.datos.keys|length|pluralize:"s" }}
-                                </summary>
-                                <ul style="margin-top: 8px; color: var(--text-muted); font-size: 13px;">
-                                    {% for clave, valor in r.datos.items %}
-                                    <li><strong>{{ clave }}:</strong>
-                                        {% if valor|length == 0 %}—
-                                        {% elif valor is iterable and valor|length > 1 %}
-                                            {{ valor|join:", " }}
-                                        {% else %}
-                                            {{ valor }}
-                                        {% endif %}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        </td>
-                        <td>{{ r.enviado_en|date:"d/m/Y H:i" }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+    {% if satisfaccion %}
+    <div class="callout">
+        <div class="info-grid-2">
+            <div>
+                <p><strong>Calificación:</strong>
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= satisfaccion.calificacion %}
+                            <span style="color:#f59e0b; font-size:18px;">★</span>
+                        {% else %}
+                            <span style="color:#d1d5db; font-size:18px;">★</span>
+                        {% endif %}
+                    {% endfor %}
+                    <span class="muted" style="font-size:13px;">{{ satisfaccion.calificacion }}/5</span>
+                </p>
+                <p><strong>Fecha:</strong> {{ satisfaccion.fecha|date:"d/m/Y H:i" }}</p>
+            </div>
+            <div>
+                {% if satisfaccion.comentario %}
+                <p><strong>Comentario:</strong> {{ satisfaccion.comentario }}</p>
+                {% else %}
+                <p class="muted">Sin comentarios.</p>
+                {% endif %}
+            </div>
         </div>
+    </div>
+    {% elif atencion.estado == 'P' %}
+    <div class="callout" style="text-align:center; padding:20px;">
+        <p class="muted">La atención debe finalizarse antes de registrar la satisfacción.</p>
+    </div>
+    {% elif atencion.estado == 'C' %}
+    <div class="callout" style="text-align:center; padding:20px;">
+        <p class="muted">La atención fue cancelada — no aplica encuesta de satisfacción.</p>
+    </div>
     {% else %}
-        <p class="muted">Aún no se han registrado servicios en esta atención.</p>
+    <div class="callout" style="text-align:center; padding:20px;">
+        <p class="muted">Aún no se ha registrado la encuesta de satisfacción.</p>
+        <a href="{% url 'modulo_puntos:registrar_satisfaccion_atencion' atencion.pk %}"
+           class="btn btn--sm" style="margin-top:10px;">+ Registrar ahora</a>
+    </div>
     {% endif %}
 </div>
 

@@ -139,137 +139,257 @@
 
     {# ── Constructor de dirección ── #}
     <div style="margin-bottom: 20px;">
-      <label>Dirección</label>
-      <p class="help-text" style="margin-bottom: 10px;">
-        Completa los campos y la dirección se genera automáticamente.
-      </p>
+      <label>Dirección <span style="color:var(--p-danger);">*</span></label>
 
-      <div class="zona-toggle">
-        <label>
-          <input type="radio" name="tipo_zona_pvd" value="urbana" checked onchange="toggleZona()">
-          Urbana (Calle / Carrera)
-        </label>
-        <label>
-          <input type="radio" name="tipo_zona_pvd" value="rural" onchange="toggleZona()">
-          Rural (Vereda / Corregimiento)
-        </label>
+      {# Tabs de modo #}
+      <div style="display:flex;gap:0;margin-bottom:12px;border:1px solid var(--p-border);border-radius:var(--p-radius-sm);overflow:hidden;font-size:12px;font-weight:600;">
+        <button type="button" id="tab-estandar" onclick="setAddrMode('estandar')"
+          style="flex:1;padding:9px 4px;border:none;cursor:pointer;background:var(--p-accent);color:#fff;transition:background .15s;">
+          Estándar
+        </button>
+        <button type="button" id="tab-esquina" onclick="setAddrMode('esquina')"
+          style="flex:1;padding:9px 4px;border:none;border-left:1px solid var(--p-border);cursor:pointer;background:var(--p-surface-raised);color:var(--p-text);transition:background .15s;">
+          Esquina / Intersección
+        </button>
+        <button type="button" id="tab-rural" onclick="setAddrMode('rural')"
+          style="flex:1;padding:9px 4px;border:none;border-left:1px solid var(--p-border);cursor:pointer;background:var(--p-surface-raised);color:var(--p-text);transition:background .15s;">
+          Rural / Vereda
+        </button>
       </div>
 
-      {# -- Urbana -- #}
-      <div id="zona-urbana" class="addr-builder">
-        <div class="addr-vial">
+      {# ── MODO ESTÁNDAR ── #}
+      <div id="panel-estandar" class="addr-builder">
 
+        {# Fila 1: vía principal #}
+        <div style="display:grid;grid-template-columns:160px 72px 58px 52px 90px;gap:7px;align-items:end;margin-bottom:10px;flex-wrap:wrap;">
           <div class="addr-cell">
             <span class="addr-lbl">Tipo de vía</span>
-            <select id="addr-tipo">
+            <select id="u-tipo" onchange="updateAddr()">
               <option value="">— Tipo —</option>
               <option>Calle</option>
               <option>Carrera</option>
               <option>Transversal</option>
               <option>Diagonal</option>
               <option>Avenida</option>
+              <option>Avenida Calle</option>
+              <option>Avenida Carrera</option>
+              <option>Circular</option>
+              <option>Circunvalar</option>
               <option>Vía</option>
             </select>
           </div>
-
           <div class="addr-cell">
             <span class="addr-lbl">Número</span>
-            <input type="text" id="addr-num" placeholder="5" maxlength="6">
+            <input type="text" id="u-num" placeholder="5" maxlength="6" oninput="updateAddr()">
           </div>
-
           <div class="addr-cell">
             <span class="addr-lbl">Letra</span>
-            <select id="addr-letra">
+            <select id="u-letra" onchange="updateAddr()">
               <option value="">—</option>
               <option>A</option><option>B</option><option>C</option><option>D</option>
               <option>E</option><option>F</option><option>G</option><option>H</option>
-              <option>J</option><option>K</option><option>L</option><option>M</option>
+              <option>I</option><option>J</option><option>K</option><option>L</option>
+              <option>M</option><option>N</option><option>P</option><option>Q</option>
+              <option>R</option><option>S</option><option>T</option><option>U</option>
+              <option>V</option><option>W</option><option>X</option><option>Y</option><option>Z</option>
             </select>
           </div>
-
           <div class="addr-cell">
             <span class="addr-lbl">Bis</span>
-            <select id="addr-bis">
+            <select id="u-bis" onchange="updateAddr()">
               <option value="">—</option>
               <option value=" Bis">Bis</option>
             </select>
           </div>
-
-          <span class="addr-sep">#</span>
-
           <div class="addr-cell">
-            <span class="addr-lbl">Nº cruce</span>
-            <input type="text" id="addr-cruce" placeholder="10" maxlength="6">
+            <span class="addr-lbl">Cardinal</span>
+            <select id="u-cardinal" onchange="updateAddr()">
+              <option value="">—</option>
+              <option>Sur</option>
+              <option>Norte</option>
+              <option>Este</option>
+              <option>Oeste</option>
+            </select>
           </div>
+        </div>
 
-          <div class="addr-cell">
+        {# Fila 2: cruce y placa #}
+        <div style="display:flex;align-items:end;gap:7px;margin-bottom:10px;flex-wrap:wrap;">
+          <span class="addr-sep" style="padding-bottom:6px;">#</span>
+          <div class="addr-cell" style="width:72px;">
+            <span class="addr-lbl">Nº cruce</span>
+            <input type="text" id="u-cruce" placeholder="10" maxlength="6" oninput="updateAddr()">
+          </div>
+          <div class="addr-cell" style="width:58px;">
             <span class="addr-lbl">Letra</span>
-            <select id="addr-letra2">
+            <select id="u-lcruce" onchange="updateAddr()">
               <option value="">—</option>
               <option>A</option><option>B</option><option>C</option><option>D</option>
               <option>E</option><option>F</option><option>G</option><option>H</option>
-              <option>J</option><option>K</option><option>L</option><option>M</option>
+              <option>I</option><option>J</option><option>K</option><option>L</option>
+              <option>M</option><option>N</option><option>P</option><option>S</option>
             </select>
           </div>
-
-          <span class="addr-sep">–</span>
-
-          <div class="addr-cell">
-            <span class="addr-lbl">Placa</span>
-            <input type="text" id="addr-placa" placeholder="20" maxlength="6">
+          <div class="addr-cell" style="width:90px;">
+            <span class="addr-lbl">Cardinal</span>
+            <select id="u-ccruce" onchange="updateAddr()">
+              <option value="">—</option>
+              <option>Sur</option>
+              <option>Norte</option>
+              <option>Este</option>
+              <option>Oeste</option>
+            </select>
           </div>
-
+          <span class="addr-sep" style="padding-bottom:6px;">–</span>
+          <div class="addr-cell" style="width:72px;">
+            <span class="addr-lbl">Placa</span>
+            <input type="text" id="u-placa" placeholder="20" maxlength="6" oninput="updateAddr()">
+          </div>
         </div>
 
-        <div class="addr-complement">
+        {# Fila 3: complemento #}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div class="addr-cell">
-            <span class="addr-lbl">Complemento <span style="text-transform:none;font-weight:400;">(Apto, Local…)</span></span>
-            <input type="text" id="addr-comp" placeholder="Local 2, Apto 301…" maxlength="50">
+            <span class="addr-lbl">Complemento <span style="text-transform:none;font-weight:400;">(Apto, Local, Interior, Piso…)</span></span>
+            <input type="text" id="u-comp" placeholder="Apto 301, Local 2, Piso 3…" maxlength="80" oninput="updateAddr()">
           </div>
           <div class="addr-cell">
             <span class="addr-lbl">Barrio <span style="text-transform:none;font-weight:400;">(opcional)</span></span>
-            <input type="text" id="addr-barrio-urbana" placeholder="Ej: Centro" maxlength="64">
+            <input type="text" id="u-barrio" placeholder="Centro, El Carmen…" maxlength="64" oninput="updateAddr()">
           </div>
-        </div>
-
-        <div class="addr-result-wrap">
-          <span style="font-size:15px;flex-shrink:0;">📍</span>
-          <input type="text" id="addr-preview-urbana" readonly
-                 value="La dirección aparecerá aquí mientras escribes…"
-                 class="placeholder">
         </div>
       </div>
 
-      {# -- Rural -- #}
-      <div id="zona-rural" class="addr-builder" style="display:none;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:flex-end;">
-          <div class="addr-cell" style="flex-shrink:0;">
-            <span class="addr-lbl">Tipo</span>
-            <select id="rur-tipo" style="height:36px;padding:0 8px;font-size:13px;border-radius:6px;margin:0;">
-              <option>Vereda</option>
-              <option>Corregimiento</option>
+      {# ── MODO ESQUINA / INTERSECCIÓN ── #}
+      <div id="panel-esquina" class="addr-builder" style="display:none;">
+        <p style="font-size:12px;color:var(--p-text-muted);margin:0 0 10px;">
+          Usa este modo para direcciones tipo <em>"Carrera 5 con Calle 5 Esquina"</em> o <em>"Calle 10 con Carrera 3 Diagonal"</em>.
+        </p>
+
+        {# Vía 1 #}
+        <div style="display:grid;grid-template-columns:150px 72px 58px 90px;gap:7px;align-items:end;margin-bottom:8px;">
+          <div class="addr-cell">
+            <span class="addr-lbl">Tipo vía 1</span>
+            <select id="e-tipo1" onchange="updateAddr()">
+              <option value="">— Tipo —</option>
+              <option>Calle</option><option>Carrera</option><option>Transversal</option>
+              <option>Diagonal</option><option>Avenida</option><option>Avenida Calle</option>
+              <option>Avenida Carrera</option><option>Circular</option><option>Vía</option>
             </select>
           </div>
-          <div class="addr-cell" style="flex:1;min-width:150px;">
-            <span class="addr-lbl">Nombre</span>
-            <input type="text" id="rur-nombre" placeholder="Ej: San Antonio"
-                   style="height:36px;padding:0 8px;font-size:13px;border-radius:6px;margin:0;width:100%;">
+          <div class="addr-cell">
+            <span class="addr-lbl">Número</span>
+            <input type="text" id="e-num1" placeholder="5" maxlength="6" oninput="updateAddr()">
           </div>
-          <div class="addr-cell" style="flex:1;min-width:150px;">
-            <span class="addr-lbl">Referencia <span style="text-transform:none;font-weight:400;">(opcional)</span></span>
-            <input type="text" id="rur-ref" placeholder="Punto de referencia"
-                   style="height:36px;padding:0 8px;font-size:13px;border-radius:6px;margin:0;width:100%;">
+          <div class="addr-cell">
+            <span class="addr-lbl">Letra</span>
+            <select id="e-letra1" onchange="updateAddr()">
+              <option value="">—</option>
+              <option>A</option><option>B</option><option>C</option><option>D</option>
+              <option>E</option><option>F</option><option>G</option><option>H</option>
+              <option>I</option><option>J</option><option>K</option><option>L</option>
+              <option>M</option><option>N</option><option>S</option>
+            </select>
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Cardinal</span>
+            <select id="e-card1" onchange="updateAddr()">
+              <option value="">—</option>
+              <option>Sur</option><option>Norte</option><option>Este</option><option>Oeste</option>
+            </select>
           </div>
         </div>
-        <div class="addr-result-wrap">
-          <span style="font-size:15px;flex-shrink:0;">📍</span>
-          <input type="text" id="addr-preview-rural" readonly
-                 value="La ubicación aparecerá aquí mientras escribes…"
-                 class="placeholder">
+
+        <div style="font-size:12px;font-weight:700;color:var(--p-text-muted);margin:4px 0 8px;letter-spacing:.06em;">CON</div>
+
+        {# Vía 2 #}
+        <div style="display:grid;grid-template-columns:150px 72px 58px 90px 130px;gap:7px;align-items:end;margin-bottom:10px;">
+          <div class="addr-cell">
+            <span class="addr-lbl">Tipo vía 2</span>
+            <select id="e-tipo2" onchange="updateAddr()">
+              <option value="">— Tipo —</option>
+              <option>Calle</option><option>Carrera</option><option>Transversal</option>
+              <option>Diagonal</option><option>Avenida</option><option>Avenida Calle</option>
+              <option>Avenida Carrera</option><option>Circular</option><option>Vía</option>
+            </select>
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Número</span>
+            <input type="text" id="e-num2" placeholder="5" maxlength="6" oninput="updateAddr()">
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Letra</span>
+            <select id="e-letra2" onchange="updateAddr()">
+              <option value="">—</option>
+              <option>A</option><option>B</option><option>C</option><option>D</option>
+              <option>E</option><option>F</option><option>G</option><option>H</option>
+              <option>I</option><option>J</option><option>K</option><option>L</option>
+              <option>M</option><option>N</option><option>S</option>
+            </select>
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Cardinal</span>
+            <select id="e-card2" onchange="updateAddr()">
+              <option value="">—</option>
+              <option>Sur</option><option>Norte</option><option>Este</option><option>Oeste</option>
+            </select>
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Tipo intersección</span>
+            <select id="e-tipo-int" onchange="updateAddr()">
+              <option>Esquina</option>
+              <option>Diagonal</option>
+              <option>Frente a</option>
+              <option>Junto a</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="addr-cell" style="margin-bottom:0;">
+          <span class="addr-lbl">Referencia adicional <span style="text-transform:none;font-weight:400;">(opcional)</span></span>
+          <input type="text" id="e-ref" placeholder="Casa amarilla, Local 2…" maxlength="80" style="width:100%;" oninput="updateAddr()">
         </div>
       </div>
 
-      {# campo oculto real #}
+      {# ── MODO RURAL ── #}
+      <div id="panel-rural" class="addr-builder" style="display:none;">
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:10px;margin-bottom:10px;align-items:end;">
+          <div class="addr-cell">
+            <span class="addr-lbl">Tipo</span>
+            <select id="r-tipo" onchange="updateAddr()">
+              <option>Vereda</option>
+              <option>Corregimiento</option>
+              <option>Inspección</option>
+              <option>Finca</option>
+              <option>Hacienda</option>
+              <option>Km</option>
+            </select>
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Nombre</span>
+            <input type="text" id="r-nombre" placeholder="El Carmen, San Antonio, La Esperanza…" maxlength="80" style="width:100%;" oninput="updateAddr()">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:130px 1fr;gap:10px;align-items:end;">
+          <div class="addr-cell">
+            <span class="addr-lbl">Kilómetro <span style="text-transform:none;font-weight:400;">(opcional)</span></span>
+            <input type="text" id="r-km" placeholder="Km 5" maxlength="10" oninput="updateAddr()">
+          </div>
+          <div class="addr-cell">
+            <span class="addr-lbl">Referencia <span style="text-transform:none;font-weight:400;">(opcional)</span></span>
+            <input type="text" id="r-ref" placeholder="Entrada principal, Casa blanca…" maxlength="80" style="width:100%;" oninput="updateAddr()">
+          </div>
+        </div>
+      </div>
+
+      {# Resultado y campo real #}
+      <div class="addr-result-wrap" style="margin-top:10px;">
+        <span style="font-size:16px;flex-shrink:0;">📍</span>
+        <span id="addr-preview-text"
+              style="flex:1;font-size:13px;font-weight:500;color:var(--p-text-muted);font-style:italic;">
+          Completa los campos para ver la dirección…
+        </span>
+      </div>
       <div style="display:none;">{{ form.direccion }}</div>
       <div id="addr-error" style="color:#991b1b;font-size:13px;margin-top:6px;display:none;">
         La dirección es requerida.
@@ -347,89 +467,151 @@ const dirInput = document.getElementById('id_direccion');
 
 function v(id) { return (document.getElementById(id)?.value || '').trim(); }
 
-// ── Constructor urbano ───────────────────────────────────────────────────────
-function buildUrban() {
-  const tipo  = v('addr-tipo');
-  const num   = v('addr-num');
-  const letra = v('addr-letra');
-  const bis   = v('addr-bis');
-  const cruce = v('addr-cruce');
-  const l2    = v('addr-letra2');
-  const placa = v('addr-placa');
-  const comp  = v('addr-comp');
+// ── Constructor de dirección colombiana ──────────────────────────────────────
+let addrMode = 'estandar';
 
-  const seg1 = [tipo, num, letra, bis].filter(Boolean).join(' ');
-  let dir = seg1;
-  if (cruce) dir += ` # ${cruce}${l2}`;
-  if (placa) dir += ` – ${placa}`;
-  if (comp)  dir += ` ${comp}`;
-  dir = dir.trim();
+function vv(id) { return (document.getElementById(id)?.value || '').trim(); }
 
-  if (dirInput) dirInput.value = dir;
-  const prev = document.getElementById('addr-preview-urbana');
-  if (dir) {
-    prev.value = dir;
-    prev.classList.remove('placeholder');
-  } else {
-    prev.value = 'La dirección aparecerá aquí mientras escribes…';
-    prev.classList.add('placeholder');
-  }
-}
-
-['addr-tipo','addr-num','addr-letra','addr-bis',
- 'addr-cruce','addr-letra2','addr-placa','addr-comp','addr-barrio-urbana']
-  .forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', buildUrban);
+function setAddrMode(mode) {
+  addrMode = mode;
+  ['estandar','esquina','rural'].forEach(function(m) {
+    const panel = document.getElementById('panel-' + m);
+    const tab   = document.getElementById('tab-' + m);
+    if (!panel || !tab) return;
+    const active = m === mode;
+    panel.style.display = active ? '' : 'none';
+    tab.style.background = active ? 'var(--p-accent)' : 'var(--p-surface-raised)';
+    tab.style.color      = active ? '#fff' : 'var(--p-text)';
   });
+  updateAddr();
+}
 
-// ── Constructor rural ────────────────────────────────────────────────────────
-function buildRural() {
-  const tipo   = v('rur-tipo');
-  const nombre = v('rur-nombre');
-  const ref    = v('rur-ref');
-  let dir = nombre ? `${tipo} ${nombre}${ref ? ' – ' + ref : ''}` : '';
-  dir = dir.trim();
+function buildEstandar() {
+  const tipo     = vv('u-tipo');
+  const num      = vv('u-num');
+  const letra    = vv('u-letra');
+  const bis      = vv('u-bis');
+  const cardinal = vv('u-cardinal');
+  const cruce    = vv('u-cruce');
+  const lcruce   = vv('u-lcruce');
+  const ccruce   = vv('u-ccruce');
+  const placa    = vv('u-placa');
+  const comp     = vv('u-comp');
+  const barrio   = vv('u-barrio');
 
-  if (dirInput) dirInput.value = dir;
-  const prev = document.getElementById('addr-preview-rural');
-  if (dir) {
-    prev.value = dir;
-    prev.classList.remove('placeholder');
-  } else {
-    prev.value = 'La ubicación aparecerá aquí mientras escribes…';
-    prev.classList.add('placeholder');
+  if (!tipo || !num) return '';
+
+  let via = tipo + ' ' + num + letra + bis;
+  if (cardinal) via += ' ' + cardinal;
+
+  let dir = via;
+  if (cruce) {
+    dir += ' # ' + cruce + lcruce;
+    if (ccruce) dir += ' ' + ccruce;
+    if (placa)  dir += ' – ' + placa;
   }
+  if (comp)   dir += ' ' + comp;
+  if (barrio) dir += ', ' + barrio;
+  return dir.trim();
 }
 
-['rur-tipo','rur-nombre','rur-ref'].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', buildRural);
-});
+function buildEsquina() {
+  const tipo1  = vv('e-tipo1');
+  const num1   = vv('e-num1');
+  const letra1 = vv('e-letra1');
+  const card1  = vv('e-card1');
+  const tipo2  = vv('e-tipo2');
+  const num2   = vv('e-num2');
+  const letra2 = vv('e-letra2');
+  const card2  = vv('e-card2');
+  const tipoInt = vv('e-tipo-int') || 'Esquina';
+  const refE   = vv('e-ref');
 
-// ── Toggle urbana / rural ────────────────────────────────────────────────────
-function toggleZona() {
-  const zona = document.querySelector('input[name="tipo_zona_pvd"]:checked').value;
-  document.getElementById('zona-urbana').style.display = zona === 'urbana' ? '' : 'none';
-  document.getElementById('zona-rural').style.display  = zona === 'rural'  ? '' : 'none';
-  if (dirInput) dirInput.value = '';
+  if (!tipo1 || !num1 || !tipo2 || !num2) return '';
+
+  let via1 = tipo1 + ' ' + num1 + letra1;
+  if (card1) via1 += ' ' + card1;
+  let via2 = tipo2 + ' ' + num2 + letra2;
+  if (card2) via2 += ' ' + card2;
+
+  let dir = via1 + ' con ' + via2 + ' ' + tipoInt;
+  if (refE) dir += ' – ' + refE;
+  return dir.trim();
 }
 
-// ── Precargar dirección existente ────────────────────────────────────────────
-(function preload() {
-  if (!dirInput || !dirInput.value) return;
-  const val = dirInput.value;
-  const prev = document.getElementById('addr-preview-urbana');
-  if (prev) { prev.value = val; prev.classList.remove('placeholder'); }
-})();
+function buildRural() {
+  const tipo   = vv('r-tipo');
+  const nombre = vv('r-nombre');
+  const km     = vv('r-km');
+  const ref    = vv('r-ref');
 
-// ── Validación de nombre en tiempo real ─────────────────────────────────────
+  if (!nombre) return '';
+
+  let dir = tipo + ' ' + nombre;
+  if (km)  dir += ' Km ' + km;
+  if (ref) dir += ' – ' + ref;
+  return dir.trim();
+}
+
+function updateAddr() {
+  let dir = '';
+  if (addrMode === 'estandar') dir = buildEstandar();
+  else if (addrMode === 'esquina') dir = buildEsquina();
+  else if (addrMode === 'rural')   dir = buildRural();
+
+  const preview  = document.getElementById('addr-preview-text');
+  const dirInput = document.getElementById('id_direccion');
+
+  if (dir) {
+    preview.textContent  = dir;
+    preview.style.color  = 'var(--p-text)';
+    preview.style.fontStyle = 'normal';
+  } else {
+    preview.textContent  = 'Completa los campos para ver la dirección…';
+    preview.style.color  = 'var(--p-text-muted)';
+    preview.style.fontStyle = 'italic';
+  }
+  if (dirInput) dirInput.value = dir;
+}
+
+// ── Prefijo obligatorio "PVD " ───────────────────────────────────────────────
+const PREFIX = 'PVD ';
 const nombreInput   = document.getElementById('{{ form.nombre.id_for_label }}');
 const nombreFb      = document.getElementById('pvd-nombre-check');
 const excludeId     = '{{ pvd.pk|default:"" }}';
-const validateUrl   = '{% url "modulo_puntos:validar_nombre_pvd" %}';
+const validateUrl   = '/pvd/validar-nombre/';
+
+if (nombreInput) {
+  // Al cargar: si el campo está vacío o no empieza con el prefijo, forzarlo
+  if (!nombreInput.value.startsWith(PREFIX)) {
+    nombreInput.value = PREFIX;
+  }
+
+  nombreInput.addEventListener('keydown', function (e) {
+    const pos = this.selectionStart;
+    // Bloquear Backspace/Delete si borraría parte del prefijo
+    if ((e.key === 'Backspace' && pos <= PREFIX.length && this.selectionStart === this.selectionEnd) ||
+        (e.key === 'Delete'    && pos < PREFIX.length)) {
+      e.preventDefault();
+    }
+  });
+
+  nombreInput.addEventListener('input', function () {
+    if (!this.value.startsWith(PREFIX)) {
+      this.value = PREFIX + this.value.replace(/^PVD\s*/i, '');
+      // Mover cursor al final
+      const end = this.value.length;
+      this.setSelectionRange(end, end);
+    }
+  });
+
+  // Evitar selección que incluya el prefijo al hacer click
+  nombreInput.addEventListener('focus', function () {
+    if (this.value === PREFIX) {
+      this.setSelectionRange(PREFIX.length, PREFIX.length);
+    }
+  });
+}
 let nombreOk        = true;
 let debounce        = null;
 
@@ -459,6 +641,18 @@ if (nombreInput) {
   });
 }
 
+// ── Precargar dirección existente al editar ──────────────────────────────────
+(function preload() {
+  const dirInput = document.getElementById('id_direccion');
+  if (!dirInput || !dirInput.value) return;
+  const preview = document.getElementById('addr-preview-text');
+  if (preview) {
+    preview.textContent = dirInput.value;
+    preview.style.color = 'var(--p-text)';
+    preview.style.fontStyle = 'normal';
+  }
+})();
+
 // ── Validación al enviar ─────────────────────────────────────────────────────
 document.getElementById('form-pvd').addEventListener('submit', function (e) {
   let ok = true;
@@ -469,6 +663,7 @@ document.getElementById('form-pvd').addEventListener('submit', function (e) {
   }
   if (!nombreOk) ok = false;
 
+  const dirInput = document.getElementById('id_direccion');
   if (dirInput && !dirInput.value.trim()) {
     document.getElementById('addr-error').style.display = '';
     ok = false;

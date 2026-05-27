@@ -478,33 +478,51 @@
     </div>
 </div>
 
-{# ── Servicios personalizados asignados a este PVD ── #}
-{% if servicios_canvas_pvd %}
-<div class="content-section">
-    <div class="section-header">
-        <h3 class="section-title">🧩 Servicios personalizados</h3>
-        {% if pvd_activo %}
-        <p class="muted" style="margin:4px 0 0; font-size:13px;">Servicios configurados específicamente para <strong>{{ pvd_activo.nombre }}</strong></p>
-        {% endif %}
-    </div>
-
-    <div class="grid" style="margin-top:16px;">
-        {% for asig in servicios_canvas_pvd %}
-        <div class="menu-card">
-            <h3>{{ asig.servicio.icono }} {{ asig.servicio.nombre }}</h3>
-            {% if asig.servicio.descripcion %}
-            <p>{{ asig.servicio.descripcion }}</p>
-            {% else %}
-            <p class="muted" style="font-size:12px;">Servicio personalizado</p>
-            {% endif %}
-            <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:abrir_servicio_canvas' asig.servicio.pk %}">Usar servicio →</a>
-            </div>
+{# ── Atenciones pendientes ── #}
+{% if atenciones_pendientes %}
+<div class="card" style="margin-top:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+            <h3 style="margin:0;">Atenciones pendientes</h3>
+            <p class="muted" style="margin:4px 0 0; font-size:13px;">Atenciones registradas que aún no han sido finalizadas.</p>
         </div>
-        {% endfor %}
+        <a href="{% url 'modulo_puntos:lista_atenciones' %}?estado=P" class="btn btn-secondary btn--sm">Ver todas</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ciudadano</th>
+                    <th>Fecha</th>
+                    <th>Hora inicio</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in atenciones_pendientes %}
+                <tr>
+                    <td class="muted" style="font-size:12px;">{{ a.pk }}</td>
+                    <td>
+                        {% if a.ciudadano %}
+                            <strong>{{ a.ciudadano.get_nombre_completo }}</strong>
+                        {% else %}
+                            <span class="muted">Sin ciudadano</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ a.fecha|date:"d/m/Y" }}</td>
+                    <td>{{ a.hora_inicio|default:"—" }}</td>
+                    <td>
+                        <a href="{% url 'modulo_puntos:detalle_atencion' a.pk %}" class="btn btn--sm">Ver →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endif %}
+
 
 {# ============================================================================ #}
 {# PANEL POR DEFECTO (si no coincide ningún rol) #}

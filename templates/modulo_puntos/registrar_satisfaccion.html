@@ -7,7 +7,14 @@
     <div class="page-hero">
         <span class="eyebrow">Calidad</span>
         <h2 class="page-title">Registrar satisfacción</h2>
+        {% if atencion %}
+        <p class="muted">
+            Evaluación de la atención <strong>#{{ atencion.pk }}</strong>
+            {% if atencion.ciudadano %} — {{ atencion.ciudadano.get_nombre_completo }}{% endif %}
+        </p>
+        {% else %}
         <p class="muted">Calificación y comentarios del usuario sobre la atención.</p>
+        {% endif %}
     </div>
 
     {% if form.errors %}
@@ -29,7 +36,11 @@
         </div>
 
         <div class="actions" style="justify-content: flex-end; margin-top: 25px;">
+            {% if atencion %}
+            <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}" class="btn btn-secondary">Cancelar</a>
+            {% else %}
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+            {% endif %}
             <button type="submit" class="btn">Guardar Calificación</button>
         </div>
     </form>

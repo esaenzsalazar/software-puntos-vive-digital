@@ -46,6 +46,13 @@ urlpatterns = [
     # REGISTRO DE ATENCIONES Y SERVICIOS
     # ==========================================================================
     path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
+    path('atenciones/', views.lista_atenciones, name='lista_atenciones'),
+    path('atenciones/<int:atencion_id>/', views.detalle_atencion, name='detalle_atencion'),
+    path('atenciones/<int:atencion_id>/editar/', views.editar_atencion, name='editar_atencion'),
+    path('atenciones/<int:atencion_id>/estado/', views.cambiar_estado_atencion, name='cambiar_estado_atencion'),
+    path('atenciones/<int:atencion_id>/servicio/', views.registrar_servicio, name='registrar_servicio_atencion'),
+    path('atenciones/<int:atencion_id>/satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion_atencion'),
+    path('servicios/', views.gestionar_servicios_pvd, name='gestionar_servicios_pvd'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
     
@@ -67,6 +74,8 @@ urlpatterns = [
     path('exportar-servicios/', views.exportar_servicios_csv, name='exportar_servicios_csv'),
     path('exportar-satisfaccion/', views.exportar_satisfaccion_csv, name='exportar_satisfaccion_csv'),
     path('exportar-prestamos/', views.exportar_prestamos_csv, name='exportar_prestamos_csv'),
+    path('exportar-cursos/', views.exportar_cursos_csv, name='exportar_cursos_csv'),
+    path('exportar-mantenimientos/', views.exportar_mantenimientos_csv, name='exportar_mantenimientos_csv'),
     # ==========================================================================
     # GESTIÓN DE USUARIOS
     # ==========================================================================
@@ -84,6 +93,8 @@ urlpatterns = [
     # GESTIÓN DE PUNTOS VIVE DIGITAL (Multi-PVD)
     # ==========================================================================
     path('pvd/', views.lista_pvd, name='lista_pvd'),
+    path('pvd/nuevo/', views.crear_pvd, name='crear_pvd'),
+    path('pvd/validar-nombre/', views.validar_nombre_pvd, name='validar_nombre_pvd'),
     path('pvd/editar/<int:pvd_cdgo>/', views.editar_pvd, name='editar_pvd'),
     path('pvd/activar/<int:pvd_cdgo>/', views.activar_pvd, name='activar_pvd'),
     path('pvd/eliminar/<int:pvd_cdgo>/', views.eliminar_pvd, name='eliminar_pvd'),

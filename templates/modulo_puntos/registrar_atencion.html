@@ -1,13 +1,18 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Registrar Atención{% endblock %}
+{% block title %}{% if atencion %}Editar atención #{{ atencion.pk }}{% else %}Registrar atención{% endif %}{% endblock %}
 
 {% block content %}
 <div class="card card--narrow">
     <div class="page-hero">
         <span class="eyebrow">Atenciones</span>
+        {% if atencion %}
+        <h2 class="page-title">Editar atención #{{ atencion.pk }}</h2>
+        <p class="muted">Corrige los datos de esta atención. Los servicios registrados no se verán afectados.</p>
+        {% else %}
         <h2 class="page-title">Registrar atención</h2>
         <p class="muted">Selecciona el ciudadano, la fecha y describe la atención prestada.</p>
+        {% endif %}
     </div>
 
     {% if form.errors %}
@@ -31,8 +36,13 @@
         </div>
 
         <div class="actions" style="justify-content:flex-end;margin-top:25px;">
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar y Volver</a>
-            <button type="submit" class="btn">Guardar Atención</button>
+            {% if atencion %}
+            <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}" class="btn btn-secondary">← Cancelar</a>
+            <button type="submit" class="btn">Guardar cambios</button>
+            {% else %}
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn">Guardar atención</button>
+            {% endif %}
         </div>
     </form>
 </div>

@@ -205,6 +205,10 @@ class Servicio(models.Model):
         'Atencion', models.PROTECT,
         null=True, blank=True, verbose_name='Atención'
     )
+    recurso = models.ForeignKey(
+        'Recurso', models.SET_NULL,
+        null=True, blank=True, verbose_name='Recurso utilizado'
+    )
     nombre = models.CharField(max_length=128, verbose_name='Nombre del Servicio')
     descripcion = models.CharField(max_length=512, null=True, blank=True, verbose_name='Descripción')
     tipo = models.CharField(max_length=64, verbose_name='Tipo de Servicio')

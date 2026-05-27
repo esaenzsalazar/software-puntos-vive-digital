@@ -13,7 +13,7 @@
         </div>
     </div>
 
-    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; align-items:center;">
         <form method="GET" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <select name="estado" class="form-control" style="max-width:220px;">
                 <option value="">— Todos los estados —</option>
@@ -24,6 +24,7 @@
             <button type="submit" class="btn btn--sm">Filtrar</button>
             {% if estado_filtro %}<a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm btn-secondary">✕ Limpiar</a>{% endif %}
         </form>
+        <a href="{% url 'modulo_puntos:exportar_cursos_csv' %}" class="btn btn-secondary btn--sm">↓ Exportar Excel</a>
     </div>
 
     {% if cursos %}

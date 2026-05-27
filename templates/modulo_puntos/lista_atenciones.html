@@ -41,6 +41,10 @@
     {% endif %}
   </form>
 
+  <p class="muted" style="font-size:13px; margin-bottom:12px;">
+    {{ total }} atención{{ total|pluralize:"es" }} encontrada{{ total|pluralize:"s" }}
+  </p>
+
   {# ── Tabla ── #}
   {% if atenciones %}
   <div class="table-responsive">
@@ -93,6 +97,28 @@
       </tbody>
     </table>
   </div>
+  {# ── Paginación ── #}
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:6px; margin-top:20px; flex-wrap:wrap;">
+    {% if page_obj.has_previous %}
+    <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_filter %}fecha={{ fecha_filter }}&{% endif %}page={{ page_obj.previous_page_number }}"
+       class="btn btn-secondary btn--sm">‹ Anterior</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <span class="btn btn--sm" style="background:var(--color-primary);color:#fff;">{{ num }}</span>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_filter %}fecha={{ fecha_filter }}&{% endif %}page={{ num }}"
+           class="btn btn-secondary btn--sm">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_filter %}fecha={{ fecha_filter }}&{% endif %}page={{ page_obj.next_page_number }}"
+       class="btn btn-secondary btn--sm">Siguiente ›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% else %}
   <div class="callout" style="text-align:center; padding:32px;">
     <p class="muted">No hay atenciones que coincidan con los filtros.</p>

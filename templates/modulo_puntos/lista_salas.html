@@ -84,14 +84,6 @@
                                title="{% if sala.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
                                 {% if sala.estado == 'A' %}⏸️{% else %}▶️{% endif %}
                             </a>
-                            {% if puede_eliminar %}
-                            <button type="button" class="btn btn--sm btn--danger" title="Eliminar sala"
-                                    data-url="{% url 'modulo_puntos:eliminar_sala' sala.id %}"
-                                    data-nombre="{{ sala.nombre|escapejs }}"
-                                    onclick="confirmarEliminar(this)">
-                                🗑️
-                            </button>
-                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -115,42 +107,4 @@
     {% endif %}
 </div>
 
-<!-- Modal de confirmación de eliminación -->
-<div id="modal-eliminar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:12px; padding:32px; max-width:440px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-        <h3 style="margin:0 0 8px 0; color:#991b1b;">⚠️ Eliminar Sala</h3>
-        <p style="margin:0 0 20px 0; color:#374151;">
-            ¿Estás seguro de que deseas eliminar la sala <strong id="modal-sala-nombre"></strong>?
-            Esta acción no se puede deshacer.
-        </p>
-        <form id="form-eliminar" method="POST">
-            {% csrf_token %}
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
-                <button type="button" onclick="cerrarModal()" class="btn btn-secondary">Cancelar</button>
-                <button type="submit" class="btn btn-primary" style="background:#dc2626; border-color:#dc2626;">
-                    Sí, eliminar
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-function confirmarEliminar(btn) {
-    document.getElementById('modal-sala-nombre').textContent = btn.dataset.nombre;
-    document.getElementById('form-eliminar').action = btn.dataset.url;
-    const modal = document.getElementById('modal-eliminar');
-    modal.style.display = 'flex';
-}
-
-function cerrarModal() {
-    document.getElementById('modal-eliminar').style.display = 'none';
-}
-
-document.getElementById('modal-eliminar').addEventListener('click', function(e) {
-    if (e.target === this) cerrarModal();
-});
-</script>
 {% endblock %}

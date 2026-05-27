@@ -1,22 +1,21 @@
 {% extends 'modulo_puntos/base.html' %}
 
-{% block title %}Historial del Ciudadano{% endblock %}
+{% block title %}Historial — {{ ciudadano.get_nombre_completo }}{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="page-hero">
         <span class="eyebrow">Historial</span>
-        <h2 class="page-title">Historial del ciudadano</h2>
+        <h2 class="page-title">{{ ciudadano.get_nombre_completo }}</h2>
         <p class="muted">Atenciones, servicios y satisfacción registrados.</p>
     </div>
 
     <div class="callout">
-        <h3>{{ ciudadano.get_nombre_completo }}</h3>
         <div class="info-grid-2">
             <div>
                 <p><strong>Documento:</strong> {{ ciudadano.tipo_documento }} {{ ciudadano.numero_documento }}</p>
-                <p><strong>Correo:</strong> {{ ciudadano.correo }}</p>
-                <p><strong>Teléfono:</strong> {{ ciudadano.telefono }}</p>
+                <p><strong>Correo:</strong> {{ ciudadano.correo|default:"—" }}</p>
+                <p><strong>Teléfono:</strong> {{ ciudadano.telefono|default:"—" }}</p>
             </div>
             <div>
                 <p><strong>Barrio:</strong> {{ ciudadano.barrio|default:"No registrado" }}</p>
@@ -26,63 +25,87 @@
         </div>
     </div>
 
-    <p class="muted" style="font-size: 16px;"><strong>Total de atenciones:</strong> <span class="text-accent">{{ total_atenciones }}</span></p>
-
-    <div class="actions">
-        <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Volver a consulta</a>
-    </div>
+    <p class="muted" style="font-size:13px; margin:12px 0 0;">
+        <strong>{{ total_atenciones }}</strong> atención{{ total_atenciones|pluralize:"es" }} registrada{{ total_atenciones|pluralize:"s" }}
+    </p>
 </div>
 
 <div class="card">
-    <h3>Atenciones registradas</h3>
+    <h3 style="margin:0 0 16px;">Atenciones registradas</h3>
 
     {% if atenciones %}
-        <div class="grid">
-            {% for atencion in atenciones %}
-                <div class="menu-card">
-                    <h3 class="text-accent">Atención #{{ atencion.id }}</h3>
-                    <p><strong>Fecha:</strong> {{ atencion.fecha }}</p>
-                    <p><strong>Hora inicio:</strong> {{ atencion.hora_inicio }}</p>
-                    <p><strong>Hora fin:</strong> {{ atencion.hora_fin|default:"Sin registrar" }}</p>
-                    <p><strong>Estado:</strong> {{ atencion.get_estado_display }}</p>
-                    <p><strong>Observaciones:</strong> {{ atencion.observaciones|default:"Sin observaciones" }}</p>
-
-                    <hr class="divider">
-
-                    <p><strong>Registrado por:</strong>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Estado</th>
+                    <th>Servicios</th>
+                    <th>Satisfacción</th>
+                    <th>Registrado por</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for atencion in atenciones %}
+                <tr>
+                    <td class="muted" style="font-size:12px;">{{ atencion.pk }}</td>
+                    <td>{{ atencion.fecha|date:"d/m/Y" }}</td>
+                    <td style="white-space:nowrap;">
+                        {{ atencion.hora_inicio|default:"—" }}
+                        {% if atencion.hora_fin %}→ {{ atencion.hora_fin }}{% endif %}
+                    </td>
+                    <td>
+                        {% if atencion.estado == 'P' %}
+                            <span class="badge badge--warning">Pendiente</span>
+                        {% elif atencion.estado == 'F' %}
+                            <span class="badge badge--success">Finalizada</span>
+                        {% elif atencion.estado == 'C' %}
+                            <span class="badge badge--danger">Cancelada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if atencion.servicios_rel %}
+                            <ul style="margin:0; padding-left:16px; font-size:13px;">
+                                {% for svc in atencion.servicios_rel %}
+                                <li>{{ svc.nombre }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for sat in atencion.satisfacciones_rel %}
+                            {% for i in "12345" %}
+                                <span style="color:{% if forloop.counter <= sat.calificacion %}#f59e0b{% else %}#d1d5db{% endif %}; font-size:14px;">★</span>
+                            {% endfor %}
+                        {% empty %}
+                            <span class="muted">—</span>
+                        {% endfor %}
+                    </td>
+                    <td>
                         {% if atencion.operador %}
                             {{ atencion.operador.get_full_name|default:atencion.operador.username }}
                         {% else %}
-                            Sin asignar
+                            <span class="muted">—</span>
                         {% endif %}
-                    </p>
-
-                    <p><strong>Servicios Brindados:</strong></p>
-                    {% if atencion.servicios_rel %}
-                        <ul style="margin-top: 5px; color: var(--text-muted);">
-                            {% for servicio in atencion.servicios_rel %}
-                                <li>{{ servicio.nombre }} ({{ servicio.tipo }})</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="muted" style="margin-top: 5px;">No tiene servicios asociados.</p>
-                    {% endif %}
-
-                    <p><strong>Satisfacción:</strong></p>
-                    {% if atencion.satisfacciones_rel %}
-                        <ul style="margin-top: 5px; color: var(--text-muted);">
-                            {% for sat in atencion.satisfacciones_rel %}
-                                <li>Calificación {{ sat.calificacion }}/5 — {{ sat.comentario|default:"Sin comentario" }} ({{ sat.fecha|date:"d/m/Y H:i" }})</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="muted" style="margin-top: 5px;">Sin registro de satisfacción para esta atención.</p>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
+                    </td>
+                    <td>
+                        <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}"
+                           class="btn btn--sm btn-secondary">Ver →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
+    <div class="callout" style="text-align:center; padding:24px;">
         <p class="muted">Este ciudadano no tiene atenciones registradas aún.</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

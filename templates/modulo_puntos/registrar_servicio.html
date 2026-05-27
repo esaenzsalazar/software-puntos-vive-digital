@@ -7,7 +7,13 @@
     <div class="page-hero">
         <span class="eyebrow">Servicios</span>
         <h2 class="page-title">Registrar servicio</h2>
+        {% if atencion %}
+        <p class="muted">Registrando servicio para <strong>Atención #{{ atencion.pk }}</strong>
+            {% if atencion.ciudadano %} — {{ atencion.ciudadano.get_nombre_completo }}{% endif %}.
+        </p>
+        {% else %}
         <p class="muted">Vincula el tipo de servicio prestado a una atención.</p>
+        {% endif %}
     </div>
 
     {% if form.errors %}
@@ -18,18 +24,33 @@
         {% csrf_token %}
         <div class="grid form-grid-2">
             {% for field in form %}
-                <div {% if field.name == 'atencion' or field.name == 'descripcion' or field.name == 'nombre' %}class="span-full"{% endif %}>
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
-                    </label>
-                    {{ field }}
-                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
-                </div>
+            {% if field.name == 'recurso' %}
+            {# El campo recurso se renderiza manualmente para controlar visibilidad #}
+            <div id="fila-recurso" style="display:none;">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                </label>
+                {{ field }}
+                {% if field.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:-15px;margin-bottom:10px;">{{ field.errors.0 }}</span>{% endif %}
+            </div>
+            {% else %}
+            <div {% if field.name == 'atencion' or field.name == 'descripcion' or field.name == 'nombre' %}class="span-full"{% endif %}>
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:-15px;margin-bottom:10px;">{{ field.errors.0 }}</span>{% endif %}
+            </div>
+            {% endif %}
             {% endfor %}
         </div>
 
         <div class="actions" style="justify-content: flex-end; margin-top: 25px;">
+            {% if atencion %}
+            <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}" class="btn btn-secondary">← Volver</a>
+            {% else %}
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+            {% endif %}
             <button type="submit" class="btn">Guardar Servicio</button>
         </div>
     </form>
@@ -38,21 +59,26 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form[method="POST"]');
-    const nombreInput = document.getElementById('id_nombre');
-    const tipoSelect = document.getElementById('id_tipo');
-    const descrInput = document.getElementById('id_descripcion');
+    const requiereSelect = document.getElementById('id_requiere_equipo');
+    const filaRecurso    = document.getElementById('fila-recurso');
+    const recursoSelect  = document.getElementById('id_recurso');
 
-    function wrap(input) {
-        if (!input) return;
-        if (!input.closest('.form-group')) {
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            input.parentNode.insertBefore(div, input);
-            div.appendChild(input);
-        }
+    function toggleRecurso() {
+        const mostrar = requiereSelect && requiereSelect.value === 'S';
+        if (filaRecurso) filaRecurso.style.display = mostrar ? '' : 'none';
+        if (recursoSelect) recursoSelect.required = mostrar;
     }
-    [nombreInput, tipoSelect, descrInput].forEach(wrap);
+
+    if (requiereSelect) {
+        requiereSelect.addEventListener('change', toggleRecurso);
+        toggleRecurso(); // estado inicial
+    }
+
+    // Validaciones existentes
+    const form       = document.querySelector('form[method="POST"]');
+    const nombreInput = document.getElementById('id_nombre');
+    const tipoSelect  = document.getElementById('id_tipo');
+    const descrInput  = document.getElementById('id_descripcion');
 
     if (nombreInput) {
         nombreInput.addEventListener('blur', function () {
@@ -78,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', function (e) {
             let ok = true;
             if (nombreInput && !ValidacionPVD.validarYMostrar(nombreInput, ValidacionPVD.validarRequerido, 'Nombre del servicio').valido) ok = false;
-            if (tipoSelect && !ValidacionPVD.validarYMostrar(tipoSelect, ValidacionPVD.validarRequerido, 'Tipo de servicio').valido) ok = false;
+            if (tipoSelect  && !ValidacionPVD.validarYMostrar(tipoSelect,  ValidacionPVD.validarRequerido, 'Tipo de servicio').valido) ok = false;
             if (!ok) e.preventDefault();
         });
     }

@@ -55,8 +55,8 @@
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
                         <span class="sidebar-link__label">Panel de control</span>
                     </a>
-                    {# Seleccionar / Cambiar PVD — para superuser y admin TIC #}
-                    {% if nav_tic %}
+                    {# Seleccionar / Cambiar PVD — para todos los roles con acceso a PVD #}
+                    {% if nav_pvd %}
                     <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="sidebar-link {% if current == 'seleccionar_pvd_view' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
                         <span class="sidebar-link__label">{% if request.session.pvd_nombre %}Cambiar PVD{% else %}Seleccionar PVD{% endif %}</span>
@@ -81,13 +81,17 @@
                     </a>
                     {% endif %}
                     {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'atenciones' in modulos_pvd_activo %}
-                    <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="sidebar-link {% if current == 'registrar_atencion' %}is-active{% endif %}">
+                    <a href="{% url 'modulo_puntos:lista_atenciones' %}" class="sidebar-link {% if current == 'lista_atenciones' or current == 'detalle_atencion' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
                         <span class="sidebar-link__label">Atenciones</span>
                     </a>
+                    <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="sidebar-link {% if current == 'registrar_atencion' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+                        <span class="sidebar-link__label">Nueva atención</span>
+                    </a>
                     {% endif %}
                     {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'servicios' in modulos_pvd_activo %}
-                    <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="sidebar-link {% if current == 'registrar_servicio' %}is-active{% endif %}">
+                    <a href="{% url 'modulo_puntos:gestionar_servicios_pvd' %}" class="sidebar-link {% if current == 'gestionar_servicios_pvd' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
                         <span class="sidebar-link__label">Servicios</span>
                     </a>
@@ -167,7 +171,7 @@
                         <span class="sidebar-link__label">Reportes</span>
                     </a>
                     {% endif %}
-                    {% if nav_super %}
+                    {% if nav_tic %}
                     <a href="{% url 'modulo_puntos:lista_pvd' %}" class="sidebar-link {% if current == 'lista_pvd' or current == 'editar_pvd' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
                         <span class="sidebar-link__label">Puntos PVD</span>
@@ -198,10 +202,12 @@
                         <span class="sidebar-link__label">Accesos temporales</span>
                     </a>
                     {% endif %}
+                    {% if nav_tic %}
                     <a href="{% url 'modulo_puntos:ayuda' %}" class="sidebar-link {% if current == 'ayuda' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
                         <span class="sidebar-link__label">Ayuda</span>
                     </a>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

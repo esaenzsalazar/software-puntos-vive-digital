@@ -65,10 +65,12 @@
                 </div>
             </div>
 
-            {# ── ATENCIÓN CIUDADANA ── #}
+            {# ── ATENCIÓN CIUDADANA ── capacidades: atencion_ciudadana, ciudadanos, atenciones, servicios, satisfaccion #}
+            {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'ciudadanos' in modulos_pvd_activo or 'atenciones' in modulos_pvd_activo or 'servicios' in modulos_pvd_activo or 'satisfaccion' in modulos_pvd_activo %}
             <div class="sidebar-group">
                 <div class="sidebar-group__label">Atención</div>
                 <div class="sidebar-group__items">
+                    {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'ciudadanos' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="sidebar-link {% if current == 'consultar_ciudadanos' or current == 'editar_ciudadano' or current == 'historial_ciudadano' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
                         <span class="sidebar-link__label">Ciudadanos</span>
@@ -77,49 +79,70 @@
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>
                         <span class="sidebar-link__label">Registrar ciudadano</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'atenciones' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:registrar_atencion' %}" class="sidebar-link {% if current == 'registrar_atencion' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
                         <span class="sidebar-link__label">Atenciones</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'servicios' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:registrar_servicio' %}" class="sidebar-link {% if current == 'registrar_servicio' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
                         <span class="sidebar-link__label">Servicios</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'atencion_ciudadana' in modulos_pvd_activo or 'satisfaccion' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:registrar_satisfaccion' %}" class="sidebar-link {% if current == 'registrar_satisfaccion' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/></svg></span>
                         <span class="sidebar-link__label">Satisfacción</span>
                     </a>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
 
-            {# ── RECURSOS Y SALAS + MANTENIMIENTO ── #}
+            {# ── RECURSOS Y SALAS + MANTENIMIENTO ── capacidades: recursos_salas, recursos, prestamos, salas, habilitaciones, mantenimiento #}
+            {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'recursos' in modulos_pvd_activo or 'prestamos' in modulos_pvd_activo or 'salas' in modulos_pvd_activo or 'habilitaciones' in modulos_pvd_activo or 'mantenimiento' in modulos_pvd_activo %}
             <div class="sidebar-group">
                 <div class="sidebar-group__label">Recursos y salas</div>
                 <div class="sidebar-group__items">
+                    {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'recursos' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="sidebar-link {% if current == 'registrar_recurso' or current == 'crear_recurso' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
                         <span class="sidebar-link__label">Recursos</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'prestamos' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:registrar_prestamo' %}" class="sidebar-link {% if current == 'registrar_prestamo' or current == 'editar_prestamo' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span>
                         <span class="sidebar-link__label">Préstamos</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'salas' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:lista_salas' %}" class="sidebar-link {% if current == 'lista_salas' or current == 'crear_sala' or current == 'editar_sala' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
                         <span class="sidebar-link__label">Salas</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'recursos_salas' in modulos_pvd_activo or 'habilitaciones' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:lista_habilitaciones' %}" class="sidebar-link {% if current == 'lista_habilitaciones' or current == 'crear_habilitacion' or current == 'editar_habilitacion' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
                         <span class="sidebar-link__label">Habilitaciones</span>
                     </a>
+                    {% endif %}
+                    {% if not restringir_modulos or 'mantenimiento' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:lista_mantenimientos' %}" class="sidebar-link {% if current == 'lista_mantenimientos' or current == 'crear_mantenimiento' or current == 'editar_mantenimiento' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                         <span class="sidebar-link__label">Mantenimientos</span>
                     </a>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
 
-            {# ── CURSOS Y TALLERES ── #}
+            {# ── CURSOS Y TALLERES ── capacidades: cursos_talleres, cursos #}
+            {% if not restringir_modulos or 'cursos_talleres' in modulos_pvd_activo or 'cursos' in modulos_pvd_activo %}
             <div class="sidebar-group">
                 <div class="sidebar-group__label">Operación</div>
                 <div class="sidebar-group__items">
@@ -129,17 +152,23 @@
                     </a>
                 </div>
             </div>
+            {% endif %}
 
-            {# ── GESTIÓN: Reportes + ítems admin #}
+
+
+            {# ── GESTIÓN: Reportes (módulo: reportes) + ítems admin (sin restricción de módulo) #}
+            {% if not restringir_modulos or 'reportes' in modulos_pvd_activo or nav_super or nav_tic %}
             <div class="sidebar-group">
                 <div class="sidebar-group__label">Gestión</div>
                 <div class="sidebar-group__items">
+                    {% if not restringir_modulos or 'reportes' in modulos_pvd_activo %}
                     <a href="{% url 'modulo_puntos:reportes' %}" class="sidebar-link {% if current == 'reportes' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
                         <span class="sidebar-link__label">Reportes</span>
                     </a>
+                    {% endif %}
                     {% if nav_super %}
-                    <a href="{% url 'modulo_puntos:lista_pvd' %}" class="sidebar-link {% if current == 'lista_pvd' or current == 'crear_pvd' or current == 'editar_pvd' %}is-active{% endif %}">
+                    <a href="{% url 'modulo_puntos:lista_pvd' %}" class="sidebar-link {% if current == 'lista_pvd' or current == 'editar_pvd' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
                         <span class="sidebar-link__label">Puntos PVD</span>
                     </a>
@@ -175,6 +204,7 @@
                     </a>
                 </div>
             </div>
+            {% endif %}
 
             {% endwith %}
         </nav>

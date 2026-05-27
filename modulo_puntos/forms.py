@@ -34,12 +34,14 @@ BARRIO_CHOICES = [
 ]
 
 ETNIA_CHOICES = [
+    ('', '— Seleccione —'),
     ('Ninguna', 'Ninguna (Mestizo / Blanco)'), ('Indígena', 'Indígena'),
     ('Afrocolombiano', 'Afrocolombiano / Afrodescendiente'), ('Raizal', 'Raizal del Archipiélago'),
     ('Palenquero', 'Palenquero'), ('Rrom', 'Rrom (Gitano)'), ('Otra', 'Extranjero / Otra'),
 ]
 
 EDUCACION_CHOICES = [
+    ('', '— Seleccione —'),
     ('Ninguno', 'Ninguno'), ('Preescolar', 'Preescolar'), ('Primaria', 'Básica Primaria'),
     ('Secundaria', 'Básica Secundaria'), ('Media', 'Media (Bachiller)'), ('Técnico', 'Técnico'),
     ('Tecnólogo', 'Tecnólogo'), ('Universitario', 'Universitario / Profesional'),
@@ -47,6 +49,7 @@ EDUCACION_CHOICES = [
 ]
 
 OCUPACION_CHOICES = [
+    ('', '— Seleccione —'),
     ('Estudiante', 'Estudiante'), ('Empleado', 'Empleado (Contrato)'),
     ('Independiente', 'Trabajador Independiente'), ('Desempleado', 'Desempleado / Buscando trabajo'),
     ('Hogar', 'Labores del Hogar'), ('Pensionado', 'Pensionado'), ('Otro', 'Otro'),
@@ -90,7 +93,7 @@ class CiudadanoForm(forms.ModelForm):
     Incluye validaciones para documento, email y teléfono.
     """
     correo = forms.EmailField(
-        label='Correo Electrónico',
+        label='Correo Electrónico (Opcional)',
         required=False,
         widget=forms.EmailInput(attrs={
             'class': 'form-control',
@@ -112,11 +115,13 @@ class CiudadanoForm(forms.ModelForm):
         labels = {
             'tipo_documento': 'Tipo de Documento',
             'numero_documento': 'Número de Documento',
-            'primer_nombre': 'Primer Nombre *',
+            'primer_nombre': 'Primer Nombre',
             'segundo_nombre': 'Segundo Nombre (Opcional)',
-            'primer_apellido': 'Primer Apellido *',
-            'segundo_apellido': 'Segundo Apellido *',
+            'primer_apellido': 'Primer Apellido',
+            'segundo_apellido': 'Segundo Apellido',
             'fecha_nacimiento': 'Fecha de Nacimiento',
+            'correo': 'Correo Electrónico (Opcional)',
+            'telefono': 'Teléfono o Celular (Opcional)',
             'genero': 'Género',
             'direccion': 'Dirección de Residencia',
             'barrio': 'Barrio (Cabecera Municipal)',
@@ -128,18 +133,20 @@ class CiudadanoForm(forms.ModelForm):
             'tiene_discapacidad': '¿Tiene alguna discapacidad?',
             'descripcion_discapacidad': '¿Cuál discapacidad? (Descríbala)',
             'estado': 'Estado en el Sistema',
-            'telefono': 'Teléfono o Celular',
         }
         widgets = {
             'tipo_documento': forms.Select(
                 choices=[
-                    ('CC', 'Cédula de Ciudadanía'),
-                    ('TI', 'Tarjeta de Identidad'),
-                    ('CE', 'Cédula de Extranjería'),
-                    ('RC', 'Registro Civil'),
-                    ('PA', 'Pasaporte'),
-                    ('PEP', 'Permiso Especial de Permanencia'),
-                    ('PPT', 'Permiso por Protección Temporal')
+                    ('', '— Seleccione tipo de documento —'),
+                    ('CC', 'Cédula de Ciudadanía (CC)'),
+                    ('TI', 'Tarjeta de Identidad (TI)'),
+                    ('RC', 'Registro Civil de Nacimiento (RC)'),
+                    ('CE', 'Cédula de Extranjería (CE)'),
+                    ('PA', 'Pasaporte (PA)'),
+                    ('PEP', 'Permiso Especial de Permanencia (PEP)'),
+                    ('PPT', 'Permiso por Protección Temporal (PPT)'),
+                    ('NUIP', 'Número Único de Identificación Personal (NUIP)'),
+                    ('NES', 'Sin documento (Menor / Excepción)'),
                 ],
                 attrs={'class': 'form-control'}
             ),
@@ -176,7 +183,10 @@ class CiudadanoForm(forms.ModelForm):
                 }
             ),
             'genero': forms.Select(
-                choices=[('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')],
+                choices=[
+                    ('', '— Seleccione —'),
+                    ('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro / No binario'),
+                ],
                 attrs={'class': 'form-control'}
             ),
             'direccion': forms.HiddenInput(attrs={'id': 'id_direccion'}),
@@ -186,7 +196,7 @@ class CiudadanoForm(forms.ModelForm):
             'nivel_educativo': forms.Select(choices=EDUCACION_CHOICES, attrs={'class': 'form-control'}),
             'ocupacion': forms.Select(choices=OCUPACION_CHOICES, attrs={'class': 'form-control'}),
             'estrato': forms.NumberInput(
-                attrs={'class': 'form-control', 'min': '1', 'max': '3'}
+                attrs={'class': 'form-control', 'min': '1', 'max': '6', 'placeholder': 'Ej: 1, 2, 3...'}
             ),
             'estado': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo')],
@@ -206,13 +216,21 @@ class CiudadanoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['estrato'].initial = 1
         self.fields['estado'].initial = 'A'
-        self.fields['tiene_discapacidad'].required = False
-        self.fields['primer_nombre'].required = True
+        self.fields['estrato'].initial = 1
+
+        # Obligatorios explícitos (modelos tienen null/blank=True por compatibilidad)
+        for f in ('tipo_documento', 'numero_documento', 'primer_nombre',
+                  'primer_apellido', 'segundo_apellido', 'fecha_nacimiento',
+                  'genero', 'barrio', 'etnia', 'nivel_educativo', 'ocupacion', 'estrato'):
+            self.fields[f].required = True
+
+        # Opcionales
         self.fields['segundo_nombre'].required = False
-        self.fields['primer_apellido'].required = True
-        self.fields['segundo_apellido'].required = True
+        self.fields['correo'].required = False
+        self.fields['telefono'].required = False
+        self.fields['tiene_discapacidad'].required = False
+        self.fields['descripcion_discapacidad'].required = False
 
     def clean_numero_documento(self):
         """Valida que el número de documento no esté duplicado."""
@@ -247,6 +265,12 @@ class CiudadanoForm(forms.ModelForm):
                 raise ValidationError('El teléfono debe tener exactamente 10 dígitos.')
         return tlfno
 
+    def clean_estrato(self):
+        estrato = self.cleaned_data.get('estrato')
+        if estrato is not None and (estrato < 1 or estrato > 6):
+            raise ValidationError('El estrato debe estar entre 1 y 6.')
+        return estrato
+
 
 class AtencionForm(forms.ModelForm):
     """
@@ -254,34 +278,18 @@ class AtencionForm(forms.ModelForm):
     """
     class Meta:
         model = Atencion
-        fields = [
-            'ciudadano', 'prestamo',
-            'fecha', 'hora_inicio', 'hora_fin',
-            'estado', 'observaciones'
-        ]
+        fields = ['ciudadano', 'fecha', 'estado', 'observaciones']
         labels = {
             'ciudadano': 'Ciudadano Atendido',
-            'prestamo': 'Préstamo Vinculado (Opcional)',
             'fecha': 'Fecha de Atención',
-            'hora_inicio': 'Hora de Inicio',
-            'hora_fin': 'Hora de Finalización',
             'estado': 'Estado de la Atención',
             'observaciones': 'Observaciones / Notas',
         }
         widgets = {
             'ciudadano': forms.Select(attrs={'class': 'form-control'}),
-            'prestamo': forms.Select(attrs={'class': 'form-control'}),
             'fecha': forms.DateInput(
                 format='%Y-%m-%d',
                 attrs={'class': 'form-control', 'type': 'date'}
-            ),
-            'hora_inicio': forms.TimeInput(
-                format='%H:%M',
-                attrs={'class': 'form-control', 'type': 'time'}
-            ),
-            'hora_fin': forms.TimeInput(
-                format='%H:%M',
-                attrs={'class': 'form-control', 'type': 'time'}
             ),
             'estado': forms.Select(
                 choices=[('P', 'Pendiente'), ('F', 'Finalizada'), ('C', 'Cancelada')],
@@ -290,7 +298,7 @@ class AtencionForm(forms.ModelForm):
             'observaciones': forms.Textarea(
                 attrs={
                     'class': 'form-control',
-                    'rows': 3,
+                    'rows': 4,
                     'placeholder': 'Describe brevemente la atención realizada...'
                 }
             ),
@@ -298,23 +306,12 @@ class AtencionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['ciudadano'].required = False
-        self.fields['prestamo'].required = False
+        self.fields['ciudadano'].required = True
         self.fields['ciudadano'].empty_label = '--- Seleccione un ciudadano ---'
-        self.fields['prestamo'].empty_label = '--- Sin préstamo vinculado ---'
-        self.fields['hora_fin'].required = False
+        self.fields['fecha'].required = True
+        self.fields['estado'].required = True
         self.fields['estado'].initial = 'P'
-
-    def clean(self):
-        """Validar que la hora final no sea menor que la hora inicial."""
-        cleaned_data = super().clean()
-        hr_ini = cleaned_data.get('hora_inicio')
-        hr_fin = cleaned_data.get('hora_fin')
-
-        if hr_ini and hr_fin and hr_fin < hr_ini:
-            self.add_error('hora_fin', 'La hora final no puede ser menor que la hora inicial.')
-
-        return cleaned_data
+        self.fields['observaciones'].required = True
 
 
 class SatisfaccionForm(forms.ModelForm):
@@ -408,6 +405,7 @@ class ServicioForm(forms.ModelForm):
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
         self.fields['requiere_equipo'].initial = 'N'
         self.fields['estado'].initial = 'A'
+
 
 
 class PrestamoRecursoForm(forms.ModelForm):

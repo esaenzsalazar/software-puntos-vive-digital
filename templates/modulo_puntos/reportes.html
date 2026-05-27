@@ -47,18 +47,6 @@
                 <a href="{% url 'modulo_puntos:exportar_satisfaccion_csv' %}" class="btn btn-success btn--sm">Satisfacción</a>
                 <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn-success btn--sm">Préstamos</a>
             </div>
-            {% if servicios_custom_rpt %}
-            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
-                <p class="muted" style="margin:0 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">✨ Nuevos servicios</p>
-                <div class="export-panel__grid">
-                    {% for svc in servicios_custom_rpt %}
-                    <a href="{% url 'modulo_puntos:exportar_servicio_custom' svc_id=svc.pk %}" class="btn btn-success btn--sm" style="border-left:3px solid #8b5cf6;">
-                        {{ svc.icono }} {{ svc.nombre }}{% if not pvd_activo %} <span style="font-size:10px;opacity:.7;">· {{ svc.punto_vive_digital.nombre }}</span>{% endif %}
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
         </div>
     </details>
 </div>

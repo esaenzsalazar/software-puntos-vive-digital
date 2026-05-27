@@ -6,27 +6,19 @@
 <div class="card">
     <div class="page-hero">
         <span class="eyebrow">Administración</span>
-        <h1 class="page-title">Gestión de Puntos Vive Digital</h1>
-        <p class="muted">Administra todos los PVDs del municipio</p>
-        <div class="page-hero__actions" style="margin-top: 16px;">
-            <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn btn-primary">
-                <span style="margin-right: 6px;">➕</span> Nuevo PVD
-            </a>
-        </div>
+        <h1 class="page-title">Puntos Vive Digital</h1>
+        <p class="muted">Administra los PVDs del municipio. Para agregar uno nuevo contáctate con el administrador del sistema.</p>
     </div>
 
     {% if pvds %}
     <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Nombre</th>
                     <th>Dirección</th>
                     <th>Barrio</th>
                     <th>Estado</th>
-                    <th class="text-center">Atenciones</th>
-                    <th class="text-center">Ciudadanos</th>
-                    <th class="text-center">Recursos</th>
                     <th class="text-center">Acciones</th>
                 </tr>
             </thead>
@@ -34,34 +26,34 @@
                 {% for pvd in pvds %}
                 <tr>
                     <td><strong>{{ pvd.nombre }}</strong></td>
-                    <td>{{ pvd.direccion }}</td>
-                    <td>{{ pvd.barrio }}</td>
+                    <td>{{ pvd.direccion|default:"—" }}</td>
+                    <td>{{ pvd.barrio|default:"—" }}</td>
                     <td>
                         {% if pvd.estado == 'A' %}
-                            <span class="badge badge--success">Activo</span>
+                            <span class="badge badge-success">Activo</span>
                         {% elif pvd.estado == 'M' %}
-                            <span class="badge badge--warning">Mantenimiento</span>
+                            <span class="badge badge-warning">Mantenimiento</span>
                         {% else %}
-                            <span class="badge badge--danger">Inactivo</span>
+                            <span class="badge badge-danger">Inactivo</span>
                         {% endif %}
                     </td>
-                    <td class="text-center">{{ pvd.total_atenciones }}</td>
-                    <td class="text-center">{{ pvd.total_ciudadanos }}</td>
-                    <td class="text-center">{{ pvd.total_recursos }}</td>
                     <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'modulo_puntos:editar_pvd' pvd.id %}" class="btn btn--sm" title="Editar datos del PVD">✏️</a>
-                            <a href="{% url 'modulo_puntos:gestionar_servicios_pvd' pvd.id %}" class="btn btn--sm" title="Gestionar servicios">⚙️ Servicios</a>
-                            <a href="{% url 'modulo_puntos:activar_pvd' pvd.id %}" class="btn btn--sm"
+                        <div style="display:flex;gap:6px;justify-content:center;">
+                            <a href="{% url 'modulo_puntos:editar_pvd' pvd.pk %}"
+                               class="btn btn--sm" title="Editar datos del PVD">✏️ Editar</a>
+                            <a href="{% url 'modulo_puntos:activar_pvd' pvd.pk %}"
+                               class="btn btn--sm btn-secondary"
                                title="{% if pvd.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
-                                {% if pvd.estado == 'A' %}⏸️{% else %}▶️{% endif %}
+                                {% if pvd.estado == 'A' %}⏸️ Desactivar{% else %}▶️ Activar{% endif %}
                             </a>
                             {% if puede_eliminar_pvd %}
-                            <button type="button" class="btn btn--sm btn--danger" title="Eliminar PVD"
-                                    data-url="{% url 'modulo_puntos:eliminar_pvd' pvd.id %}"
+                            <button type="button" class="btn btn--sm"
+                                    style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;"
+                                    title="Eliminar PVD"
+                                    data-url="{% url 'modulo_puntos:eliminar_pvd' pvd.pk %}"
                                     data-nombre="{{ pvd.nombre|escapejs }}"
                                     onclick="confirmarEliminarPVD(this)">
-                                🗑️
+                                🗑️ Eliminar
                             </button>
                             {% endif %}
                         </div>
@@ -72,31 +64,26 @@
         </table>
     </div>
     {% else %}
-    <div class="card card--hint" style="text-align: center; padding: 40px;">
-        <p style="font-size: 48px; margin: 0 0 16px 0;">🏢</p>
-        <h3 style="margin: 0 0 8px 0;">No hay Puntos Vive Digital registrados</h3>
-        <p class="muted">Comienza creando tu primer Punto Vive Digital.</p>
-        <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn" style="margin-top: 16px;">Crear primer PVD</a>
+    <div style="text-align:center;padding:40px;">
+        <p style="font-size:48px;margin:0 0 16px 0;">🏢</p>
+        <h3 style="margin:0 0 8px 0;">No hay Puntos Vive Digital registrados</h3>
+        <p class="muted">Contacta al administrador del sistema para registrar el primer PVD.</p>
     </div>
     {% endif %}
 </div>
 
-<!-- Modal de confirmación de eliminación PVD -->
-<div id="modal-eliminar-pvd" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:12px; padding:32px; max-width:460px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-        <h3 style="margin:0 0 8px 0; color:#991b1b;">⚠️ Eliminar PVD</h3>
-        <p style="margin:0 0 8px 0; color:#374151;">
-            ¿Estás seguro de que deseas eliminar el Punto Vive Digital <strong id="modal-pvd-nombre"></strong>?
-        </p>
-        <p style="margin:0 0 20px 0; color:#991b1b; font-size:14px;">
-            Esta acción eliminará también todas las salas y datos asociados. <strong>No se puede deshacer.</strong>
+<div id="modal-eliminar-pvd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;padding:32px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <h3 style="margin:0 0 8px 0;color:#991b1b;">⚠️ Eliminar PVD</h3>
+        <p style="margin:0 0 20px 0;color:#374151;">
+            ¿Eliminar <strong id="modal-pvd-nombre"></strong>? Esta acción eliminará todos los datos asociados y <strong>no se puede deshacer</strong>.
         </p>
         <form id="form-eliminar-pvd" method="POST">
             {% csrf_token %}
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
                 <button type="button" onclick="cerrarModalPVD()" class="btn btn-secondary">Cancelar</button>
-                <button type="submit" class="btn btn-primary" style="background:#dc2626; border-color:#dc2626;">
-                    Sí, eliminar PVD
+                <button type="submit" class="btn" style="background:#dc2626;border-color:#dc2626;color:#fff;">
+                    Sí, eliminar
                 </button>
             </div>
         </form>
@@ -109,14 +96,11 @@
 function confirmarEliminarPVD(btn) {
     document.getElementById('modal-pvd-nombre').textContent = btn.dataset.nombre;
     document.getElementById('form-eliminar-pvd').action = btn.dataset.url;
-    const modal = document.getElementById('modal-eliminar-pvd');
-    modal.style.display = 'flex';
+    document.getElementById('modal-eliminar-pvd').style.display = 'flex';
 }
-
 function cerrarModalPVD() {
     document.getElementById('modal-eliminar-pvd').style.display = 'none';
 }
-
 document.getElementById('modal-eliminar-pvd').addEventListener('click', function(e) {
     if (e.target === this) cerrarModalPVD();
 });

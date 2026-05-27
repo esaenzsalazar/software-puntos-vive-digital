@@ -18,10 +18,7 @@ _BREADCRUMB_MAP = {
     'historial_ciudadano':   ('Historial',             'Ciudadanos',            'consultar_ciudadanos'),
     'ciudadanos_pendientes': ('Pendientes',            'Ciudadanos',            'consultar_ciudadanos'),
     # Atenciones
-    'lista_atenciones':      ('Atenciones',            'Panel',                 'panel_control'),
-    'registrar_atencion':    ('Nueva Atención',        'Atenciones',            'lista_atenciones'),
-    'detalle_atencion':      ('Detalle Atención',      'Atenciones',            'lista_atenciones'),
-    'formulario_servicio':   ('Formulario de Servicio','Detalle Atención',      'lista_atenciones'),
+    'registrar_atencion':    ('Nueva Atención',        'Panel',                 'panel_control'),
     'registrar_servicio':    ('Registrar Servicio',    'Panel',                 'panel_control'),
     'registrar_satisfaccion':('Satisfacción',          'Panel',                 'panel_control'),
     # Recursos
@@ -33,9 +30,7 @@ _BREADCRUMB_MAP = {
     'reportes':              ('Reportes',              'Panel',                 'panel_control'),
     # PVDs
     'lista_pvd':             ('Puntos Vive Digital',   'Panel',                 'panel_control'),
-    'crear_pvd':             ('Nuevo PVD',             'Puntos Vive Digital',   'lista_pvd'),
     'editar_pvd':            ('Editar PVD',            'Puntos Vive Digital',   'lista_pvd'),
-    'gestionar_servicios_pvd': ('Servicios del PVD',  'Puntos Vive Digital',   'lista_pvd'),
     # Salas
     'lista_salas':           ('Salas',                 'Panel',                 'panel_control'),
     'crear_sala':            ('Nueva Sala',            'Salas',                 'lista_salas'),
@@ -68,28 +63,32 @@ _BREADCRUMB_MAP = {
     'accesos_temporales':    ('Accesos Temporales',    'Panel',                 'panel_control'),
 }
 
-# (label, url_name_or_sentinel, css_extra)
-# '__back__' = use bc_parent_url resolved at runtime
-# '' = base .btn (blue primary), 'btn-secondary' = light secondary
+_TOPBAR_MODULO_REQUERIDO = {
+    'registrar_atencion':  {'atencion_ciudadana', 'atenciones', 'ciudadanos'},
+    'registrar_ciudadano': {'atencion_ciudadana', 'ciudadanos'},
+    'crear_recurso':       {'recursos_salas', 'recursos'},
+    'registrar_prestamo':  {'recursos_salas', 'prestamos'},
+    'reportes':            {'reportes'},
+    'crear_sala':          {'recursos_salas', 'salas'},
+    'crear_habilitacion':  {'recursos_salas', 'habilitaciones'},
+    'crear_curso':         {'cursos_talleres', 'cursos'},
+    'crear_mantenimiento': {'mantenimiento'},
+}
+
 _TOPBAR_ACTIONS = {
     'panel_control':         [('↓ Exportar', 'reportes', 'btn-secondary'), ('+ Nueva atención', 'registrar_atencion', '')],
-    'lista_atenciones':      [('+ Nueva atención', 'registrar_atencion', '')],
     'consultar_ciudadanos':  [('+ Registrar ciudadano', 'registrar_ciudadano', '')],
     'registrar_ciudadano':   [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_ciudadano':      [('← Cancelar', '__back__', 'btn-secondary')],
     'historial_ciudadano':   [('← Volver', '__back__', 'btn-secondary')],
     'registrar_atencion':    [('← Cancelar', '__back__', 'btn-secondary')],
-    'detalle_atencion':      [('← Volver', '__back__', 'btn-secondary')],
-    'formulario_servicio':   [('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_servicio':    [('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_satisfaccion':[('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_recurso':     [('+ Préstamo', 'registrar_prestamo', 'btn-secondary'), ('+ Nuevo recurso', 'crear_recurso', '')],
     'crear_recurso':         [('← Cancelar', '__back__', 'btn-secondary')],
     'registrar_prestamo':    [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_prestamo':       [('← Cancelar', '__back__', 'btn-secondary')],
-    'lista_pvd':             [('+ Nuevo PVD', 'crear_pvd', '')],
-    'gestionar_servicios_pvd': [('← Volver', '__back__', 'btn-secondary')],
-    'crear_pvd':             [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_pvd':             [],
     'editar_pvd':            [('← Cancelar', '__back__', 'btn-secondary')],
     'lista_salas':           [('+ Nueva sala', 'crear_sala', '')],
     'crear_sala':            [('← Cancelar', '__back__', 'btn-secondary')],
@@ -146,13 +145,14 @@ def pvd_navigation(request):
         'bc_parent_label': bc_parent_label,
         'bc_parent_url': bc_parent_url,
         'topbar_actions': [],
+        'restringir_modulos': False,
+        'modulos_pvd_activo': set(),
     }
 
     u = request.user
     if not u.is_authenticated:
         return ctx
 
-    # Determinar permisos de navegación
     ctx['nav_super'] = u.is_superuser
     ctx['nav_tic'] = u.is_superuser or u.groups.filter(name='Administrador TIC').exists()
 
@@ -175,7 +175,6 @@ def pvd_navigation(request):
         except PuntoViveDigital.DoesNotExist:
             request.session.pop('pvd_activo_id', None)
 
-    # Sustituir "Panel" en breadcrumb por el nombre del PVD activo
     if ctx['pvd_activo'] and bc_parent_label == 'Panel':
         ctx['bc_parent_label'] = ctx['pvd_activo'].nombre
 
@@ -183,9 +182,9 @@ def pvd_navigation(request):
         PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
     )
 
-    # Resolver acciones del topbar para la página actual
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])
     resolved = []
+    modulos_activos = ctx.get('modulos_pvd_activo', set())
     for label, target, css in raw_actions:
         if target == '__back__':
             action_url = bc_parent_url
@@ -195,6 +194,9 @@ def pvd_navigation(request):
             except NoReverseMatch:
                 action_url = None
         if action_url:
+            if ctx.get('restringir_modulos') and target in _TOPBAR_MODULO_REQUERIDO:
+                if not _TOPBAR_MODULO_REQUERIDO[target].intersection(modulos_activos):
+                    continue
             resolved.append({'label': label, 'url': action_url, 'css': css})
     ctx['topbar_actions'] = resolved
 

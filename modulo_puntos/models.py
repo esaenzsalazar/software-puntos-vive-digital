@@ -19,7 +19,6 @@ class PuntoViveDigital(models.Model):
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
     fecha_creacion = models.DateField(auto_now_add=True, null=True, verbose_name='Fecha de creación')
     descripcion = models.TextField(null=True, blank=True, verbose_name='Descripción/Notas')
-    modulos_habilitados = models.JSONField(default=list, blank=True, verbose_name='Módulos habilitados')
     admin_a_cargo = models.ForeignKey(
         'auth.User',
         on_delete=models.SET_NULL,
@@ -173,7 +172,7 @@ class Atencion(models.Model):
         null=True, blank=True, verbose_name='Préstamo'
     )
     fecha = models.DateField(verbose_name='Fecha de Atención')
-    hora_inicio = models.TimeField(verbose_name='Hora de Inicio')
+    hora_inicio = models.TimeField(null=True, blank=True, verbose_name='Hora de Inicio')
     hora_fin = models.TimeField(null=True, blank=True, verbose_name='Hora de Finalización')
     estado = models.CharField(max_length=1, default='P', choices=ESTADO_CHOICES, verbose_name='Estado')
     observaciones = models.CharField(max_length=512, null=True, blank=True, verbose_name='Observaciones')
@@ -220,7 +219,6 @@ class Servicio(models.Model):
 
     def __str__(self):
         return self.nombre
-
 
 
 class Satisfaccion(models.Model):
@@ -624,103 +622,3 @@ class MantenimientoEquipo(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()} – {self.punto_vive_digital.nombre} ({self.fecha})"
 
-
-# ==============================================================================
-# CATÁLOGO DE SERVICIOS Y ASIGNACIÓN A PVDs
-# ==============================================================================
-
-class CatalogoServicio(models.Model):
-    """
-    Definición reutilizable de un servicio — puede ser plantilla del sistema
-    o creada por un administrador durante el wizard de creación de PVD.
-
-    Arquetipos:
-    - canvas: constructor visual; `config_lienzo` almacena el árbol de bloques:
-        {bloques: [{id, tipo, props}]}
-        tipos de bloque: titulo | parrafo | separador | campo | boton
-    - recoleccion: legado; `campos` almacena [{id, nombre, tipo_campo, requerido, placeholder, opciones}]
-    - redireccion: legado; usa `url_externa` y `es_embed`
-    """
-    TIPO_CHOICES = [
-        ('canvas',      'Servicio personalizado (canvas)'),
-        ('recoleccion', 'Formulario de datos (legado)'),
-        ('redireccion', 'Enlace externo (legado)'),
-    ]
-
-    nombre = models.CharField(max_length=100, verbose_name='Nombre del servicio')
-    descripcion = models.CharField(max_length=255, blank=True, verbose_name='Descripción')
-    icono = models.CharField(max_length=10, default='⚙️', verbose_name='Ícono (emoji)')
-    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='canvas', verbose_name='Tipo')
-    campos = models.JSONField(default=list, verbose_name='Esquema de campos (legado)')
-    url_externa = models.CharField(max_length=500, blank=True, verbose_name='URL externa')
-    es_embed = models.BooleanField(default=False, verbose_name='Mostrar como iframe')
-    config_lienzo = models.JSONField(default=dict, blank=True, verbose_name='Lienzo del servicio')
-    es_plantilla_sistema = models.BooleanField(default=False, verbose_name='Plantilla del sistema')
-    activo = models.BooleanField(default=True, verbose_name='Activo')
-    creado_por = models.ForeignKey(
-        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='servicios_catalogo_creados', verbose_name='Creado por',
-    )
-    creado_en = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table = 'pvd_catalogo_servicios'
-        ordering = ['-es_plantilla_sistema', 'nombre']
-        verbose_name = 'Servicio del Catálogo'
-        verbose_name_plural = 'Catálogo de Servicios'
-
-    def __str__(self):
-        return self.nombre
-
-
-class PVDServicio(models.Model):
-    """Asignación de un servicio del catálogo a un PVD."""
-    pvd = models.ForeignKey(
-        'PuntoViveDigital', on_delete=models.CASCADE,
-        related_name='pvd_servicios', verbose_name='Punto Vive Digital',
-    )
-    servicio = models.ForeignKey(
-        'CatalogoServicio', on_delete=models.CASCADE,
-        related_name='pvd_asignaciones', verbose_name='Servicio',
-    )
-    activo = models.BooleanField(default=True, verbose_name='Activo')
-    orden = models.PositiveIntegerField(default=0, verbose_name='Orden')
-    asignado_en = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table = 'pvd_pvd_servicios'
-        unique_together = [['pvd', 'servicio']]
-        ordering = ['orden', 'servicio__nombre']
-        verbose_name = 'Servicio del PVD'
-        verbose_name_plural = 'Servicios del PVD'
-
-    def __str__(self):
-        return f"{self.pvd.nombre} → {self.servicio.nombre}"
-
-
-class RespuestaServicio(models.Model):
-    """Respuestas de un ciudadano a un formulario personalizado durante una Atención."""
-    atencion = models.ForeignKey(
-        'Atencion', on_delete=models.CASCADE,
-        related_name='respuestas_servicio',
-        verbose_name='Atención',
-    )
-    servicio = models.ForeignKey(
-        'CatalogoServicio', on_delete=models.SET_NULL,
-        null=True, related_name='respuestas',
-        verbose_name='Servicio',
-    )
-    datos = models.JSONField(default=dict, verbose_name='Datos enviados')
-    enviado_en = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        app_label = 'modulo_puntos_app'
-        db_table = 'pvd_respuestas_servicio'
-        ordering = ['-enviado_en']
-        verbose_name = 'Respuesta de servicio'
-        verbose_name_plural = 'Respuestas de servicios'
-
-    def __str__(self):
-        return f"Respuesta #{self.pk} – Atención #{self.atencion_id}"

@@ -132,6 +132,10 @@ class PrestamoRecurso(models.Model):
         'Recurso', models.PROTECT,
         null=True, blank=True, verbose_name='Recurso'
     )
+    ciudadano = models.ForeignKey(
+        'Ciudadano', models.SET_NULL,
+        null=True, blank=True, verbose_name='Ciudadano'
+    )
     fecha_entrega = models.DateTimeField(verbose_name='Fecha de Entrega')
     fecha_devolucion = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de Devolución')
     observaciones = models.CharField(max_length=512, null=True, blank=True, verbose_name='Observaciones')
@@ -141,9 +145,14 @@ class PrestamoRecurso(models.Model):
         db_table = 'pvd_prestamos'
         verbose_name = 'Préstamo de Recurso'
         verbose_name_plural = 'Préstamos de Recursos'
+        indexes = [
+            models.Index(fields=['recurso', 'fecha_entrega'], name='idx_prs_recurso_fecha'),
+            models.Index(fields=['ciudadano'], name='idx_prs_ciudadano'),
+        ]
 
     def __str__(self):
-        return f"Préstamo #{self.pk}"
+        ciudadano_str = str(self.ciudadano) if self.ciudadano else 'Sin ciudadano'
+        return f"Préstamo #{self.pk} — {ciudadano_str}"
 
 
 class Atencion(models.Model):
@@ -214,16 +223,16 @@ class Servicio(models.Model):
     tipo = models.CharField(max_length=64, verbose_name='Tipo de Servicio')
     requiere_equipo = models.CharField(max_length=1, default='N', choices=REQUIERE_EQUIPO_CHOICES, verbose_name='¿Requiere Equipo?')
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
-    recurso = models.ForeignKey(
-        'Recurso', models.SET_NULL,
-        null=True, blank=True, verbose_name='Recurso utilizado'
-    )
 
     class Meta:
         app_label = 'modulo_puntos_app'
         db_table = 'pvd_servicios'
         verbose_name = 'Servicio'
         verbose_name_plural = 'Servicios'
+        indexes = [
+            models.Index(fields=['atencion'], name='idx_srv_atencion'),
+            models.Index(fields=['tipo'], name='idx_srv_tipo'),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -243,6 +252,9 @@ class Satisfaccion(models.Model):
         db_table = 'pvd_satisfaccion'
         verbose_name = 'Encuesta de Satisfacción'
         verbose_name_plural = 'Encuestas de Satisfacción'
+        indexes = [
+            models.Index(fields=['atencion'], name='idx_sat_atencion'),
+        ]
 
     def __str__(self):
         return f"Calificación: {self.calificacion}"
@@ -629,4 +641,44 @@ class MantenimientoEquipo(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} – {self.punto_vive_digital.nombre} ({self.fecha})"
+
+
+# ==============================================================================
+# EVIDENCIAS
+# ==============================================================================
+
+class Evidencia(models.Model):
+    CATEGORIA_CHOICES = [
+        ('ACT', 'Actividad'),
+        ('CAP', 'Capacitación'),
+        ('MAN', 'Mantenimiento'),
+        ('EVE', 'Evento'),
+        ('OTR', 'Otra'),
+    ]
+    punto_vive_digital = models.ForeignKey(
+        'PuntoViveDigital', on_delete=models.CASCADE,
+        related_name='evidencias', verbose_name='Punto Vive Digital'
+    )
+    titulo = models.CharField(max_length=150, verbose_name='Título')
+    descripcion = models.TextField(verbose_name='Descripción')
+    categoria = models.CharField(
+        max_length=3, choices=CATEGORIA_CHOICES, default='ACT', verbose_name='Categoría'
+    )
+    fecha = models.DateField(verbose_name='Fecha de la evidencia')
+    imagen = models.ImageField(upload_to='evidencias/%Y/%m/', verbose_name='Imagen')
+    registrado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True,
+        related_name='evidencias_registradas', verbose_name='Registrado por'
+    )
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'modulo_puntos_app'
+        db_table = 'pvd_evidencias'
+        ordering = ['-fecha', '-fecha_registro']
+        verbose_name = 'Evidencia'
+        verbose_name_plural = 'Evidencias'
+
+    def __str__(self):
+        return f"{self.titulo} – {self.punto_vive_digital.nombre} ({self.fecha})"
 

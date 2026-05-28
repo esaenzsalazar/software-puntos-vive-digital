@@ -144,6 +144,13 @@ urlpatterns = [
     path('mantenimientos/<int:mant_id>/editar/', views.editar_mantenimiento, name='editar_mantenimiento'),
 
     # ==========================================================================
+    # EVIDENCIAS
+    # ==========================================================================
+    path('evidencias/', views.lista_evidencias, name='lista_evidencias'),
+    path('evidencias/nueva/', views.crear_evidencia, name='crear_evidencia'),
+    path('evidencias/<int:evidencia_id>/eliminar/', views.eliminar_evidencia, name='eliminar_evidencia'),
+
+    # ==========================================================================
     # ==========================================================================
     # ACCESOS TEMPORALES (Superusuario / Admin TIC)
     # ==========================================================================

@@ -23,14 +23,14 @@ from .models import (
     Recurso, PuntoViveDigital, Sala, UserProfile, AuditoriaAccion,
     PermisoDefinicion, PermisoRol, PermisoUsuario, HabilitacionSala,
     Curso, SesionCurso, InscripcionCurso, AsistenciaSesion,
-    MantenimientoEquipo,
+    MantenimientoEquipo, Evidencia,
 )
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
     CrearUsuarioForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
-    MantenimientoEquipoForm,
+    MantenimientoEquipoForm, EvidenciaForm,
 )
 from .utils import registrar_auditoria, tiene_permiso
 
@@ -783,13 +783,16 @@ def registrar_prestamo(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    form = PrestamoRecursoForm(request.POST or None)
+    pvd_id = request.session.get('pvd_activo_id')
+    form = PrestamoRecursoForm(request.POST or None, pvd_id=pvd_id)
     if request.method == 'POST':
         if form.is_valid():
             try:
-                form.save()
-                messages.success(request, 'Préstamo registrado correctamente en la base de datos.')
-                return redirect('modulo_puntos:panel_control')
+                prestamo = form.save()
+                registrar_auditoria(request, 'CREATE', 'PrestamoRecurso', prestamo.pk,
+                                    f'Nuevo préstamo: {prestamo.recurso}')
+                messages.success(request, 'Préstamo registrado correctamente.')
+                return redirect('modulo_puntos:registrar_recurso')
             except Exception as e:
                 messages.error(request, f'Error al guardar en BD: {e}')
         else:
@@ -810,8 +813,9 @@ def editar_prestamo(request, prestamo_id):
         messages.error(request, 'No tienes permiso para editar préstamos.')
         return redirect('modulo_puntos:registrar_recurso')
 
+    pvd_id = request.session.get('pvd_activo_id')
     prestamo = get_object_or_404(PrestamoRecurso, pk=prestamo_id)
-    form = PrestamoRecursoForm(request.POST or None, instance=prestamo)
+    form = PrestamoRecursoForm(request.POST or None, instance=prestamo, pvd_id=pvd_id)
 
     if request.method == 'POST':
         if form.is_valid():
@@ -1548,6 +1552,89 @@ def exportar_mantenimientos_csv(request):
 
     wb = _crear_hoja('Mantenimientos', headers, filas)
     return _xlsx_response('Reporte_Mantenimientos_PVD', wb)
+
+
+# ── EVIDENCIAS ────────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def lista_evidencias(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    pvd = PuntoViveDigital.objects.filter(pk=pvd_id).first() if pvd_id else None
+
+    qs = Evidencia.objects.select_related('punto_vive_digital', 'registrado_por').order_by('-fecha', '-fecha_registro')
+    if pvd:
+        qs = qs.filter(punto_vive_digital=pvd)
+
+    categoria = request.GET.get('categoria', '')
+    if categoria:
+        qs = qs.filter(categoria=categoria)
+
+    paginator = Paginator(qs, 12)
+    page = request.GET.get('page')
+    evidencias = paginator.get_page(page)
+
+    return render(request, 'modulo_puntos/lista_evidencias.html', {
+        'evidencias': evidencias,
+        'pvd': pvd,
+        'categoria_activa': categoria,
+        'categorias': Evidencia.CATEGORIA_CHOICES,
+        'total': qs.count(),
+    })
+
+
+@login_required(login_url='/login/')
+def crear_evidencia(request):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para registrar evidencias.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    pvd = PuntoViveDigital.objects.filter(pk=pvd_id).first() if pvd_id else None
+
+    if not pvd:
+        messages.warning(request, 'Debes seleccionar un Punto Vive Digital antes de registrar evidencias.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
+    form = EvidenciaForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            evidencia = form.save(commit=False)
+            evidencia.punto_vive_digital = pvd
+            evidencia.registrado_por = request.user
+            evidencia.save()
+            registrar_auditoria(request, 'CREATE', 'Evidencia', evidencia.pk, f'Nueva evidencia: {evidencia.titulo} — PVD: {pvd}')
+            messages.success(request, f'Evidencia "{evidencia.titulo}" registrada correctamente.')
+            return redirect('modulo_puntos:lista_evidencias')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/crear_evidencia.html', {'form': form, 'pvd': pvd})
+
+
+@login_required(login_url='/login/')
+def eliminar_evidencia(request, evidencia_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para eliminar evidencias.')
+        return redirect('modulo_puntos:panel_control')
+
+    pvd_id = request.session.get('pvd_activo_id')
+    evidencia = get_object_or_404(Evidencia, pk=evidencia_id)
+
+    if pvd_id and evidencia.punto_vive_digital_id != pvd_id:
+        messages.error(request, 'No tienes permisos para eliminar esta evidencia.')
+        return redirect('modulo_puntos:lista_evidencias')
+
+    if request.method == 'POST':
+        titulo = evidencia.titulo
+        evidencia.imagen.delete(save=False)
+        evidencia.delete()
+        registrar_auditoria(request, 'DELETE', 'Evidencia', evidencia_id, f'Evidencia eliminada: {titulo}')
+        messages.success(request, f'Evidencia "{titulo}" eliminada.')
+
+    return redirect('modulo_puntos:lista_evidencias')
 
 
 # ── AYUDA ──────────────────────────────────────────────────────────────────────

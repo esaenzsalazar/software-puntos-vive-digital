@@ -3,7 +3,7 @@ Utilidades para el sistema PVD - Contrato CD-224-2026
 Funciones helper para auditoría, validaciones y otras utilidades.
 """
 import re
-import random
+import secrets
 import string
 from datetime import datetime
 from django.contrib import messages
@@ -135,32 +135,17 @@ def generar_username(primer_nombre, segundo_nombre='', primer_apellido='', segun
     return username
 
 
-def generar_password(longitud=10):
-    """
-    Genera una contraseña segura aleatoria.
-    
-    Args:
-        longitud: Longitud de la contraseña (por defecto 10)
-    
-    Returns:
-        str: Contraseña generada
-    """
-    # Asegurar al menos una mayúscula, una minúscula, un número y un carácter especial
-    mayusculas = random.choice(string.ascii_uppercase)
-    minusculas = random.choice(string.ascii_lowercase)
-    numeros = random.choice(string.digits)
-    especiales = random.choice('!@#$%^&*')
-    
-    # Rellenar con caracteres aleatorios
-    restante = longitud - 4
-    caracteres = string.ascii_letters + string.digits + '!@#$%^&*'
-    restante = ''.join(random.choice(caracteres) for _ in range(restante))
-    
-    # Combinar y mezclar
-    password = list(mayusculas + minusculas + numeros + especiales + restante)
-    random.shuffle(password)
-    
-    return ''.join(password)
+def generar_password(longitud=12):
+    """Genera una contraseña criptográficamente segura."""
+    alfabeto = string.ascii_letters + string.digits + '!@#$%&*'
+    while True:
+        pwd = ''.join(secrets.choice(alfabeto) for _ in range(longitud))
+        # Garantizar al menos un carácter de cada categoría
+        if (any(c.isupper() for c in pwd)
+                and any(c.islower() for c in pwd)
+                and any(c.isdigit() for c in pwd)
+                and any(c in '!@#$%&*' for c in pwd)):
+            return pwd
 
 
 def validar_formato_documento(documento):
@@ -297,20 +282,9 @@ def generar_username_admin_pvd(primer_nombre):
     return f"PVD{nombre}" if nombre else 'PVDOperador'
 
 
-def generar_password_admin_pvd(primer_nombre):
-    """
-    Genera contraseña para Admin PVD: primer_nombre capitalizado + 'adminpvd'.
-    Ejemplo: 'Juan' → 'Juanadminpvd'
-    """
-    if not primer_nombre:
-        return 'Operadoradminpvd'
-    nombre = primer_nombre.strip()
-    for origen, destino in [('á','a'),('é','e'),('í','i'),('ó','o'),('ú','u'),
-                             ('Á','A'),('É','E'),('Í','I'),('Ó','O'),('Ú','U'),
-                             ('ñ','n'),('Ñ','N')]:
-        nombre = nombre.replace(origen, destino)
-    nombre = re.sub(r'[^a-zA-Z]', '', nombre).capitalize()
-    return f"{nombre}adminpvd" if nombre else 'Operadoradminpvd'
+def generar_password_admin_pvd(primer_nombre=None):
+    """Genera una contraseña criptográficamente segura para Admin PVD."""
+    return generar_password(longitud=12)
 
 
 def validar_formato_email(email):

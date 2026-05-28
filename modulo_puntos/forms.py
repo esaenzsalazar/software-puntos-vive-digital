@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
-    Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo,
+    Curso, SesionCurso, InscripcionCurso, MantenimientoEquipo, Evidencia,
 )
 
 # ==============================================================================
@@ -441,16 +441,28 @@ class PrestamoRecursoForm(forms.ModelForm):
 
     class Meta:
         model = PrestamoRecurso
-        fields = ['recurso', 'fecha_entrega', 'fecha_devolucion', 'observaciones']
+        fields = ['ciudadano', 'recurso', 'fecha_entrega', 'fecha_devolucion', 'observaciones']
         widgets = {
+            'ciudadano': forms.Select(attrs={'class': 'form-control'}),
             'recurso': forms.Select(attrs={'class': 'form-control'}),
             'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
         }
 
     def __init__(self, *args, **kwargs):
+        pvd_id = kwargs.pop('pvd_id', None)
         super().__init__(*args, **kwargs)
         self.fields['recurso'].required = False
         self.fields['recurso'].empty_label = '--- Seleccione un recurso ---'
+        self.fields['ciudadano'].required = False
+        self.fields['ciudadano'].empty_label = '--- Ciudadano (opcional) ---'
+        if pvd_id:
+            self.fields['ciudadano'].queryset = Ciudadano.objects.filter(
+                punto_vive_digital_id=pvd_id, estado='A'
+            ).order_by('primer_apellido', 'primer_nombre')
+        else:
+            self.fields['ciudadano'].queryset = Ciudadano.objects.filter(
+                estado='A'
+            ).order_by('primer_apellido', 'primer_nombre')
 
     def clean(self):
         from django.db.models import Q
@@ -1120,6 +1132,43 @@ class MantenimientoEquipoForm(forms.ModelForm):
             'hallazgos': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Problemas encontrados...'}),
             'acciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Acciones tomadas o recomendaciones...'}),
         }
+
+
+# ==============================================================================
+# EVIDENCIAS
+# ==============================================================================
+
+class EvidenciaForm(forms.ModelForm):
+    class Meta:
+        model = Evidencia
+        fields = ['titulo', 'categoria', 'fecha', 'descripcion', 'imagen']
+        labels = {
+            'titulo': 'Título *',
+            'categoria': 'Categoría *',
+            'fecha': 'Fecha de la evidencia *',
+            'descripcion': 'Descripción *',
+            'imagen': 'Imagen *',
+        }
+        widgets = {
+            'titulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Taller de alfabetización digital – mayo 2026'}),
+            'categoria': forms.Select(attrs={'class': 'form-control'}),
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe brevemente la actividad registrada en la imagen...'}),
+            'imagen': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+        }
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get('imagen')
+        if not imagen:
+            return imagen
+        # Tamaño máximo: 5 MB
+        if imagen.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('La imagen no puede superar los 5 MB.')
+        # Tipos permitidos
+        tipos_permitidos = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+        if hasattr(imagen, 'content_type') and imagen.content_type not in tipos_permitidos:
+            raise forms.ValidationError('Formato no permitido. Usa JPG, PNG, WEBP o GIF.')
+        return imagen
 
 
 

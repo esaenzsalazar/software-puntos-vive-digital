@@ -63,6 +63,9 @@ _BREADCRUMB_MAP = {
     'lista_mantenimientos':  ('Mantenimientos',        'Panel',                 'panel_control'),
     'crear_mantenimiento':   ('Nuevo Mantenimiento',   'Mantenimientos',        'lista_mantenimientos'),
     'editar_mantenimiento':  ('Editar Mantenimiento',  'Mantenimientos',        'lista_mantenimientos'),
+    # Evidencias
+    'lista_evidencias':      ('Evidencias',            'Panel',                 'panel_control'),
+    'crear_evidencia':       ('Nueva Evidencia',       'Evidencias',            'lista_evidencias'),
     # Usuarios y roles
     'gestionar_roles':       ('Gestión de Roles',      'Panel',                 'panel_control'),
     'crear_admin_tic':       ('Nuevo Admin TIC',       'Panel',                 'panel_control'),
@@ -123,6 +126,8 @@ _TOPBAR_ACTIONS = {
     'lista_mantenimientos':  [('+ Nuevo mantenimiento', 'crear_mantenimiento', '')],
     'crear_mantenimiento':   [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_mantenimiento':  [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_evidencias':      [('+ Nueva evidencia', 'crear_evidencia', '')],
+    'crear_evidencia':       [('← Cancelar', '__back__', 'btn-secondary')],
     'perfil_usuario':        [('← Volver', '__back__', 'btn-secondary')],
     'crear_admin_tic':       [('← Cancelar', '__back__', 'btn-secondary')],
     'crear_admin_pvd':       [('← Cancelar', '__back__', 'btn-secondary')],

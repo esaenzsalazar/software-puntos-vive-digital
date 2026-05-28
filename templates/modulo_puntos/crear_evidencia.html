@@ -1,0 +1,89 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Nueva Evidencia{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+    <div class="page-hero">
+        <span class="eyebrow">Operación</span>
+        <h2 class="page-title">Registrar evidencia</h2>
+        <p class="muted">Adjunta una fotografía con su descripción y categoría.{% if pvd %} PVD: <strong>{{ pvd.nombre }}</strong>{% endif %}</p>
+    </div>
+
+    {% if form.errors %}
+        <div class="alert alert-error">Revisa los campos marcados antes de continuar.</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="grid form-grid-2">
+
+            <div class="span-full">
+                <label for="{{ form.titulo.id_for_label }}">Título <span style="color:red;">*</span></label>
+                {{ form.titulo }}
+                {% if form.titulo.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.titulo.errors.0 }}</span>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.categoria.id_for_label }}">Categoría <span style="color:red;">*</span></label>
+                {{ form.categoria }}
+                {% if form.categoria.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.categoria.errors.0 }}</span>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.fecha.id_for_label }}">Fecha de la evidencia <span style="color:red;">*</span></label>
+                {{ form.fecha }}
+                {% if form.fecha.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.fecha.errors.0 }}</span>{% endif %}
+            </div>
+
+            <div class="span-full">
+                <label for="{{ form.descripcion.id_for_label }}">Descripción <span style="color:red;">*</span></label>
+                {{ form.descripcion }}
+                {% if form.descripcion.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.descripcion.errors.0 }}</span>{% endif %}
+            </div>
+
+            <div class="span-full">
+                <label for="{{ form.imagen.id_for_label }}">Imagen <span style="color:red;">*</span></label>
+                {{ form.imagen }}
+                <span style="font-size:12px;color:#64748b;display:block;margin-top:4px;">Formatos aceptados: JPG, PNG, WEBP. Tamaño recomendado: máx. 5 MB.</span>
+                {% if form.imagen.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:4px;">{{ form.imagen.errors.0 }}</span>{% endif %}
+            </div>
+
+            {# Vista previa de la imagen antes de subir #}
+            <div class="span-full" id="preview-wrap" style="display:none;">
+                <label>Vista previa</label>
+                <img id="preview-img" src="" alt="Vista previa"
+                     style="max-width:100%;max-height:300px;border-radius:6px;border:1px solid #e2e8f0;display:block;margin-top:4px;">
+            </div>
+
+        </div>
+
+        <div class="actions" style="justify-content:flex-end;margin-top:25px;">
+            <a href="{% url 'modulo_puntos:lista_evidencias' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn">Guardar evidencia</button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function(){
+    var input = document.getElementById('{{ form.imagen.id_for_label }}');
+    var wrap  = document.getElementById('preview-wrap');
+    var img   = document.getElementById('preview-img');
+    if(input){
+        input.addEventListener('change', function(){
+            var file = this.files[0];
+            if(file && file.type.startsWith('image/')){
+                var reader = new FileReader();
+                reader.onload = function(e){ img.src = e.target.result; wrap.style.display = ''; };
+                reader.readAsDataURL(file);
+            } else {
+                wrap.style.display = 'none';
+                img.src = '';
+            }
+        });
+    }
+})();
+</script>
+
+{% endblock %}

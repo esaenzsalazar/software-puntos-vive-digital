@@ -115,6 +115,10 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+# Media files (user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Authentication configuration
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'

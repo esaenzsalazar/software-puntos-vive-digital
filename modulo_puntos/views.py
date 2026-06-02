@@ -631,6 +631,43 @@ def reportes(request):
 # ── ATENCIONES Y SERVICIOS ─────────────────────────────────────────────────────
 
 @login_required(login_url='/login/')
+def buscar_ciudadanos_json(request):
+    """Endpoint AJAX para el autocompletado de ciudadanos en el formulario de atención."""
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'results': []})
+
+    user = request.user
+    es_pvd_solo = (
+        not user.is_superuser
+        and not usuario_es_admin_tic(user)
+        and user.groups.filter(name='Administrador PVD').exists()
+    )
+
+    qs = Ciudadano.objects.filter(estado='A')
+    if es_pvd_solo:
+        pvd_id = request.session.get('pvd_activo_id')
+        qs = qs.filter(punto_vive_digital_id=pvd_id) if pvd_id else qs.none()
+
+    qs = qs.filter(
+        Q(primer_nombre__icontains=q)
+        | Q(segundo_nombre__icontains=q)
+        | Q(primer_apellido__icontains=q)
+        | Q(segundo_apellido__icontains=q)
+        | Q(numero_documento__icontains=q)
+    ).order_by('primer_apellido', 'primer_nombre')[:12]
+
+    return JsonResponse({'results': [
+        {
+            'id':     c.pk,
+            'nombre': c.get_nombre_completo(),
+            'doc':    c.numero_documento or '',
+        }
+        for c in qs
+    ]})
+
+
+@login_required(login_url='/login/')
 def registrar_atencion(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
@@ -774,7 +811,33 @@ def cambiar_estado_atencion(request, atencion_id):
     else:
         messages.error(request, 'Estado no válido.')
 
+    next_url = request.POST.get('next', '').strip()
+    if next_url == 'lista':
+        return redirect('modulo_puntos:lista_atenciones')
     return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
+
+
+@login_required(login_url='/login/')
+def finalizar_servicio(request, atencion_id, servicio_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    if request.method != 'POST':
+        return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
+
+    servicio = get_object_or_404(Servicio, pk=servicio_id, atencion_id=atencion_id)
+
+    if servicio.estado == 'A':
+        servicio.estado = 'F'
+        servicio.save(update_fields=['estado'])
+        registrar_auditoria(request, 'UPDATE', 'Servicio', servicio.pk,
+                            f'Servicio finalizado: {servicio.nombre}')
+        messages.success(request, f'Servicio "{servicio.nombre}" finalizado.')
+    else:
+        messages.warning(request, 'El servicio ya está finalizado o inactivo.')
+
+    return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
 
 
 @login_required(login_url='/login/')

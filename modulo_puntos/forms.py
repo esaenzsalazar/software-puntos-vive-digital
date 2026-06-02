@@ -18,19 +18,84 @@ from .models import (
 # ==============================================================================
 
 BARRIO_CHOICES = [
-    ('', '— Seleccione un barrio —'),
-    ('Ninguno / Área Rural', 'Ninguno / Área Rural'),
-    ('Centro', 'Centro'), ('Obrero', 'Obrero'), ('Municipal', 'Municipal'),
-    ('La Planta', 'La Planta'), ('Gualcoche', 'Gualcoche'), ('Los Mármoles', 'Los Mármoles'),
-    ('Paulus VI', 'Paulus VI'), ('Primero de Mayo', 'Primero de Mayo'),
-    ('José Antonio Galán', 'José Antonio Galán'), ('La Esperanza', 'La Esperanza'),
-    ('Cocicoinpa', 'Cocicoinpa'), ('Ricaurte', 'Ricaurte'), ('Brisas del Río', 'Brisas del Río'),
-    ('Cañaveral', 'Cañaveral'), ('El Edén', 'El Edén'), ('La María', 'La María'),
-    ('La María II Etapa', 'La María II Etapa'), ('El Jardín', 'El Jardín'),
-    ('Antonio Nariño', 'Antonio Nariño'), ('Ceilán', 'Ceilán'), ('Chorreras', 'Chorreras'),
-    ('El Guayabo', 'El Guayabo'), ('El Overo', 'El Overo'), ('Galicia', 'Galicia'),
-    ('Chicoral', 'Chicoral'), ('El Placer', 'El Placer'), ('Uribe', 'Uribe'),
-    ('Paila Arriba', 'Paila Arriba'), ('Mestizal', 'Mestizal'), ('Otro', 'Otro barrio')
+    ('', '— Seleccione barrio o municipio —'),
+    ('Barrios de Bugalagrande', [
+        ('Ninguno / Área Rural', 'Ninguno / Área Rural'),
+        ('Centro', 'Centro'),
+        ('Obrero', 'Obrero'),
+        ('Municipal', 'Municipal'),
+        ('La Planta', 'La Planta'),
+        ('Gualcoche', 'Gualcoche'),
+        ('Los Mármoles', 'Los Mármoles'),
+        ('Paulus VI', 'Paulus VI'),
+        ('Primero de Mayo', 'Primero de Mayo'),
+        ('José Antonio Galán', 'José Antonio Galán'),
+        ('La Esperanza', 'La Esperanza'),
+        ('Cocicoinpa', 'Cocicoinpa'),
+        ('Ricaurte', 'Ricaurte'),
+        ('Brisas del Río', 'Brisas del Río'),
+        ('Cañaveral', 'Cañaveral'),
+        ('El Edén', 'El Edén'),
+        ('La María', 'La María'),
+        ('La María II Etapa', 'La María II Etapa'),
+        ('El Jardín', 'El Jardín'),
+        ('Antonio Nariño', 'Antonio Nariño'),
+        ('Ceilán', 'Ceilán'),
+        ('Chorreras', 'Chorreras'),
+        ('El Guayabo', 'El Guayabo'),
+        ('El Overo', 'El Overo'),
+        ('Galicia', 'Galicia'),
+        ('Chicoral', 'Chicoral'),
+        ('El Placer', 'El Placer'),
+        ('Uribe', 'Uribe'),
+        ('Paila Arriba', 'Paila Arriba'),
+        ('Mestizal', 'Mestizal'),
+        ('Otro barrio', 'Otro barrio'),
+    ]),
+    ('Municipios del Valle del Cauca', [
+        ('Alcalá', 'Alcalá'),
+        ('Andalucía', 'Andalucía'),
+        ('Ansermanuevo', 'Ansermanuevo'),
+        ('Argelia', 'Argelia'),
+        ('Bolívar', 'Bolívar'),
+        ('Buenaventura', 'Buenaventura'),
+        ('Bugalagrande', 'Bugalagrande'),
+        ('Caicedonia', 'Caicedonia'),
+        ('Calima (El Darién)', 'Calima (El Darién)'),
+        ('Candelaria', 'Candelaria'),
+        ('Cartago', 'Cartago'),
+        ('Dagua', 'Dagua'),
+        ('El Águila', 'El Águila'),
+        ('El Cairo', 'El Cairo'),
+        ('El Cerrito', 'El Cerrito'),
+        ('El Dovio', 'El Dovio'),
+        ('Florida', 'Florida'),
+        ('Ginebra', 'Ginebra'),
+        ('Guacarí', 'Guacarí'),
+        ('Guadalajara de Buga', 'Guadalajara de Buga'),
+        ('Jamundí', 'Jamundí'),
+        ('La Cumbre', 'La Cumbre'),
+        ('La Unión', 'La Unión'),
+        ('La Victoria', 'La Victoria'),
+        ('Obando', 'Obando'),
+        ('Palmira', 'Palmira'),
+        ('Pradera', 'Pradera'),
+        ('Restrepo', 'Restrepo'),
+        ('Riofrío', 'Riofrío'),
+        ('Roldanillo', 'Roldanillo'),
+        ('San Pedro', 'San Pedro'),
+        ('Santiago de Cali', 'Santiago de Cali'),
+        ('Sevilla', 'Sevilla'),
+        ('Toro', 'Toro'),
+        ('Trujillo', 'Trujillo'),
+        ('Tuluá', 'Tuluá'),
+        ('Ulloa', 'Ulloa'),
+        ('Versalles', 'Versalles'),
+        ('Vijes', 'Vijes'),
+        ('Yotoco', 'Yotoco'),
+        ('Yumbo', 'Yumbo'),
+        ('Zarzal', 'Zarzal'),
+    ]),
 ]
 
 ETNIA_CHOICES = [
@@ -108,7 +173,7 @@ class CiudadanoForm(forms.ModelForm):
             'primer_nombre', 'segundo_nombre',
             'primer_apellido', 'segundo_apellido',
             'fecha_nacimiento', 'correo', 'telefono', 'genero',
-            'direccion', 'barrio', 'zona_rural',
+            'direccion', 'municipio', 'barrio', 'zona_rural',
             'etnia', 'nivel_educativo', 'ocupacion', 'estrato',
             'tiene_discapacidad', 'descripcion_discapacidad', 'estado'
         ]
@@ -124,7 +189,8 @@ class CiudadanoForm(forms.ModelForm):
             'telefono': 'Teléfono o Celular (Opcional)',
             'genero': 'Género',
             'direccion': 'Dirección de Residencia',
-            'barrio': 'Barrio (Cabecera Municipal)',
+            'municipio': 'Municipio de Residencia',
+            'barrio': 'Barrio de Residencia',
             'zona_rural': 'Vereda / Corregimiento (Opcional)',
             'etnia': 'Pertenencia Étnica',
             'nivel_educativo': 'Nivel Educativo',
@@ -190,7 +256,8 @@ class CiudadanoForm(forms.ModelForm):
                 attrs={'class': 'form-control'}
             ),
             'direccion': forms.HiddenInput(attrs={'id': 'id_direccion'}),
-            'barrio': forms.Select(choices=BARRIO_CHOICES, attrs={'class': 'form-control'}),
+            'municipio': forms.HiddenInput(attrs={'id': 'id_municipio'}),
+            'barrio': forms.HiddenInput(attrs={'id': 'id_barrio'}),
             'zona_rural': forms.HiddenInput(attrs={'id': 'id_zona_rural'}),
             'etnia': forms.Select(choices=ETNIA_CHOICES, attrs={'class': 'form-control'}),
             'nivel_educativo': forms.Select(choices=EDUCACION_CHOICES, attrs={'class': 'form-control'}),
@@ -270,6 +337,43 @@ class CiudadanoForm(forms.ModelForm):
         if estrato is not None and (estrato < 1 or estrato > 6):
             raise ValidationError('El estrato debe estar entre 1 y 6.')
         return estrato
+
+    def clean(self):
+        from datetime import date as _date
+        cleaned_data = super().clean()
+        tipo_doc  = cleaned_data.get('tipo_documento')
+        fecha_nac = cleaned_data.get('fecha_nacimiento')
+
+        if not tipo_doc or not fecha_nac:
+            return cleaned_data
+
+        hoy  = _date.today()
+        edad = hoy.year - fecha_nac.year - (
+            (hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day)
+        )
+
+        REGLAS = {
+            'CC': (18, 150, 'Cédula de Ciudadanía'),
+            'TI': (7,  17,  'Tarjeta de Identidad'),
+            'RC': (0,  6,   'Registro Civil de Nacimiento'),
+        }
+
+        if tipo_doc in REGLAS:
+            min_e, max_e, nombre = REGLAS[tipo_doc]
+            if not (min_e <= edad <= max_e):
+                if edad < 7:
+                    correcto = 'Registro Civil de Nacimiento (RC)'
+                elif edad < 18:
+                    correcto = 'Tarjeta de Identidad (TI)'
+                else:
+                    correcto = 'Cédula de Ciudadanía (CC)'
+                self.add_error(
+                    'tipo_documento',
+                    f'La {nombre} es para personas entre {min_e} y {max_e} años. '
+                    f'Esta persona tiene {edad} año(s) — el documento correcto es: {correcto}.'
+                )
+
+        return cleaned_data
 
 
 class AtencionForm(forms.ModelForm):

@@ -69,6 +69,7 @@ class Ciudadano(models.Model):
     tiene_discapacidad = models.BooleanField(default=False, verbose_name='Tiene Discapacidad')
     descripcion_discapacidad = models.CharField(max_length=128, null=True, blank=True, verbose_name='Descripción Discapacidad')
     direccion = models.CharField(max_length=128, null=True, blank=True, verbose_name='Dirección')
+    municipio = models.CharField(max_length=64, null=True, blank=True, verbose_name='Municipio de Residencia')
     barrio = models.CharField(max_length=64, null=True, blank=True, verbose_name='Barrio')
     zona_rural = models.CharField(max_length=64, null=True, blank=True, verbose_name='Zona Rural')
     estrato = models.IntegerField(default=1, verbose_name='Estrato Socioeconómico')
@@ -203,6 +204,7 @@ class Atencion(models.Model):
 class Servicio(models.Model):
     ESTADO_CHOICES = [
         ('A', 'Activo'),
+        ('F', 'Finalizado'),
         ('I', 'Inactivo'),
     ]
     REQUIERE_EQUIPO_CHOICES = [

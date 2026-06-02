@@ -101,11 +101,111 @@
                 {% elif field.name == 'zona_rural' %}
                     {{ field }}
 
+                {% elif field.name == 'municipio' %}
+                    {{ field }}
+
                 {% elif field.name == 'barrio' %}
-                    <div id="contenedor_barrio">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}</label>
+                    {# ── Selector cascading Municipio → Barrio ── #}
+                    <div id="contenedor_barrio" class="span-full"
+                         style="background:#f8fafc; padding:20px; border-radius:8px;
+                                border:1px solid #cbd5e1; margin-bottom:10px;">
+                        <label style="font-size:16px; color:var(--primary-color);
+                                      display:block; margin-bottom:14px;">
+                            Municipio y Barrio de Residencia
+                        </label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+                            {# — Columna 1: Municipio — #}
+                            <div>
+                                <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block;">
+                                    Municipio
+                                </label>
+                                <select id="sel_municipio" class="form-control" onchange="actualizarBarrio()">
+                                    <option value="">— Seleccione municipio —</option>
+                                    <optgroup label="── Bugalagrande ──">
+                                        <option value="Bugalagrande">Bugalagrande</option>
+                                    </optgroup>
+                                    <optgroup label="── Otros municipios del Valle del Cauca ──">
+                                        <option value="Alcalá">Alcalá</option>
+                                        <option value="Andalucía">Andalucía</option>
+                                        <option value="Ansermanuevo">Ansermanuevo</option>
+                                        <option value="Argelia">Argelia</option>
+                                        <option value="Bolívar">Bolívar</option>
+                                        <option value="Buenaventura">Buenaventura</option>
+                                        <option value="Caicedonia">Caicedonia</option>
+                                        <option value="Calima (El Darién)">Calima (El Darién)</option>
+                                        <option value="Candelaria">Candelaria</option>
+                                        <option value="Cartago">Cartago</option>
+                                        <option value="Dagua">Dagua</option>
+                                        <option value="El Águila">El Águila</option>
+                                        <option value="El Cairo">El Cairo</option>
+                                        <option value="El Cerrito">El Cerrito</option>
+                                        <option value="El Dovio">El Dovio</option>
+                                        <option value="Florida">Florida</option>
+                                        <option value="Ginebra">Ginebra</option>
+                                        <option value="Guacarí">Guacarí</option>
+                                        <option value="Guadalajara de Buga">Guadalajara de Buga</option>
+                                        <option value="Jamundí">Jamundí</option>
+                                        <option value="La Cumbre">La Cumbre</option>
+                                        <option value="La Unión">La Unión</option>
+                                        <option value="La Victoria">La Victoria</option>
+                                        <option value="Obando">Obando</option>
+                                        <option value="Palmira">Palmira</option>
+                                        <option value="Pradera">Pradera</option>
+                                        <option value="Restrepo">Restrepo</option>
+                                        <option value="Riofrío">Riofrío</option>
+                                        <option value="Roldanillo">Roldanillo</option>
+                                        <option value="San Pedro">San Pedro</option>
+                                        <option value="Santiago de Cali">Santiago de Cali</option>
+                                        <option value="Sevilla">Sevilla</option>
+                                        <option value="Toro">Toro</option>
+                                        <option value="Trujillo">Trujillo</option>
+                                        <option value="Tuluá">Tuluá</option>
+                                        <option value="Ulloa">Ulloa</option>
+                                        <option value="Versalles">Versalles</option>
+                                        <option value="Vijes">Vijes</option>
+                                        <option value="Yotoco">Yotoco</option>
+                                        <option value="Yumbo">Yumbo</option>
+                                        <option value="Zarzal">Zarzal</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            {# — Columna 2: Barrio (dinámico) — #}
+                            <div>
+                                <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block;">
+                                    Barrio o Sector
+                                </label>
+
+                                {# Hint inicial #}
+                                <p id="barrio_hint" class="muted"
+                                   style="font-size:13px; margin:6px 0 0; font-style:italic;">
+                                    Selecciona primero el municipio.
+                                </p>
+
+                                {# Select dinámico — se llena con JS según el municipio #}
+                                <select id="sel_barrio" class="form-control"
+                                        style="display:none;" onchange="setBarrioValor(this.value)">
+                                    <option value="">— Seleccione barrio —</option>
+                                </select>
+
+                                {# Input que aparece solo cuando se elige "Otro barrio" #}
+                                <input type="text" id="txt_otro_barrio" class="form-control"
+                                       style="display:none; margin-top:10px;"
+                                       placeholder="Escribe el nombre del barrio…"
+                                       oninput="document.getElementById('id_barrio').value = this.value.trim()">
+                            </div>
+                        </div>
+
+                        {# Campos ocultos del modelo #}
                         {{ field }}
-                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
+                        {% for hf in form %}{% if hf.name == 'municipio' %}{{ hf }}{% endif %}{% endfor %}
+
+                        {% if field.errors %}
+                            <span style="color:#991b1b; font-size:13px; display:block; margin-top:8px;">
+                                {{ field.errors.0 }}
+                            </span>
+                        {% endif %}
                     </div>
 
                 {% elif field.name == 'tiene_discapacidad' %}
@@ -139,6 +239,13 @@
             {% endfor %}
         </div>
 
+        {# ── Alerta de inconsistencia documento / edad ── #}
+        <div id="doc_tipo_error"
+             style="display:none; background:#fef2f2; border:1.5px solid #fca5a5;
+                    border-radius:8px; padding:14px 18px; margin-bottom:16px;
+                    color:#991b1b; font-size:14px; line-height:1.7;">
+        </div>
+
         <div class="actions" style="justify-content: flex-end; margin-top: 20px;">
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn">Guardar Ciudadano</button>
@@ -149,6 +256,76 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         
+        // ----------------------------------------------------
+        // VALIDACIÓN: TIPO DE DOCUMENTO vs. EDAD
+        // ----------------------------------------------------
+        const REGLAS_DOC = {
+            'CC': { min: 18, max: 150, nombre: 'Cédula de Ciudadanía' },
+            'TI': { min: 7,  max: 17,  nombre: 'Tarjeta de Identidad' },
+            'RC': { min: 0,  max: 6,   nombre: 'Registro Civil de Nacimiento' },
+        };
+
+        function calcularEdadAnios(fechaStr) {
+            if (!fechaStr) return null;
+            const hoy = new Date();
+            const nac = new Date(fechaStr);
+            if (isNaN(nac)) return null;
+            let edad = hoy.getFullYear() - nac.getFullYear();
+            const m = hoy.getMonth() - nac.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+            return edad;
+        }
+
+        function docCorrecto(edad) {
+            if (edad < 7)  return 'Registro Civil de Nacimiento (RC)';
+            if (edad < 18) return 'Tarjeta de Identidad (TI)';
+            return 'Cédula de Ciudadanía (CC)';
+        }
+
+        function validarDocumento() {
+            const tipo    = document.getElementById('id_tipo_documento').value;
+            const errDiv  = document.getElementById('doc_tipo_error');
+            const edad    = calcularEdadAnios(document.getElementById('id_fecha_nacimiento').value);
+
+            // Solo aplica para CC, TI y RC; y solo cuando hay fecha de nacimiento
+            if (!(tipo in REGLAS_DOC) || edad === null) {
+                errDiv.style.display = 'none';
+                return true;
+            }
+
+            const r = REGLAS_DOC[tipo];
+            if (edad >= r.min && edad <= r.max) {
+                errDiv.style.display = 'none';
+                return true;
+            }
+
+            const correcto = docCorrecto(edad);
+            errDiv.innerHTML =
+                `⚠ <strong>Tipo de documento incorrecto.</strong><br>` +
+                `La <strong>${r.nombre}</strong> corresponde a personas entre ${r.min} y ${r.max === 150 ? '17+' : r.max} años.<br>` +
+                `Según la fecha de nacimiento esta persona tiene <strong>${edad} año(s)</strong>.<br>` +
+                `El documento correcto sería: <strong>${correcto}</strong>.`;
+            errDiv.style.display = 'block';
+            return false;
+        }
+
+        const elTipoDoc  = document.getElementById('id_tipo_documento');
+        const elFechaNac = document.getElementById('id_fecha_nacimiento');
+        if (elTipoDoc)  elTipoDoc.addEventListener('change', validarDocumento);
+        if (elFechaNac) elFechaNac.addEventListener('change', validarDocumento);
+
+        // Bloquear envío si hay inconsistencia
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (!validarDocumento()) {
+                e.preventDefault();
+                document.getElementById('doc_tipo_error')
+                    .scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+        // Validar al cargar (modo edición)
+        validarDocumento();
+
         // ----------------------------------------------------
         // LÓGICA DE DISCAPACIDAD
         // ----------------------------------------------------
@@ -206,25 +383,152 @@
             const constructorUrbano = document.getElementById('constructor_urbano');
             const constructorRural = document.getElementById('constructor_rural');
             const contenedorBarrio = document.getElementById('contenedor_barrio');
-            const barrioSelect = document.getElementById('id_barrio');
 
             if (zonaSeleccionada === 'Urbana') {
                 constructorUrbano.style.display = 'block';
                 constructorRural.style.display = 'none';
-                contenedorBarrio.style.display = 'block'; 
-                
+                contenedorBarrio.style.display = 'block';
                 document.getElementById('id_zona_rural').value = '';
-                
             } else {
                 constructorUrbano.style.display = 'none';
                 constructorRural.style.display = 'block';
-                contenedorBarrio.style.display = 'none'; 
-                
+                contenedorBarrio.style.display = 'none';
                 document.getElementById('id_direccion').value = '';
-                barrioSelect.value = 'Ninguno / Área Rural'; 
+                // En zona rural: fijar Bugalagrande + barrio vacío
+                document.getElementById('id_municipio').value = 'Bugalagrande';
+                document.getElementById('id_barrio').value = 'Ninguno / Área Rural';
                 updateDireccionRural();
             }
         };
+
+        // ----------------------------------------------------
+        // DATOS: BARRIOS POR MUNICIPIO (Valle del Cauca)
+        // ----------------------------------------------------
+        const BARRIOS = {
+            'Bugalagrande': ['Ninguno / Área Rural','Centro','Obrero','Municipal','La Planta','Gualcoche','Los Mármoles','Paulus VI','Primero de Mayo','José Antonio Galán','La Esperanza','Cocicoinpa','Ricaurte','Brisas del Río','Cañaveral','El Edén','La María','La María II Etapa','El Jardín','Antonio Nariño','Ceilán','Chorreras','El Guayabo','El Overo','Galicia','Chicoral','El Placer','Uribe','Paila Arriba','Mestizal','Otro barrio'],
+            'Alcalá': ['Centro','La Playa','El Progreso','La Floresta','Villa del Río','El Prado','Nuevo Horizonte','Obrero','La Unión','El Porvenir','Otro barrio'],
+            'Andalucía': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Paraíso','La María','El Jardín','La Floresta','Otro barrio'],
+            'Ansermanuevo': ['Centro','El Carmelo','Obrero','La Frontera','Villa Esperanza','El Porvenir','La Esperanza','La Unión','Otro barrio'],
+            'Argelia': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
+            'Bolívar': ['Centro','San Fernando','El Progreso','La Esperanza','Obrero','Villa Nueva','El Jardín','La Inmaculada','Otro barrio'],
+            'Buenaventura': ['Centro (Isla Cascajal)','Isla Piangüita','Alfonso López','El Pílamo','Lleras','La Playita','El Cristal','La Inmaculada','Villa España','Miramar','El Progreso','Barrio Obrero','Ciudad Nueva','Viento Libre','Otro barrio'],
+            'Caicedonia': ['Centro','El Progreso','Obrero','La Esperanza','Villa Nueva','El Prado','La María','Ferrocarril','El Paraíso','La Floresta','El Porvenir','Otro barrio'],
+            'Calima (El Darién)': ['Centro','El Darién','El Progreso','La Esperanza','Obrero','Villa del Lago','La Florida','Otro barrio'],
+            'Candelaria': ['Centro','El Carmelo','La Carbonera','Juanchito','El Pinal','Villa del Rosario','San Joaquín','Paso de la Torre','El Recreo','Otro barrio'],
+            'Cartago': ['Centro','El Prado','Tejares','Guaduales','Versalles','El Palmar','Miraflores','El Dorado','Obrero','La Floresta','Nuevo Horizonte','Samaria','Panamericano','El Bosque','La Sultana','La Esperanza','Santa Teresita','El Jardín','Otro barrio'],
+            'Dagua': ['Centro','El Progreso','La Esperanza','La Florida','Obrero','El Pino','Villa Esperanza','Otro barrio'],
+            'El Águila': ['Centro','El Progreso','Obrero','La Esperanza','La Unión','Otro barrio'],
+            'El Cairo': ['Centro','El Progreso','Obrero','La Esperanza','La Unión','Otro barrio'],
+            'El Cerrito': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Merced','El Prado','La Marina','Otro barrio'],
+            'El Dovio': ['Centro','El Progreso','Obrero','La Esperanza','La Unión','Otro barrio'],
+            'Florida': ['Centro','La Unión','El Progreso','Obrero','La Esperanza','Villa Nueva','El Prado','La Aurora','El Jardín','La Floresta','Otro barrio'],
+            'Ginebra': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Floresta','Otro barrio'],
+            'Guacarí': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Inmaculada','San Isidro','Otro barrio'],
+            'Guadalajara de Buga': ['Centro','El Prado','La Independencia','Santa Rita','Obrero','La Inmaculada','San Vicente','El Dorado','Versalles','El Progreso','La Florida','El Jardín','El Restrepo','Otro barrio'],
+            'Jamundí': ['Centro','La Paz','El Progreso','La Esperanza','Obrero','Villa del Sur','El Prado','Nuevo Jamundí','La Ventura','El Vergel','Otro barrio'],
+            'La Cumbre': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
+            'La Unión': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Inmaculada','El Jardín','Otro barrio'],
+            'La Victoria': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Florida','Otro barrio'],
+            'Obando': ['Centro','El Progreso','La Esperanza','Obrero','La Florida','El Jardín','Otro barrio'],
+            'Palmira': ['Centro','El Prado','La Emilia','Chapinero','El Recreo','Versalles','Los Ángeles','La Esneda','El Paraíso','Obrero','La Esperanza','Villa del Sur','La Dolores','El Jardín','El Bosque','Villa Campestre','Brisas de los Álamos','Otro barrio'],
+            'Pradera': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Florida','El Jardín','Otro barrio'],
+            'Restrepo': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Floresta','Otro barrio'],
+            'Riofrío': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
+            'Roldanillo': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Floresta','El Jardín','Otro barrio'],
+            'San Pedro': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Florida','Otro barrio'],
+            'Santiago de Cali': ['Aguablanca','Alfonso López','Chapinero','Ciudad Jardín','El Peñón','El Poblado','El Porvenir','Granada','Guabal','La Flora','La Floresta','La Merced','Laureles','Limonar','Meléndez','Obrero','San Fernando','San Nicolás','Siloé','Terrón Colorado','Univalle','Valle del Lili','Villa del Lago','Comunas Norte (1–8)','Comunas Centro (9–12)','Comunas Sur (17–22)','Otro barrio'],
+            'Sevilla': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Floresta','El Carmelo','El Jardín','Otro barrio'],
+            'Toro': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Unión','Otro barrio'],
+            'Trujillo': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Floresta','Otro barrio'],
+            'Tuluá': ['Centro','El Bosque','El Prado','La Inmaculada','Chapinero','El Vergel','El Jardín','Obrero','La Esperanza','La Unión','Villa del Río','El Paraíso','San Carlos','La Floresta','La Colombia','María Auxiliadora','El Carmelo','El Troncal','La Paz','Otro barrio'],
+            'Ulloa': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
+            'Versalles': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
+            'Vijes': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
+            'Yotoco': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Florida','Otro barrio'],
+            'Yumbo': ['Centro','El Palo','La Paz','Villa del Prado','Bellavista','El Rodeo','Nueva Colonia','La Estación','Marco Fidel Suárez','El Paraíso','La Primavera','Villa Esperanza','Otro barrio'],
+            'Zarzal': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Florida','La Merced','El Carmelo','El Jardín','Otro barrio'],
+        };
+
+        // ----------------------------------------------------
+        // LÓGICA CASCADING: MUNICIPIO → BARRIO
+        // ----------------------------------------------------
+        window.actualizarBarrio = function() {
+            const municipio = document.getElementById('sel_municipio').value;
+            const hint      = document.getElementById('barrio_hint');
+            const selBarrio = document.getElementById('sel_barrio');
+
+            document.getElementById('id_municipio').value = municipio;
+            document.getElementById('id_barrio').value    = '';
+
+            const txtOtro = document.getElementById('txt_otro_barrio');
+
+            if (!municipio) {
+                hint.style.display      = 'block';
+                selBarrio.style.display = 'none';
+                selBarrio.innerHTML     = '<option value="">— Seleccione barrio —</option>';
+                txtOtro.style.display   = 'none';
+                txtOtro.value           = '';
+                return;
+            }
+
+            // Ocultar input "otro barrio" al cambiar de municipio
+            txtOtro.style.display = 'none';
+            txtOtro.value         = '';
+
+            // Poblar el select con los barrios del municipio seleccionado
+            const barrios = BARRIOS[municipio] || ['Centro','Otro barrio'];
+            let opciones  = '<option value="">— Seleccione barrio —</option>';
+            barrios.forEach(b => {
+                opciones += `<option value="${b}">${b}</option>`;
+            });
+            selBarrio.innerHTML     = opciones;
+            selBarrio.style.display = 'block';
+            hint.style.display      = 'none';
+        };
+
+        window.setBarrioValor = function(valor) {
+            const txtOtro = document.getElementById('txt_otro_barrio');
+            if (valor === 'Otro barrio') {
+                txtOtro.style.display = 'block';
+                txtOtro.value = '';
+                document.getElementById('id_barrio').value = '';
+                txtOtro.focus();
+            } else {
+                txtOtro.style.display = 'none';
+                txtOtro.value = '';
+                document.getElementById('id_barrio').value = valor;
+            }
+        };
+
+        // Restaurar selects al editar un ciudadano existente
+        (function restaurarSelects() {
+            const municipioGuardado = document.getElementById('id_municipio').value;
+            const barrioGuardado    = document.getElementById('id_barrio').value;
+            if (!municipioGuardado && !barrioGuardado) return;
+
+            const selMunicipio = document.getElementById('sel_municipio');
+            if (municipioGuardado) {
+                selMunicipio.value = municipioGuardado;
+            } else if (barrioGuardado) {
+                // Dato antiguo sin municipio guardado: asumir Bugalagrande
+                selMunicipio.value = 'Bugalagrande';
+            }
+            actualizarBarrio();
+
+            if (barrioGuardado) {
+                const selBarrio = document.getElementById('sel_barrio');
+                // Intentar seleccionar en el select; si no existe, mostrar input "otro"
+                selBarrio.value = barrioGuardado;
+                if (selBarrio.value !== barrioGuardado) {
+                    // El barrio guardado no está en la lista → mostrar como "otro"
+                    selBarrio.value = 'Otro barrio';
+                    const txtOtro = document.getElementById('txt_otro_barrio');
+                    txtOtro.style.display = 'block';
+                    txtOtro.value = barrioGuardado;
+                }
+                document.getElementById('id_barrio').value = barrioGuardado;
+            }
+        })();
 
         // ----------------------------------------------------
         // LÓGICA DEL CONSTRUCTOR DE DIRECCIONES (URBANO)

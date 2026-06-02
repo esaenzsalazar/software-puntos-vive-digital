@@ -103,6 +103,8 @@
                     <th>Tipo</th>
                     <th>¿Requiere equipo?</th>
                     <th>Descripción</th>
+                    <th>Estado</th>
+                    {% if atencion.estado == 'P' %}<th></th>{% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -123,6 +125,30 @@
                         {% endif %}
                     </td>
                     <td>{{ svc.descripcion|default:"—" }}</td>
+                    <td>
+                        {% if svc.estado == 'A' %}
+                            <span class="badge badge--warning">Activo</span>
+                        {% elif svc.estado == 'F' %}
+                            <span class="badge badge--success">Finalizado</span>
+                        {% else %}
+                            <span class="badge">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    {% if atencion.estado == 'P' %}
+                    <td>
+                        {% if svc.estado == 'A' %}
+                        <form method="POST"
+                              action="{% url 'modulo_puntos:finalizar_servicio' atencion.pk svc.pk %}"
+                              style="margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn--sm"
+                                    onclick="return confirm('¿Finalizar el servicio «{{ svc.nombre }}»?')">
+                                ✓ Finalizar
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>

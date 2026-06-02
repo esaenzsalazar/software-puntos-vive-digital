@@ -46,11 +46,13 @@ urlpatterns = [
     # ==========================================================================
     path('registrar-atencion/', views.registrar_atencion, name='registrar_atencion'),
     path('atenciones/', views.lista_atenciones, name='lista_atenciones'),
+    path('atenciones/buscar-ciudadanos/', views.buscar_ciudadanos_json, name='buscar_ciudadanos_json'),
     path('atenciones/<int:atencion_id>/', views.detalle_atencion, name='detalle_atencion'),
     path('atenciones/<int:atencion_id>/editar/', views.editar_atencion, name='editar_atencion'),
     path('atenciones/<int:atencion_id>/estado/', views.cambiar_estado_atencion, name='cambiar_estado_atencion'),
     path('atenciones/<int:atencion_id>/servicio/', views.registrar_servicio, name='registrar_servicio_atencion'),
     path('atenciones/<int:atencion_id>/satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion_atencion'),
+    path('atenciones/<int:atencion_id>/servicio/<int:servicio_id>/finalizar/', views.finalizar_servicio, name='finalizar_servicio'),
     path('servicios/', views.gestionar_servicios_pvd, name='gestionar_servicios_pvd'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),

@@ -59,7 +59,7 @@
           <th>Estado</th>
           <th>PVD</th>
           <th>Registrado por</th>
-          <th></th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -89,8 +89,47 @@
           <td>{{ atencion.punto_vive_digital|default:"—" }}</td>
           <td>{{ atencion.operador.get_full_name|default:atencion.operador.username|default:"—" }}</td>
           <td>
-            <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}"
-               class="btn btn--sm" title="Ver detalle">Ver</a>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}"
+                 class="btn btn-secondary btn--sm" title="Ver detalle">Ver</a>
+              {% if atencion.estado == 'P' %}
+              <form method="POST"
+                    action="{% url 'modulo_puntos:cambiar_estado_atencion' atencion.pk %}"
+                    style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="estado" value="F">
+                <input type="hidden" name="next" value="lista">
+                <button type="submit" class="btn btn--sm"
+                        onclick="return confirm('¿Finalizar la atención #{{ atencion.pk }}?')">
+                  ✓ Finalizar
+                </button>
+              </form>
+              <form method="POST"
+                    action="{% url 'modulo_puntos:cambiar_estado_atencion' atencion.pk %}"
+                    style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="estado" value="C">
+                <input type="hidden" name="next" value="lista">
+                <button type="submit" class="btn btn-secondary btn--sm"
+                        style="color:var(--color-danger);"
+                        onclick="return confirm('¿Cancelar la atención #{{ atencion.pk }}?')">
+                  ✕
+                </button>
+              </form>
+              {% elif atencion.estado == 'F' or atencion.estado == 'C' %}
+              <form method="POST"
+                    action="{% url 'modulo_puntos:cambiar_estado_atencion' atencion.pk %}"
+                    style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="estado" value="P">
+                <input type="hidden" name="next" value="lista">
+                <button type="submit" class="btn btn-secondary btn--sm"
+                        onclick="return confirm('¿Reabrir la atención #{{ atencion.pk }}?')">
+                  ↺
+                </button>
+              </form>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}

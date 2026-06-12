@@ -30,6 +30,7 @@ urlpatterns = [
     path('consultar-ciudadanos/', views.consultar_ciudadanos, name='consultar_ciudadanos'),
     path('registrar-ciudadano/', views.registrar_ciudadano, name='registrar_ciudadano'),
     path('editar-ciudadano/<int:ciu_cdgo>/', views.editar_ciudadano, name='editar_ciudadano'),
+    path('ciudadano/<int:ciu_cdgo>/desactivar/', views.desactivar_ciudadano, name='desactivar_ciudadano'),
     path('historial-ciudadano/<int:ciu_cdgo>/', views.historial_ciudadano, name='historial_ciudadano'),
     path('ciudadanos-pendientes/', views.ciudadanos_pendientes, name='ciudadanos_pendientes'),
     path('ciudadano/<int:ciu_id>/aprobar/', views.aprobar_ciudadano, name='aprobar_ciudadano'),
@@ -52,7 +53,11 @@ urlpatterns = [
     path('atenciones/<int:atencion_id>/estado/', views.cambiar_estado_atencion, name='cambiar_estado_atencion'),
     path('atenciones/<int:atencion_id>/servicio/', views.registrar_servicio, name='registrar_servicio_atencion'),
     path('atenciones/<int:atencion_id>/satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion_atencion'),
+    path('satisfaccion/<int:satisfaccion_id>/editar/', views.editar_satisfaccion, name='editar_satisfaccion'),
+    path('satisfaccion/<int:satisfaccion_id>/eliminar/', views.eliminar_satisfaccion, name='eliminar_satisfaccion'),
     path('atenciones/<int:atencion_id>/servicio/<int:servicio_id>/finalizar/', views.finalizar_servicio, name='finalizar_servicio'),
+    path('servicios/<int:servicio_id>/editar/', views.editar_servicio, name='editar_servicio'),
+    path('servicios/<int:servicio_id>/eliminar/', views.eliminar_servicio, name='eliminar_servicio'),
     path('servicios/', views.gestionar_servicios_pvd, name='gestionar_servicios_pvd'),
     path('registrar-servicio/', views.registrar_servicio, name='registrar_servicio'),
     path('registrar-satisfaccion/', views.registrar_satisfaccion, name='registrar_satisfaccion'),
@@ -62,6 +67,8 @@ urlpatterns = [
     # ==========================================================================
     path('recursos/', views.lista_recursos, name='registrar_recurso'),
     path('recursos/nuevo/', views.crear_recurso, name='crear_recurso'),
+    path('recursos/<int:recurso_id>/editar/', views.editar_recurso, name='editar_recurso'),
+    path('recursos/<int:recurso_id>/eliminar/', views.eliminar_recurso, name='eliminar_recurso'),
     path('registrar-prestamo/', views.registrar_prestamo, name='registrar_prestamo'),
     path('prestamos/<int:prestamo_id>/editar/', views.editar_prestamo, name='editar_prestamo'),
     path('prestamos/<int:prestamo_id>/devolver/', views.devolver_prestamo, name='devolver_prestamo'),
@@ -108,6 +115,7 @@ urlpatterns = [
     path('salas/crear/', views.crear_sala, name='crear_sala'),
     path('salas/editar/<int:sala_cdgo>/', views.editar_sala, name='editar_sala'),
     path('salas/activar/<int:sala_cdgo>/', views.activar_sala, name='activar_sala'),
+    path('salas/eliminar/<int:sala_cdgo>/', views.eliminar_sala, name='eliminar_sala'),
     
     # ==========================================================================
     # HABILITACIÓN DE SALAS
@@ -137,6 +145,10 @@ urlpatterns = [
     path('cursos/<int:curso_id>/sesion/', views.crear_sesion_curso, name='crear_sesion_curso'),
     path('cursos/<int:curso_id>/inscribir/', views.inscribir_ciudadano, name='inscribir_ciudadano'),
     path('cursos/sesion/<int:sesion_id>/asistencia/', views.marcar_asistencia, name='marcar_asistencia'),
+    path('cursos/<int:curso_id>/estado/', views.cambiar_estado_curso, name='cambiar_estado_curso'),
+    path('cursos/<int:curso_id>/eliminar/', views.eliminar_curso, name='eliminar_curso'),
+    path('cursos/sesion/<int:sesion_id>/eliminar/', views.eliminar_sesion_curso, name='eliminar_sesion_curso'),
+    path('cursos/inscripcion/<int:inscripcion_id>/eliminar/', views.eliminar_inscripcion, name='eliminar_inscripcion'),
 
     # ==========================================================================
     # MANTENIMIENTO DE EQUIPOS
@@ -144,12 +156,14 @@ urlpatterns = [
     path('mantenimientos/', views.lista_mantenimientos, name='lista_mantenimientos'),
     path('mantenimientos/crear/', views.crear_mantenimiento, name='crear_mantenimiento'),
     path('mantenimientos/<int:mant_id>/editar/', views.editar_mantenimiento, name='editar_mantenimiento'),
+    path('mantenimientos/<int:mant_id>/eliminar/', views.eliminar_mantenimiento, name='eliminar_mantenimiento'),
 
     # ==========================================================================
     # EVIDENCIAS
     # ==========================================================================
     path('evidencias/', views.lista_evidencias, name='lista_evidencias'),
     path('evidencias/nueva/', views.crear_evidencia, name='crear_evidencia'),
+    path('evidencias/<int:evidencia_id>/editar/', views.editar_evidencia, name='editar_evidencia'),
     path('evidencias/<int:evidencia_id>/eliminar/', views.eliminar_evidencia, name='eliminar_evidencia'),
 
     # ==========================================================================
@@ -162,4 +176,6 @@ urlpatterns = [
     # AYUDA Y SOPORTE
     # ==========================================================================
     path('ayuda/', views.ayuda_sistema, name='ayuda'),
+    path('auditoria/', views.log_auditoria, name='log_auditoria'),
+    path('auditoria/exportar/', views.exportar_auditoria, name='exportar_auditoria'),
 ]

@@ -7,7 +7,7 @@
     <div class="page-hero">
         <span class="eyebrow">Administración</span>
         <h1 class="page-title">Puntos Vive Digital</h1>
-        <p class="muted">Administra los Puntos Vive Digital del municipio.</p>
+        <p class="muted">Administra los Puntos Vive Digital del municipio de Bugalagrande.</p>
     </div>
 
     {% if pvds %}
@@ -16,8 +16,10 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
-                    <th>Dirección</th>
-                    <th>Barrio</th>
+                    <th>Dirección / Barrio</th>
+                    <th>Admin asignado</th>
+                    <th class="text-center">Ciudadanos</th>
+                    <th class="text-center">Atenciones</th>
                     <th>Estado</th>
                     <th class="text-center">Acciones</th>
                 </tr>
@@ -25,9 +27,36 @@
             <tbody>
                 {% for pvd in pvds %}
                 <tr>
-                    <td><strong>{{ pvd.nombre }}</strong></td>
-                    <td>{{ pvd.direccion|default:"—" }}</td>
-                    <td>{{ pvd.barrio|default:"—" }}</td>
+                    <td>
+                        <strong style="font-size:15px;">{{ pvd.nombre }}</strong>
+                        {% if pvd.telefono %}
+                        <br><span style="font-size:12px;color:#64748b;">📞 {{ pvd.telefono }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span>{{ pvd.direccion|default:"—" }}</span>
+                        {% if pvd.barrio %}
+                        <br><span style="font-size:12px;color:#64748b;">{{ pvd.barrio }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if pvd.admins %}
+                            {% for admin in pvd.admins %}
+                            <div style="font-size:13px;">
+                                <strong>{{ admin.get_full_name|default:admin.username }}</strong>
+                                <span style="font-size:11px;color:#94a3b8;">@{{ admin.username }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <span style="font-size:12px;color:#f59e0b;font-weight:600;">⚠️ Sin admin</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span style="font-size:16px;font-weight:700;color:#1d4ed8;">{{ pvd.total_ciudadanos }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span style="font-size:16px;font-weight:700;color:#15803d;">{{ pvd.total_atenciones }}</span>
+                    </td>
                     <td>
                         {% if pvd.estado == 'A' %}
                             <span class="badge badge-success">Activo</span>
@@ -38,14 +67,23 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <div style="display:flex;gap:6px;justify-content:center;">
+                        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
                             <a href="{% url 'modulo_puntos:editar_pvd' pvd.pk %}"
                                class="btn btn--sm" title="Editar datos del PVD">✏️ Editar</a>
-                            <a href="{% url 'modulo_puntos:activar_pvd' pvd.pk %}"
-                               class="btn btn--sm btn-secondary"
-                               title="{% if pvd.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
-                                {% if pvd.estado == 'A' %}⏸️ Desactivar{% else %}▶️ Activar{% endif %}
-                            </a>
+                            <form method="POST" action="{% url 'modulo_puntos:activar_pvd' pvd.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm btn-secondary"
+                                    data-confirm="{% if pvd.estado == 'A' %}¿Desactivar el PVD «{{ pvd.nombre }}»? Los usuarios no podrán acceder a él.{% else %}¿Activar el PVD «{{ pvd.nombre }}»?{% endif %}">
+                                    {% if pvd.estado == 'A' %}⏸️{% else %}▶️{% endif %}
+                                </button>
+                            </form>
+                            {% if puede_eliminar_pvd %}
+                            <form method="POST" action="{% url 'modulo_puntos:eliminar_pvd' pvd.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm btn-secondary" style="color:#dc2626;"
+                                        data-confirm="¿Eliminar definitivamente el PVD «{{ pvd.nombre }}»? Esta acción no se puede deshacer.">🗑️</button>
+                            </form>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -54,13 +92,12 @@
         </table>
     </div>
     {% else %}
-    <div style="text-align:center;padding:40px;">
+    <div style="text-align:center;padding:48px 24px;">
         <p style="font-size:48px;margin:0 0 16px 0;">🏢</p>
         <h3 style="margin:0 0 8px 0;">No hay Puntos Vive Digital registrados</h3>
-        <p class="muted">Aún no hay PVDs registrados.</p>
-        <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn" style="margin-top:12px;">+ Nuevo PVD</a>
+        <p class="muted">Crea el primer PVD para comenzar.</p>
+        <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn" style="margin-top:16px;">+ Crear PVD</a>
     </div>
     {% endif %}
 </div>
-
 {% endblock %}

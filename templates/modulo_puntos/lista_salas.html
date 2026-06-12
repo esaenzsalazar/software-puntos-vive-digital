@@ -8,15 +8,10 @@
         <span class="eyebrow">Administración</span>
         <h1 class="page-title">Gestión de Salas</h1>
         <p class="muted">Administra las salas de cada Punto Vive Digital</p>
-        <div class="page-hero__actions" style="margin-top: 16px;">
-            <a href="{% url 'modulo_puntos:crear_sala' %}" class="btn btn-primary">
-                <span style="margin-right: 6px;">➕</span> Nueva Sala
-            </a>
-        </div>
     </div>
 
     {% if es_admin_tic and pvds %}
-    <div class="card" style="margin-bottom: 24px; padding: 16px; background: var(--bg-alt);">
+    <div class="card" style="margin-bottom: 24px; padding: 16px; background: var(--p-surface-raised);">
         <label style="font-weight: 600; margin-bottom: 8px; display: block;">Filtrar por PVD:</label>
         <select id="pvd-filter" class="form-control" style="max-width: 400px;">
             <option value="">-- Todos los PVDs --</option>
@@ -78,12 +73,24 @@
                     </td>
                     <td>{{ sala.fecha_creacion|date:"d/m/Y" }}</td>
                     <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'modulo_puntos:editar_sala' sala.id %}" class="btn btn--sm" title="Editar">✏️</a>
-                            <a href="{% url 'modulo_puntos:activar_sala' sala.id %}" class="btn btn--sm"
-                               title="{% if sala.estado == 'A' %}Desactivar{% else %}Activar{% endif %}">
-                                {% if sala.estado == 'A' %}⏸️{% else %}▶️{% endif %}
-                            </a>
+                        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                            <a href="{% url 'modulo_puntos:editar_sala' sala.id %}" class="btn btn--sm btn-secondary" title="Editar">✏️</a>
+                            <a href="{% url 'modulo_puntos:agenda_sala' sala.id %}" class="btn btn--sm btn-secondary" title="Ver agenda">📅</a>
+                            <form method="POST" action="{% url 'modulo_puntos:activar_sala' sala.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm btn-secondary"
+                                    title="{% if sala.estado == 'A' %}Desactivar{% else %}Activar{% endif %}"
+                                    data-confirm="{% if sala.estado == 'A' %}¿Desactivar la sala «{{ sala.nombre }}»?{% else %}¿Activar la sala «{{ sala.nombre }}»?{% endif %}">
+                                    {% if sala.estado == 'A' %}⏸️{% else %}▶️{% endif %}
+                                </button>
+                            </form>
+                            {% if puede_eliminar %}
+                            <form method="POST" action="{% url 'modulo_puntos:eliminar_sala' sala.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm btn-secondary" style="color:#dc2626;"
+                                    data-confirm="¿Eliminar permanentemente la sala «{{ sala.nombre }}»? Esta acción no se puede deshacer.">🗑️</button>
+                            </form>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -102,7 +109,6 @@
                 Comienza creando tu primera sala para un Punto Vive Digital.
             {% endif %}
         </p>
-        <a href="{% url 'modulo_puntos:crear_sala' %}" class="btn" style="margin-top: 16px;">Crear primera sala</a>
     </div>
     {% endif %}
 </div>

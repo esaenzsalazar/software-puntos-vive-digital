@@ -421,8 +421,28 @@ class AtencionForm(forms.ModelForm):
         self.fields['hora_inicio'].required = True
         self.fields['hora_fin'].required = False
         self.fields['estado'].required = True
-        self.fields['estado'].initial = 'P'
         self.fields['observaciones'].required = True
+        self.fields['observaciones'].widget.attrs['placeholder'] = (
+            'Describe brevemente la razón de la atención, el trámite realizado o cualquier nota relevante.'
+        )
+        # Solo pre-seleccionar Pendiente cuando es una atención nueva
+        if not self.instance or not self.instance.pk:
+            self.fields['estado'].initial = 'P'
+
+    def clean(self):
+        cleaned = super().clean()
+        fecha = cleaned.get('fecha')
+        hora_inicio = cleaned.get('hora_inicio')
+        hora_fin = cleaned.get('hora_fin')
+
+        from datetime import date as date_cls
+        if fecha and fecha > date_cls.today():
+            self.add_error('fecha', 'La fecha de atención no puede ser futura.')
+
+        if hora_inicio and hora_fin and hora_fin <= hora_inicio:
+            self.add_error('hora_fin', 'La hora de fin debe ser posterior a la hora de inicio.')
+
+        return cleaned
 
 
 class SatisfaccionForm(forms.ModelForm):

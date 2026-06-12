@@ -3,11 +3,19 @@
 {% block title %}Historial — {{ ciudadano.get_nombre_completo }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="page-hero">
-        <span class="eyebrow">Historial</span>
-        <h2 class="page-title">{{ ciudadano.get_nombre_completo }}</h2>
-        <p class="muted">Atenciones, servicios y satisfacción registrados.</p>
+<div class="card" style="margin-bottom:24px;">
+    <div class="page-hero" style="padding-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+                <span class="eyebrow">Historial del Ciudadano</span>
+                <h2 class="page-title">{{ ciudadano.get_nombre_completo }}</h2>
+                <p class="muted">{{ total_atenciones }} atención{{ total_atenciones|pluralize:"es" }} registrada{{ total_atenciones|pluralize:"s" }}</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+                <a href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.pk %}" class="btn btn-secondary btn--sm">✏️ Editar ciudadano</a>
+                <a href="{% url 'modulo_puntos:registrar_atencion' %}?ciudadano={{ ciudadano.pk }}" class="btn btn--sm">+ Nueva atención</a>
+            </div>
+        </div>
     </div>
 
     <div class="callout">
@@ -21,13 +29,10 @@
                 <p><strong>Barrio:</strong> {{ ciudadano.barrio|default:"No registrado" }}</p>
                 <p><strong>Dirección:</strong> {{ ciudadano.direccion|default:"No registrada" }}</p>
                 <p><strong>Zona Rural:</strong> {{ ciudadano.zona_rural|default:"N/A" }}</p>
+                <p><strong>Municipio:</strong> {{ ciudadano.municipio|default:"No registrado" }}</p>
             </div>
         </div>
     </div>
-
-    <p class="muted" style="font-size:13px; margin:12px 0 0;">
-        <strong>{{ total_atenciones }}</strong> atención{{ total_atenciones|pluralize:"es" }} registrada{{ total_atenciones|pluralize:"s" }}
-    </p>
 </div>
 
 <div class="card">

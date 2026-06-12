@@ -4,28 +4,33 @@
 {% block title %}Ciudadanos Pendientes{% endblock %}
 
 {% block content %}
-<div class="page-hero">
-    <div class="page-hero__eyebrow">Gestión de Ciudadanos</div>
-    <h1 class="page-hero__title">⏳ Ciudadanos Pendientes de Aprobación</h1>
-    <p class="page-hero__desc">Revisa y aprueba los registros enviados por ciudadanos a través del formulario público.</p>
-</div>
-
-{% if messages %}
-<div style="margin-bottom:16px;">
-    {% for message in messages %}
-    <div class="badge badge-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}info{% endif %}"
-         style="display:block;padding:10px 14px;font-size:14px;border-radius:6px;margin-bottom:6px;">
-        {{ message }}
+<div class="card" style="margin-bottom:24px;">
+    <div class="page-hero" style="padding-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+                <span class="eyebrow">Gestión de Ciudadanos</span>
+                <h1 class="page-title">Ciudadanos Pendientes</h1>
+                <p class="muted">Revisa y aprueba los registros enviados a través del formulario público.</p>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <div class="stat-card stat-card--accent-warning" style="min-width:120px;padding:12px 20px;">
+                    <div class="stat-card__value" style="font-size:28px;">{{ total_pendientes }}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">Pendientes</div>
+                </div>
+            </div>
+        </div>
     </div>
-    {% endfor %}
-</div>
-{% endif %}
 
-<div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
-    <div class="stat-card stat-card--accent-warning" style="min-width:160px;">
-        <div class="stat-card__value">{{ total_pendientes }}</div>
-        <div class="stat-card__label">Pendientes</div>
+    {% if messages %}
+    <div style="margin-bottom:12px;">
+        {% for message in messages %}
+        <div class="badge badge-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}info{% endif %}"
+             style="display:block;padding:10px 14px;font-size:14px;border-radius:6px;margin-bottom:6px;">
+            {{ message }}
+        </div>
+        {% endfor %}
     </div>
+    {% endif %}
 </div>
 
 {% if ciudadanos_pendientes %}

@@ -1,170 +1,97 @@
 {% extends 'modulo_puntos/base.html' %}
 
+{% block title %}Gestión de Roles{% endblock %}
+
 {% block content %}
-<div class="apple-container">
-    <header class="module-header">
-        <h1>Control de Acceso</h1>
-        <p>Define roles y asigna permisos específicos para el personal</p>
-    </header>
-
-    <div class="apple-grid">
-        <section class="apple-card shadow-sm">
-            <h2 class="card-title">Configurar Nuevo Rol</h2>
-            <form method="POST" class="apple-form">
-                {% csrf_token %}
-                <input type="hidden" name="rol_id" id="rol_id">
-                
-                <div class="input-group">
-                    <label>Nombre del Rol</label>
-                    <input type="text" name="nombre_rol" id="nombre_rol" placeholder="Ej: Administrador, Operador, Consultor" required>
-                </div>
-
-                <div class="input-group">
-                    <label>Seleccionar Permisos (Multiselección)</label>
-                    <div class="custom-select-wrapper">
-                        <select name="permisos" id="permisos_select" multiple class="apple-select-multiple">
-                            {% for permiso in permisos_disponibles %}
-                                <option value="{{ permiso.id }}">{{ permiso.name }} | {{ permiso.content_type.model }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="hint">Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar varios.</small>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-primary-apple">Guardar Cambios</button>
-            </form>
-        </section>
-
-        <section class="apple-card">
-            <h2 class="card-title">Roles del Sistema</h2>
-            <div class="roles-list">
-                {% for rol in roles %}
-                <div class="role-item">
-                    <div class="role-info">
-                        <h3>{{ rol.name }}</h3>
-                        <span>{{ rol.permissions.count }} permisos activos</span>
-                    </div>
-                    <button class="btn-edit-minimal" onclick="editarRol('{{ rol.id }}', '{{ rol.name }}', [{% for p in rol.permissions.all %}'{{ p.id }}',{% endfor %}])">
-                        Editar
-                    </button>
-                </div>
-                {% empty %}
-                <p class="empty-state">No hay roles definidos aún.</p>
-                {% endfor %}
-            </div>
-        </section>
+<div class="card" style="margin-bottom:24px;">
+    <div class="page-hero" style="padding-bottom:16px;">
+        <span class="eyebrow">Administración</span>
+        <h1 class="page-title">Gestión de Roles</h1>
+        <p class="muted">Define y asigna permisos a los grupos de usuarios del sistema.</p>
     </div>
 </div>
 
-<style>
-    /* Estética Apple: Limpia, Espaciada y Responsive */
-    :root {
-        --apple-bg: #f5f5f7;
-        --apple-card: #ffffff;
-        --apple-blue: #0071e3;
-        --apple-text: #1d1d1f;
-        --apple-gray: #86868b;
-    }
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
 
-    .apple-container {
-        max-width: 1000px;
-        margin: 40px auto;
-        padding: 0 20px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        color: var(--apple-text);
-    }
+    <div class="card">
+        <h3 style="margin:0 0 20px;font-size:15px;font-weight:700;">
+            <span id="form-titulo">➕ Crear nuevo rol</span>
+        </h3>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="rol_id" id="rol_id">
 
-    .module-header { text-align: center; margin-bottom: 50px; }
-    .module-header h1 { font-size: 40px; font-weight: 600; letter-spacing: -1px; margin-bottom: 10px; }
-    .module-header p { color: var(--apple-gray); font-size: 19px; }
+            <div class="form-group">
+                <label>Nombre del Rol <span style="color:red;">*</span></label>
+                <input type="text" name="nombre_rol" id="nombre_rol"
+                       class="form-control"
+                       placeholder="Ej: Administrador, Consultor…" required>
+            </div>
 
-    .apple-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-    }
+            <div class="form-group">
+                <label>Permisos del rol</label>
+                <select name="permisos" id="permisos_select" multiple
+                        class="form-control" style="height:200px;">
+                    {% for permiso in permisos_disponibles %}
+                    <option value="{{ permiso.id }}">{{ permiso.name }} — {{ permiso.content_type.model }}</option>
+                    {% endfor %}
+                </select>
+                <small class="muted" style="font-size:12px;">Ctrl/Cmd + clic para seleccionar varios.</small>
+            </div>
 
-    @media (max-width: 850px) { .apple-grid { grid-template-columns: 1fr; } }
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                <button type="submit" class="btn">Guardar rol</button>
+                <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
+            </div>
+        </form>
+    </div>
 
-    .apple-card {
-        background: var(--apple-card);
-        border-radius: 22px;
-        padding: 30px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.04);
-        transition: transform 0.3s ease;
-    }
+    <div class="card">
+        <h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Roles del sistema</h3>
+        {% if roles %}
+        <div>
+            {% for rol in roles %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;">
+                <div>
+                    <strong style="font-size:14px;">{{ rol.name }}</strong>
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">{{ rol.permissions.count }} permiso{{ rol.permissions.count|pluralize:"s" }} activo{{ rol.permissions.count|pluralize:"s" }}</div>
+                </div>
+                <button class="btn btn-secondary btn--sm"
+                        onclick="editarRol('{{ rol.id }}', '{{ rol.name|escapejs }}', [{% for p in rol.permissions.all %}'{{ p.id }}',{% endfor %}])">
+                    ✏️ Editar
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="callout" style="text-align:center;padding:32px 16px;">
+            <p class="muted">No hay roles definidos aún.</p>
+        </div>
+        {% endif %}
+    </div>
 
-    .card-title { font-size: 22px; font-weight: 600; margin-bottom: 25px; }
-
-    .input-group { margin-bottom: 20px; }
-    .input-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
-    
-    input[type="text"], .apple-select-multiple {
-        width: 100%;
-        padding: 14px;
-        border: 1.5px solid #d2d2d7;
-        border-radius: 12px;
-        background: #fbfbfd;
-        font-size: 16px;
-        transition: all 0.2s;
-        box-sizing: border-box;
-    }
-
-    input:focus, .apple-select-multiple:focus {
-        border-color: var(--apple-blue);
-        outline: none;
-        background: #fff;
-        box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
-    }
-
-    .apple-select-multiple { height: 200px; }
-
-    .btn-primary-apple {
-        width: 100%;
-        background: var(--apple-blue);
-        color: white;
-        border: none;
-        padding: 15px;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-top: 10px;
-    }
-
-    .role-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 0;
-        border-bottom: 1px solid #f5f5f7;
-    }
-
-    .role-info h3 { font-size: 17px; font-weight: 600; margin: 0; }
-    .role-info span { font-size: 13px; color: var(--apple-gray); }
-
-    .btn-edit-minimal {
-        background: #f5f5f7;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
-        color: var(--apple-blue);
-        font-weight: 500;
-        cursor: pointer;
-    }
-</style>
+</div>
 
 <script>
-    function editarRol(id, nombre, permisos) {
-        document.getElementById('rol_id').value = id;
-        document.getElementById('nombre_rol').value = nombre;
-        
-        const select = document.getElementById('permisos_select');
-        Array.from(select.options).forEach(option => {
-            option.selected = permisos.includes(option.value);
-        });
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+function editarRol(id, nombre, permisos) {
+    document.getElementById('rol_id').value = id;
+    document.getElementById('nombre_rol').value = nombre;
+    document.getElementById('form-titulo').textContent = '✏️ Editando rol';
+
+    const select = document.getElementById('permisos_select');
+    Array.from(select.options).forEach(function(opt) {
+        opt.selected = permisos.includes(opt.value);
+    });
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function limpiarFormulario() {
+    document.getElementById('rol_id').value = '';
+    document.getElementById('nombre_rol').value = '';
+    document.getElementById('form-titulo').textContent = '➕ Crear nuevo rol';
+    const select = document.getElementById('permisos_select');
+    Array.from(select.options).forEach(function(opt) { opt.selected = false; });
+}
 </script>
 {% endblock %}

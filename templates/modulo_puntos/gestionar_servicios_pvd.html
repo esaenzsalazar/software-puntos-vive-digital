@@ -100,6 +100,18 @@
     <p class="muted">No hay servicios que coincidan con los filtros.</p>
   </div>
   {% endif %}
+
+  {% if servicios.has_other_pages %}
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0;">
+    {% if servicios.has_previous %}
+    <a href="?q={{ q }}&tipo={{ tipo_filter }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&page={{ servicios.previous_page_number }}" class="btn btn-secondary btn--sm">← Anterior</a>
+    {% endif %}
+    <span class="muted">Página {{ servicios.number }} de {{ servicios.paginator.num_pages }}</span>
+    {% if servicios.has_next %}
+    <a href="?q={{ q }}&tipo={{ tipo_filter }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&page={{ servicios.next_page_number }}" class="btn btn-secondary btn--sm">Siguiente →</a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 {% endblock %}

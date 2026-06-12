@@ -117,8 +117,8 @@
             {% endif %}
         </div>
 
-        <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--border-color);">
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+        <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--p-border);">
+            <a href="{% url 'modulo_puntos:lista_pvd' %}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn">Continuar al paso 2 →</button>
         </div>
     </form>
@@ -172,7 +172,7 @@
             <a href="{% url 'modulo_puntos:accesos_temporales' %}" style="color:#1d4ed8; font-weight:600;">Accesos Temporales</a>.
         </div>
 
-        <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--border-color);">
+        <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--p-border);">
             <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn btn-secondary">← Volver al paso 1</a>
             <button type="submit" class="btn">Crear PVD</button>
         </div>

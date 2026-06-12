@@ -29,10 +29,49 @@
                 </div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm">Editar</a>
-                <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm">+ Nueva Sesión</a>
-                <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">Inscribir Ciudadano</a>
-                <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm">← Volver</a>
+                <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm">✏️ Editar</a>
+                <a href="{% url 'modulo_puntos:crear_sesion_curso' curso.id %}" class="btn btn--sm">+ Sesión</a>
+                <a href="{% url 'modulo_puntos:inscribir_ciudadano' curso.id %}" class="btn btn--sm">+ Inscribir</a>
+
+                {# ── Cambio de estado ── #}
+                {% if curso.estado == 'PL' %}
+                <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_curso' curso.id %}" style="margin:0;">
+                    {% csrf_token %}<input type="hidden" name="nuevo_estado" value="AC">
+                    <button type="submit" class="btn btn--sm" style="background:#16a34a;border-color:#16a34a;"
+                            data-confirm="¿Iniciar el curso «{{ curso.nombre }}»?">▶ Iniciar</button>
+                </form>
+                <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_curso' curso.id %}" style="margin:0;">
+                    {% csrf_token %}<input type="hidden" name="nuevo_estado" value="CA">
+                    <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                            data-confirm="¿Cancelar el curso «{{ curso.nombre }}»?">✕ Cancelar</button>
+                </form>
+                {% elif curso.estado == 'AC' %}
+                <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_curso' curso.id %}" style="margin:0;">
+                    {% csrf_token %}<input type="hidden" name="nuevo_estado" value="FI">
+                    <button type="submit" class="btn btn--sm" style="background:#16a34a;border-color:#16a34a;"
+                            data-confirm="¿Marcar el curso «{{ curso.nombre }}» como finalizado?">✓ Finalizar</button>
+                </form>
+                <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_curso' curso.id %}" style="margin:0;">
+                    {% csrf_token %}<input type="hidden" name="nuevo_estado" value="CA">
+                    <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                            data-confirm="¿Cancelar el curso «{{ curso.nombre }}»?">✕ Cancelar</button>
+                </form>
+                {% elif curso.estado == 'FI' or curso.estado == 'CA' %}
+                <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_curso' curso.id %}" style="margin:0;">
+                    {% csrf_token %}<input type="hidden" name="nuevo_estado" value="PL">
+                    <button type="submit" class="btn btn-secondary btn--sm"
+                            data-confirm="¿Reactivar el curso «{{ curso.nombre }}» como Planificado?">↺ Reactivar</button>
+                </form>
+                {% endif %}
+
+                {# ── Eliminar curso ── #}
+                <form method="POST" action="{% url 'modulo_puntos:eliminar_curso' curso.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                            data-confirm="¿Eliminar definitivamente el curso «{{ curso.nombre }}»? Esta acción no se puede deshacer.">🗑️</button>
+                </form>
+
+                <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn-secondary btn--sm">← Volver</a>
             </div>
         </div>
     </div>
@@ -112,7 +151,14 @@
                         </span>
                     </td>
                     <td class="text-center">
-                        <a href="{% url 'modulo_puntos:marcar_asistencia' ses.id %}" class="btn btn--sm">Registrar asistencia</a>
+                        <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
+                            <a href="{% url 'modulo_puntos:marcar_asistencia' ses.id %}" class="btn btn--sm">Asistencia</a>
+                            <form method="POST" action="{% url 'modulo_puntos:eliminar_sesion_curso' ses.id %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                                        data-confirm="¿Eliminar la sesión #{{ ses.numero_sesion }} «{{ ses.tema }}»?">🗑️</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -145,7 +191,8 @@
                     <th>Nombre</th>
                     <th>Documento</th>
                     <th>Estado</th>
-                    <th>Fecha de inscripción</th>
+                    <th>Inscripción</th>
+                    <th style="text-align:center;">Acción</th>
                 </tr>
             </thead>
             <tbody>
@@ -163,6 +210,13 @@
                         {% endif %}
                     </td>
                     <td>{{ ins.fecha_inscripcion|date:"d/m/Y" }}</td>
+                    <td style="text-align:center;">
+                        <form method="POST" action="{% url 'modulo_puntos:eliminar_inscripcion' ins.id %}" style="margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                                    data-confirm="¿Quitar a {{ ins.ciudadano.get_nombre_completo }} de este curso?">🗑️ Quitar</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -8,23 +8,38 @@
         <span class="eyebrow">Formación</span>
         <h1 class="page-title">Cursos y Talleres</h1>
         <p class="muted">Gestiona los cursos de aprendizaje del Punto Vive Digital</p>
-        <div class="page-hero__actions" style="margin-top:16px;">
-            <a href="{% url 'modulo_puntos:crear_curso' %}" class="btn">➕ Nuevo Curso</a>
-        </div>
     </div>
 
-    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; align-items:center;">
-        <form method="GET" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <select name="estado" class="form-control" style="max-width:220px;">
-                <option value="">— Todos los estados —</option>
+    <form method="GET" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+        <div style="flex:2;min-width:180px;">
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Buscar</label>
+            <input type="search" name="q" value="{{ q_filtro }}" placeholder="Nombre, descripción, población…" style="width:100%;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Estado</label>
+            <select name="estado" class="form-control" style="min-width:160px;">
+                <option value="">— Todos —</option>
                 {% for val, label in estados %}
                     <option value="{{ val }}" {% if estado_filtro == val %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn--sm">Filtrar</button>
-            {% if estado_filtro %}<a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm btn-secondary">✕ Limpiar</a>{% endif %}
-        </form>
-        <a href="{% url 'modulo_puntos:exportar_cursos_csv' %}" class="btn btn-secondary btn--sm">↓ Exportar Excel</a>
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Inicio desde</label>
+            <input type="date" name="fecha_desde" value="{{ fecha_desde_filtro }}" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Hasta</label>
+            <input type="date" name="fecha_hasta" value="{{ fecha_hasta_filtro }}" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+        </div>
+        <button type="submit" class="btn btn--sm">Filtrar</button>
+        {% if q_filtro or estado_filtro or fecha_desde_filtro or fecha_hasta_filtro %}
+        <a href="{% url 'modulo_puntos:lista_cursos' %}" class="btn btn--sm btn-secondary">✕ Limpiar</a>
+        {% endif %}
+    </form>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <p class="muted" style="font-size:13px;margin:0;">{{ total_cursos }} curso{{ total_cursos|pluralize:"s" }} encontrado{{ total_cursos|pluralize:"s" }}</p>
+        <a href="{% url 'modulo_puntos:exportar_cursos_csv' %}{% if fecha_desde_filtro or fecha_hasta_filtro %}?fecha_desde={{ fecha_desde_filtro }}&fecha_hasta={{ fecha_hasta_filtro }}{% endif %}" class="btn btn-secondary btn--sm">↓ Exportar Excel</a>
     </div>
 
     {% if cursos %}
@@ -65,9 +80,9 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <div class="btn-group btn-group-sm">
+                        <div style="display:flex;gap:6px;justify-content:center;">
                             <a href="{% url 'modulo_puntos:detalle_curso' curso.id %}" class="btn btn--sm" title="Ver detalle">👁️</a>
-                            <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm" title="Editar">✏️</a>
+                            <a href="{% url 'modulo_puntos:editar_curso' curso.id %}" class="btn btn--sm btn-secondary" title="Editar">✏️</a>
                         </div>
                     </td>
                 </tr>
@@ -75,12 +90,32 @@
             </tbody>
         </table>
     </div>
+    {% if page_obj.has_other_pages %}
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;padding:16px 0;flex-wrap:wrap;">
+        {% if page_obj.has_previous %}
+        <a href="?{% if q_filtro %}q={{ q_filtro }}&{% endif %}{% if estado_filtro %}estado={{ estado_filtro }}&{% endif %}{% if fecha_desde_filtro %}fecha_desde={{ fecha_desde_filtro }}&{% endif %}{% if fecha_hasta_filtro %}fecha_hasta={{ fecha_hasta_filtro }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn btn-secondary btn--sm">‹ Anterior</a>
+        {% endif %}
+        <span class="muted" style="font-size:13px;">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?{% if q_filtro %}q={{ q_filtro }}&{% endif %}{% if estado_filtro %}estado={{ estado_filtro }}&{% endif %}{% if fecha_desde_filtro %}fecha_desde={{ fecha_desde_filtro }}&{% endif %}{% if fecha_hasta_filtro %}fecha_hasta={{ fecha_hasta_filtro }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn btn-secondary btn--sm">Siguiente ›</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="card card--hint" style="text-align:center; padding:40px;">
         <p style="font-size:48px; margin:0 0 16px 0;">📚</p>
         <h3 style="margin:0 0 8px 0;">No hay cursos registrados</h3>
-        <p class="muted">Crea el primer curso o taller para este Punto Vive Digital.</p>
+        <p class="muted">
+            {% if q_filtro or estado_filtro or fecha_desde_filtro or fecha_hasta_filtro %}
+            No hay cursos que coincidan con los filtros aplicados.
+            {% else %}
+            Crea el primer curso o taller para este Punto Vive Digital.
+            {% endif %}
+        </p>
+        {% if not q_filtro and not estado_filtro %}
         <a href="{% url 'modulo_puntos:crear_curso' %}" class="btn" style="margin-top:16px;">Crear primer curso</a>
+        {% endif %}
     </div>
     {% endif %}
 </div>

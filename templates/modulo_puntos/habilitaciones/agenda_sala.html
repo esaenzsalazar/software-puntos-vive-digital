@@ -56,12 +56,6 @@
                 border:1px solid #e2e8f0; border-top:none; border-radius:0 0 8px 8px;
                 padding:6px; min-height:120px; background:white;
             ">
-                {% with hab_dia=agenda|dictsort:dia %}
-                {% for hab in agenda|dictsortreversed:"pk" %}
-                {# workaround: iterate agenda manually #}
-                {% endfor %}
-                {% endwith %}
-
                 {% for hab_key, hab_list in agenda.items %}
                     {% if hab_key == dia %}
                         {% if hab_list %}

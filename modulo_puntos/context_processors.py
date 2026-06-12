@@ -2,7 +2,7 @@
 Contexto global para navegación según permisos (contrato PVD / roles).
 Proporciona variables de contexto disponibles en todos los templates.
 """
-from .models import PuntoViveDigital
+from .models import PuntoViveDigital, Ciudadano
 from django.urls import reverse, NoReverseMatch
 
 # (label, parent_label, parent_url_name)
@@ -11,6 +11,7 @@ _BREADCRUMB_MAP = {
     'seleccionar_pvd_view':  ('Seleccionar PVD',       None,                    None),
     'perfil_usuario':        ('Mi Perfil',             'Panel',                 'panel_control'),
     'ayuda':                 ('Ayuda',                 'Panel',                 'panel_control'),
+    'log_auditoria':         ('Log de Auditoría',      'Panel',                 'panel_control'),
     # Ciudadanos
     'consultar_ciudadanos':  ('Ciudadanos',            'Panel',                 'panel_control'),
     'registrar_ciudadano':   ('Registrar Ciudadano',   'Ciudadanos',            'consultar_ciudadanos'),
@@ -30,6 +31,7 @@ _BREADCRUMB_MAP = {
     # Recursos
     'registrar_recurso':     ('Recursos',              'Panel',                 'panel_control'),
     'crear_recurso':         ('Nuevo Recurso',         'Recursos',              'registrar_recurso'),
+    'editar_recurso':        ('Editar Recurso',        'Recursos',              'registrar_recurso'),
     'registrar_prestamo':    ('Nuevo Préstamo',        'Recursos',              'registrar_recurso'),
     'editar_prestamo':       ('Editar Préstamo',       'Recursos',              'registrar_recurso'),
     # Reportes
@@ -66,6 +68,7 @@ _BREADCRUMB_MAP = {
     # Evidencias
     'lista_evidencias':      ('Evidencias',            'Panel',                 'panel_control'),
     'crear_evidencia':       ('Nueva Evidencia',       'Evidencias',            'lista_evidencias'),
+    'editar_evidencia':      ('Editar Evidencia',      'Evidencias',            'lista_evidencias'),
     # Usuarios y roles
     'gestionar_roles':       ('Gestión de Roles',      'Panel',                 'panel_control'),
     'crear_admin_tic':       ('Nuevo Admin TIC',       'Panel',                 'panel_control'),
@@ -88,9 +91,10 @@ _TOPBAR_MODULO_REQUERIDO = {
 _TOPBAR_ACTIONS = {
     'panel_control':         [('↓ Exportar', 'reportes', 'btn-secondary'), ('+ Nueva atención', 'registrar_atencion', '')],
     'consultar_ciudadanos':  [('+ Registrar ciudadano', 'registrar_ciudadano', '')],
+    'ciudadanos_pendientes': [('← Ciudadanos', '__back__', 'btn-secondary')],
     'registrar_ciudadano':   [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_ciudadano':      [('← Cancelar', '__back__', 'btn-secondary')],
-    'historial_ciudadano':   [('← Volver', '__back__', 'btn-secondary')],
+    'historial_ciudadano':   [('← Volver', '__back__', 'btn-secondary'), ('+ Nueva atención', 'registrar_atencion', '')],
     'lista_atenciones':      [('+ Nueva atención', 'registrar_atencion', '')],
     'detalle_atencion':      [('← Volver', '__back__', 'btn-secondary')],
     'editar_atencion':       [('← Cancelar', '__back__', 'btn-secondary')],
@@ -116,6 +120,12 @@ _TOPBAR_ACTIONS = {
     'editar_permiso':        [('← Cancelar', '__back__', 'btn-secondary')],
     'permisos_usuario':      [('← Volver', '__back__', 'btn-secondary')],
     'permisos_ofitic':       [('← Volver', '__back__', 'btn-secondary')],
+    'accesos_temporales':    [('← Volver', '__back__', 'btn-secondary')],
+    'log_auditoria':         [],
+    'editar_recurso':        [('← Cancelar', '__back__', 'btn-secondary')],
+    'editar_satisfaccion':   [('← Cancelar', '__back__', 'btn-secondary')],
+    'editar_evidencia':      [('← Cancelar', '__back__', 'btn-secondary')],
+    'agenda_sala':           [('← Volver', '__back__', 'btn-secondary')],
     'lista_cursos':          [('+ Nuevo curso', 'crear_curso', '')],
     'crear_curso':           [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_curso':          [('← Cancelar', '__back__', 'btn-secondary')],
@@ -218,5 +228,10 @@ def pvd_navigation(request):
                     continue
             resolved.append({'label': label, 'url': action_url, 'css': css})
     ctx['topbar_actions'] = resolved
+
+    if u.is_authenticated and ctx['nav_pvd']:
+        ctx['pendientes_count'] = Ciudadano.objects.filter(estado='P').count()
+    else:
+        ctx['pendientes_count'] = 0
 
     return ctx

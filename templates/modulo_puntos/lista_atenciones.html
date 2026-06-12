@@ -32,11 +32,28 @@
     </div>
     <div>
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-                    color:var(--text-muted);display:block;margin-bottom:4px;">Fecha</label>
-      <input type="date" name="fecha" value="{{ fecha_filter }}">
+                    color:var(--text-muted);display:block;margin-bottom:4px;">Desde</label>
+      <input type="date" name="fecha_desde" value="{{ fecha_desde_filter }}">
     </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                    color:var(--text-muted);display:block;margin-bottom:4px;">Hasta</label>
+      <input type="date" name="fecha_hasta" value="{{ fecha_hasta_filter }}">
+    </div>
+    {% if pvds_para_filtro %}
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                    color:var(--text-muted);display:block;margin-bottom:4px;">PVD</label>
+      <select name="pvd">
+        <option value="">— Todos —</option>
+        {% for pvd in pvds_para_filtro %}
+        <option value="{{ pvd.pk }}" {% if pvd_filter == pvd.pk|stringformat:"s" %}selected{% endif %}>{{ pvd.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
     <button type="submit" class="btn btn--sm">Filtrar</button>
-    {% if q or estado_filter or fecha_filter %}
+    {% if q or estado_filter or fecha_desde_filter or fecha_hasta_filter or pvd_filter %}
     <a href="{% url 'modulo_puntos:lista_atenciones' %}" class="btn btn-secondary btn--sm">✕ Limpiar</a>
     {% endif %}
   </form>
@@ -100,7 +117,7 @@
                 <input type="hidden" name="estado" value="F">
                 <input type="hidden" name="next" value="lista">
                 <button type="submit" class="btn btn--sm"
-                        onclick="return confirm('¿Finalizar la atención #{{ atencion.pk }}?')">
+                        data-confirm="¿Finalizar la atención #{{ atencion.pk }}?">
                   ✓ Finalizar
                 </button>
               </form>
@@ -111,8 +128,8 @@
                 <input type="hidden" name="estado" value="C">
                 <input type="hidden" name="next" value="lista">
                 <button type="submit" class="btn btn-secondary btn--sm"
-                        style="color:var(--color-danger);"
-                        onclick="return confirm('¿Cancelar la atención #{{ atencion.pk }}?')">
+                        style="color:var(--p-danger);"
+                        data-confirm="¿Cancelar la atención #{{ atencion.pk }}?">
                   ✕
                 </button>
               </form>
@@ -124,7 +141,7 @@
                 <input type="hidden" name="estado" value="P">
                 <input type="hidden" name="next" value="lista">
                 <button type="submit" class="btn btn-secondary btn--sm"
-                        onclick="return confirm('¿Reabrir la atención #{{ atencion.pk }}?')">
+                        data-confirm="¿Reabrir la atención #{{ atencion.pk }}?">
                   ↺
                 </button>
               </form>
@@ -140,19 +157,19 @@
   {% if page_obj.has_other_pages %}
   <div style="display:flex; justify-content:center; gap:6px; margin-top:20px; flex-wrap:wrap;">
     {% if page_obj.has_previous %}
-    <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_filter %}fecha={{ fecha_filter }}&{% endif %}page={{ page_obj.previous_page_number }}"
+    <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_desde_filter %}fecha_desde={{ fecha_desde_filter }}&{% endif %}{% if fecha_hasta_filter %}fecha_hasta={{ fecha_hasta_filter }}&{% endif %}{% if pvd_filter %}pvd={{ pvd_filter }}&{% endif %}page={{ page_obj.previous_page_number }}"
        class="btn btn-secondary btn--sm">‹ Anterior</a>
     {% endif %}
     {% for num in page_obj.paginator.page_range %}
       {% if page_obj.number == num %}
-        <span class="btn btn--sm" style="background:var(--color-primary);color:#fff;">{{ num }}</span>
+        <span class="btn btn--sm" style="background:var(--primary-color);color:#fff;">{{ num }}</span>
       {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-        <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_filter %}fecha={{ fecha_filter }}&{% endif %}page={{ num }}"
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_desde_filter %}fecha_desde={{ fecha_desde_filter }}&{% endif %}{% if fecha_hasta_filter %}fecha_hasta={{ fecha_hasta_filter }}&{% endif %}{% if pvd_filter %}pvd={{ pvd_filter }}&{% endif %}page={{ num }}"
            class="btn btn-secondary btn--sm">{{ num }}</a>
       {% endif %}
     {% endfor %}
     {% if page_obj.has_next %}
-    <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_filter %}fecha={{ fecha_filter }}&{% endif %}page={{ page_obj.next_page_number }}"
+    <a href="?{% if q %}q={{ q }}&{% endif %}{% if estado_filter %}estado={{ estado_filter }}&{% endif %}{% if fecha_desde_filter %}fecha_desde={{ fecha_desde_filter }}&{% endif %}{% if fecha_hasta_filter %}fecha_hasta={{ fecha_hasta_filter }}&{% endif %}{% if pvd_filter %}pvd={{ pvd_filter }}&{% endif %}page={{ page_obj.next_page_number }}"
        class="btn btn-secondary btn--sm">Siguiente ›</a>
     {% endif %}
   </div>

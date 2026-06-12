@@ -49,7 +49,7 @@
             {% if atencion %}
             <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}" class="btn btn-secondary">← Volver</a>
             {% else %}
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
+            <a href="{% url 'modulo_puntos:lista_atenciones' %}" class="btn btn-secondary">Cancelar</a>
             {% endif %}
             <button type="submit" class="btn">Guardar Servicio</button>
         </div>

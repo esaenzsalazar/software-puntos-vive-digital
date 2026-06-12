@@ -1,0 +1,116 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Log de Auditoría{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Seguridad</span>
+        <h1 class="page-title">Log de Auditoría</h1>
+        <p class="muted">Registro de todas las acciones realizadas en el sistema.</p>
+    </div>
+
+    <details class="export-panel" style="margin-bottom:16px;">
+        <summary>↓ Exportar log</summary>
+        <div style="padding:12px 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <span class="muted" style="font-size:13px;">Exporta los registros con los filtros activos en formato Excel.</span>
+            <a href="{% url 'modulo_puntos:exportar_auditoria' %}?q={{ q|urlencode }}&accion={{ accion_filter|urlencode }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}"
+               class="btn btn--sm">↓ Descargar Excel</a>
+        </div>
+    </details>
+
+    <form method="GET" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:20px;">
+        <div style="flex:2;min-width:200px;">
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Buscar</label>
+            <input type="search" name="q" value="{{ q }}" placeholder="Usuario, modelo, descripción…" style="width:100%;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Acción</label>
+            <select name="accion" style="min-width:160px;">
+                <option value="">— Todas —</option>
+                {% for cod, etq in tipo_choices %}
+                <option value="{{ cod }}" {% if accion_filter == cod %}selected{% endif %}>{{ etq }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Desde</label>
+            <input type="date" name="fecha_desde" value="{{ fecha_desde }}" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+        </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Hasta</label>
+            <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+        </div>
+        <button type="submit" class="btn btn--sm">Filtrar</button>
+        {% if q or accion_filter or fecha_desde or fecha_hasta %}
+        <a href="{% url 'modulo_puntos:log_auditoria' %}" class="btn btn-secondary btn--sm">✕ Limpiar</a>
+        {% endif %}
+    </form>
+
+    {% if registros %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Modelo</th>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registros %}
+                <tr>
+                    <td style="white-space:nowrap;font-size:12px;color:#64748b;">{{ reg.fecha_accion|date:"d/m/Y H:i" }}</td>
+                    <td><strong>{{ reg.usuario|default:"—" }}</strong></td>
+                    <td>
+                        {% if reg.accion == 'CREATE' %}
+                            <span class="badge badge--success">Creación</span>
+                        {% elif reg.accion == 'UPDATE' %}
+                            <span class="badge badge--warning">Actualización</span>
+                        {% elif reg.accion == 'DELETE' %}
+                            <span class="badge badge--danger">Eliminación</span>
+                        {% elif reg.accion == 'LOGIN' %}
+                            <span class="badge badge--info">Login</span>
+                        {% elif reg.accion == 'LOGOUT' %}
+                            <span class="badge" style="background:#f1f5f9;color:#475569;">Logout</span>
+                        {% elif reg.accion == 'EXPORT' %}
+                            <span class="badge" style="background:#ede9fe;color:#6d28d9;">Exportación</span>
+                        {% else %}
+                            <span class="badge">{{ reg.get_accion_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;color:#64748b;">{{ reg.modelo_afectado|default:"—" }}</td>
+                    <td style="font-size:12px;color:#94a3b8;">#{{ reg.objeto_id|default:"—" }}</td>
+                    <td style="font-size:13px;max-width:320px;">{{ reg.descripcion|truncatechars:80|default:"—" }}</td>
+                    <td style="font-size:12px;color:#94a3b8;">{{ reg.direccion_ip|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 0;flex-wrap:wrap;">
+        {% if page_obj.has_previous %}
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if accion_filter %}accion={{ accion_filter }}&{% endif %}{% if fecha_desde %}fecha_desde={{ fecha_desde }}&{% endif %}{% if fecha_hasta %}fecha_hasta={{ fecha_hasta }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn btn-secondary btn--sm">‹ Anterior</a>
+        {% endif %}
+        <span class="muted" style="font-size:13px;">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if accion_filter %}accion={{ accion_filter }}&{% endif %}{% if fecha_desde %}fecha_desde={{ fecha_desde }}&{% endif %}{% if fecha_hasta %}fecha_hasta={{ fecha_hasta }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn btn-secondary btn--sm">Siguiente ›</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card card--hint" style="text-align:center;padding:48px 24px;">
+        <p style="font-size:40px;margin:0 0 12px;">🔍</p>
+        <h3 style="margin:0 0 8px;">Sin registros</h3>
+        <p class="muted">No hay acciones que coincidan con los filtros aplicados.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

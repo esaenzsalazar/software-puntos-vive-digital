@@ -3,10 +3,251 @@
 {% block title %}Ayuda{% endblock %}
 
 {% block content %}
-<div class="card" style="text-align:center; padding:64px 24px;">
-    <div style="font-size:56px; margin-bottom:16px;">🚧</div>
-    <h2 class="page-title" style="margin:0 0 8px;">Sección en construcción</h2>
-    <p class="muted">La documentación y guías de uso estarán disponibles una vez el sistema esté completamente finalizado.</p>
-    <a href="{% url 'modulo_puntos:panel_control' %}" class="btn" style="margin-top:24px;">Volver al panel</a>
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Documentación</span>
+        <h1 class="page-title">Centro de Ayuda</h1>
+        <p class="muted">Guías de uso del sistema Puntos Vive Digital — Alcaldía de Bugalagrande</p>
+    </div>
 </div>
+
+{# ── Acceso rápido ── #}
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:16px;">
+    <a href="#ciudadanos" style="text-decoration:none;">
+        <div class="card" style="text-align:center; padding:20px 12px; cursor:pointer;">
+            <div style="font-size:28px;">👤</div>
+            <p style="margin:8px 0 0; font-size:13px; font-weight:600;">Ciudadanos</p>
+        </div>
+    </a>
+    <a href="#atenciones" style="text-decoration:none;">
+        <div class="card" style="text-align:center; padding:20px 12px; cursor:pointer;">
+            <div style="font-size:28px;">📋</div>
+            <p style="margin:8px 0 0; font-size:13px; font-weight:600;">Atenciones</p>
+        </div>
+    </a>
+    <a href="#recursos" style="text-decoration:none;">
+        <div class="card" style="text-align:center; padding:20px 12px; cursor:pointer;">
+            <div style="font-size:28px;">💻</div>
+            <p style="margin:8px 0 0; font-size:13px; font-weight:600;">Recursos</p>
+        </div>
+    </a>
+    <a href="#salas" style="text-decoration:none;">
+        <div class="card" style="text-align:center; padding:20px 12px; cursor:pointer;">
+            <div style="font-size:28px;">🏛️</div>
+            <p style="margin:8px 0 0; font-size:13px; font-weight:600;">Salas</p>
+        </div>
+    </a>
+    <a href="#cursos" style="text-decoration:none;">
+        <div class="card" style="text-align:center; padding:20px 12px; cursor:pointer;">
+            <div style="font-size:28px;">📚</div>
+            <p style="margin:8px 0 0; font-size:13px; font-weight:600;">Cursos</p>
+        </div>
+    </a>
+    <a href="#reportes" style="text-decoration:none;">
+        <div class="card" style="text-align:center; padding:20px 12px; cursor:pointer;">
+            <div style="font-size:28px;">📊</div>
+            <p style="margin:8px 0 0; font-size:13px; font-weight:600;">Reportes</p>
+        </div>
+    </a>
+</div>
+
+{# ── Roles ── #}
+<div class="card" style="margin-top:16px;">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        🔑 Roles de usuario
+    </h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px;">
+            <p style="font-weight:700; margin:0 0 6px; color:#1d4ed8;">Superusuario</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Acceso total al sistema. Puede crear y eliminar cualquier registro, gestionar roles, permisos y todos los PVDs.</p>
+        </div>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:16px;">
+            <p style="font-weight:700; margin:0 0 6px; color:#166534;">Administrador TIC</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Ve y gestiona todos los PVDs. Puede delegar permisos a los Admin PVD. No puede cambiar la configuración de roles globales.</p>
+        </div>
+        <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; padding:16px;">
+            <p style="font-weight:700; margin:0 0 6px; color:#6d28d9;">Administrador PVD</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Solo ve su Punto Vive Digital asignado. Registra atenciones, ciudadanos, servicios, recursos y mantenimientos de su sede.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Ciudadanos ── #}
+<div class="card" style="margin-top:16px;" id="ciudadanos">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        👤 Módulo de Ciudadanos
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo registrar un ciudadano?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Ve a <strong>Ciudadanos → + Registrar ciudadano</strong>. Completa los datos obligatorios: tipo de documento, número, nombre, apellido y género. Los demás campos son opcionales pero enriquecen los reportes.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Qué es el estado del ciudadano?</p>
+            <p style="font-size:13px; color:#374151; margin:0;"><span class="badge badge-success">Activo</span> puede ser atendido normalmente. <span class="badge badge-warning">Pendiente</span> fue registrado por autoservicio y debe ser aprobado por un administrador antes de recibir atención.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo ver el historial de un ciudadano?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">En la lista de ciudadanos, haz clic en el botón <strong>Historial</strong> de la fila correspondiente. Verás todas las atenciones, servicios y encuestas registradas para ese ciudadano.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Atenciones ── #}
+<div class="card" style="margin-top:16px;" id="atenciones">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        📋 Módulo de Atenciones
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">Flujo de una atención</p>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px;">
+                <span class="badge badge-warning">Pendiente</span>
+                <span>→ Se registran servicios y satisfacción →</span>
+                <span class="badge badge-success">Finalizada</span>
+                <span>→ (si fue error) →</span>
+                <span class="badge badge-danger">Cancelada</span>
+            </div>
+            <p style="font-size:13px; color:#6b7280; margin:6px 0 0;">Una atención <strong>no puede cancelarse directamente</strong> desde Pendiente. Primero debe finalizarse.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo registrar una nueva atención?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Usa el botón <strong>+ Nueva atención</strong> en el topbar o en el panel de control. Busca al ciudadano por nombre o documento. Si no existe, regístralo primero.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo agregar servicios a una atención?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Entra al detalle de la atención y usa <strong>+ Agregar servicio</strong>. Puedes agregar varios servicios por atención. Cada servicio puede finalizarse por separado.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cuándo registrar la satisfacción?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">La encuesta de satisfacción solo se puede registrar cuando la atención está en estado <span class="badge badge-success">Finalizada</span>. Ve al detalle de la atención y usa el botón correspondiente.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Recursos ── #}
+<div class="card" style="margin-top:16px;" id="recursos">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        💻 Módulo de Recursos y Préstamos
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo registrar un recurso?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Ve a <strong>Recursos → + Nuevo recurso</strong>. Selecciona el tipo (portátil, impresora, etc.) y asigna un código único como <em>LAP-001</em>. El código permite identificar el equipo físicamente.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo registrar un préstamo?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Usa <strong>+ Préstamo</strong> en el topbar de Recursos. Selecciona el recurso, la fecha de entrega y la devolución programada. Cuando el ciudadano devuelva el equipo, usa el botón <strong>Devuelto</strong> en la fila del préstamo.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">Indicadores de estado</p>
+            <p style="font-size:13px; color:#374151; margin:0;"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:12px;font-size:12px;">Prestado ahora</span> significa que el recurso tiene un préstamo activo sin devolución registrada. <span style="background:#f0fdf4;color:#166534;padding:2px 8px;border-radius:12px;font-size:12px;">Disponible</span> significa que está libre.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Salas ── #}
+<div class="card" style="margin-top:16px;" id="salas">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        🏛️ Módulo de Salas y Habilitaciones
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Qué es una habilitación?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Una habilitación es la reserva de una sala para un uso específico (capacitación, navegación, conferencia, etc.) en una fecha y hora determinada.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">Estados de una habilitación</p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
+                <span class="badge badge-warning">Pendiente</span>
+                <span class="badge badge-info">Confirmada</span>
+                <span class="badge badge-success">En curso</span>
+                <span class="badge badge-success">Finalizada</span>
+                <span class="badge badge-danger">Cancelada</span>
+            </div>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo ver la agenda de una sala?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">En la lista de habilitaciones puedes filtrar por sala y ver todas sus reservas. También puedes acceder a la agenda desde el detalle de cada sala.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Cursos ── #}
+<div class="card" style="margin-top:16px;" id="cursos">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        📚 Módulo de Cursos y Talleres
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">Estructura de un curso</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Un <strong>Curso</strong> tiene varias <strong>Sesiones</strong>. Los ciudadanos se inscriben al curso y su asistencia se marca sesión por sesión.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo inscribir un ciudadano a un curso?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Entra al detalle del curso y usa el botón <strong>Inscribir ciudadano</strong>. Busca al ciudadano por nombre o documento.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo marcar asistencia?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">En el detalle del curso, ingresa a una sesión y usa <strong>Marcar asistencia</strong>. Aparecerá la lista de inscritos para marcar quién asistió.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Reportes ── #}
+<div class="card" style="margin-top:16px;" id="reportes">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        📊 Módulo de Reportes
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Cómo filtrar por fechas?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">En la parte superior de Reportes hay un filtro de <strong>Fecha desde</strong> y <strong>Fecha hasta</strong>. Al aplicar el filtro, todos los KPIs y gráficas se actualizan. Las exportaciones Excel también respetan ese filtro.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Qué datos incluye cada exportación Excel?</p>
+            <ul style="font-size:13px; color:#374151; margin:4px 0 0; padding-left:20px;">
+                <li><strong>Atenciones:</strong> todas las atenciones con datos del ciudadano y operador</li>
+                <li><strong>Ciudadanos:</strong> directorio completo con perfil sociodemográfico</li>
+                <li><strong>Servicios:</strong> detalle de cada servicio registrado</li>
+                <li><strong>Satisfacción:</strong> encuestas con calificación y comentarios</li>
+                <li><strong>Préstamos:</strong> historial de préstamos de recursos</li>
+            </ul>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Qué es la tasa de finalización?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Es el porcentaje de atenciones que llegaron a estado <span class="badge badge-success">Finalizada</span> sobre el total. Una tasa alta indica buena gestión operativa.</p>
+        </div>
+    </div>
+</div>
+
+{# ── Preguntas frecuentes ── #}
+<div class="card" style="margin-top:16px; margin-bottom:24px;">
+    <h2 style="font-size:16px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+        ❓ Preguntas frecuentes
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:14px;">
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">Olvidé mi contraseña, ¿qué hago?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Contacta al Administrador TIC o al Superusuario del sistema para que te restablezca la contraseña.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Por qué no veo todos los PVDs?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Si eres Administrador PVD, solo puedes ver el PVD o PVDs asignados a tu usuario. El Administrador TIC tiene acceso a todos.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Puedo eliminar una atención?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">No. Las atenciones no se eliminan para mantener la trazabilidad. Si fue un registro erróneo, cámbiala a estado <span class="badge badge-danger">Cancelada</span> y agrega una observación explicando el motivo.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿El sistema funciona sin internet?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">No. La base de datos está en la nube (Aiven Cloud). Se requiere conexión a internet para usar el sistema.</p>
+        </div>
+        <div>
+            <p style="font-weight:600; margin:0 0 4px;">¿Con qué navegador funciona mejor?</p>
+            <p style="font-size:13px; color:#374151; margin:0;">Chrome o Edge en sus versiones actuales. Se recomienda no usar Internet Explorer.</p>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

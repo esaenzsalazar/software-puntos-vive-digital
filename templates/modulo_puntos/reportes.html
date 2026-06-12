@@ -46,12 +46,21 @@
         <summary class="export-panel__summary">↓ Descargar datos (Excel)</summary>
         <div class="export-panel__body">
             <p class="muted" style="margin:0 0 10px; font-size:13px;">Selecciona el conjunto de datos a exportar.</p>
+            {% if fecha_desde or fecha_hasta %}
+            <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">
+                Exportando con filtro de fechas activo:
+                {% if fecha_desde %}desde {{ fecha_desde }}{% endif %}
+                {% if fecha_hasta %}hasta {{ fecha_hasta }}{% endif %}
+            </p>
+            {% endif %}
             <div class="export-panel__grid">
-                <a href="{% url 'modulo_puntos:exportar_atenciones_csv' %}" class="btn btn-success btn--sm">Atenciones</a>
+                <a href="{% url 'modulo_puntos:exportar_atenciones_csv' %}{% if fecha_desde or fecha_hasta %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}{% endif %}" class="btn btn-success btn--sm">Atenciones</a>
                 <a href="{% url 'modulo_puntos:exportar_ciudadanos_csv' %}" class="btn btn-success btn--sm">Ciudadanos</a>
-                <a href="{% url 'modulo_puntos:exportar_servicios_csv' %}" class="btn btn-success btn--sm">Servicios</a>
-                <a href="{% url 'modulo_puntos:exportar_satisfaccion_csv' %}" class="btn btn-success btn--sm">Satisfacción</a>
-                <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn-success btn--sm">Préstamos</a>
+                <a href="{% url 'modulo_puntos:exportar_servicios_csv' %}{% if fecha_desde or fecha_hasta %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}{% endif %}" class="btn btn-success btn--sm">Servicios</a>
+                <a href="{% url 'modulo_puntos:exportar_satisfaccion_csv' %}{% if fecha_desde or fecha_hasta %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}{% endif %}" class="btn btn-success btn--sm">Satisfacción</a>
+                <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}{% if fecha_desde or fecha_hasta %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}{% endif %}" class="btn btn-success btn--sm">Préstamos</a>
+                <a href="{% url 'modulo_puntos:exportar_cursos_csv' %}{% if fecha_desde or fecha_hasta %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}{% endif %}" class="btn btn-success btn--sm">Cursos</a>
+                <a href="{% url 'modulo_puntos:exportar_mantenimientos_csv' %}{% if fecha_desde or fecha_hasta %}?fecha_desde_m={{ fecha_desde }}&fecha_hasta_m={{ fecha_hasta }}{% endif %}" class="btn btn-success btn--sm">Mantenimientos</a>
             </div>
         </div>
     </details>
@@ -144,7 +153,7 @@
             <div class="rpt-section__title">Estrato socioeconómico</div>
             {% for item in ciudadanos_por_estrato %}
             <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
-                <span class="rpt-row__label">Estrato {{ item.ciu_estrato }}</span>
+                <span class="rpt-row__label">Estrato {{ item.estrato }}</span>
                 {% if total_ciudadanos %}
                 <div class="rpt-bar"><div class="rpt-bar__fill rpt-bar__fill--amber" style="width:{% widthratio item.total total_ciudadanos 100 %}%"></div></div>
                 {% endif %}
@@ -350,6 +359,129 @@
         </table>
     </div>
 </div>
+
+{# ── KPIs Operacionales ── #}
+<div class="card" style="margin-top:16px;">
+    <div class="rpt-card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:16px;">
+        <span style="font-size:18px;">📊</span>
+        <div>
+            <h3 style="margin:0; font-size:15px; font-weight:700;">Eficiencia operacional</h3>
+            <p class="muted" style="margin:2px 0 0; font-size:12px;">Indicadores de desempeño del período seleccionado</p>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:20px;">
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:16px; text-align:center;">
+            <p style="font-size:12px; color:#6b7280; margin:0 0 4px;">Tasa de finalización</p>
+            <p style="font-size:28px; font-weight:700; color:#16a34a; margin:0;">{{ tasa_finalizacion }}%</p>
+            <p style="font-size:11px; color:#9ca3af; margin:4px 0 0;">{{ atenciones_finalizadas }} de {{ total_atenciones }} atenciones</p>
+        </div>
+        <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:16px; text-align:center;">
+            <p style="font-size:12px; color:#6b7280; margin:0 0 4px;">Tasa de cancelación</p>
+            <p style="font-size:28px; font-weight:700; color:#ea580c; margin:0;">{{ tasa_cancelacion }}%</p>
+            <p style="font-size:11px; color:#9ca3af; margin:4px 0 0;">{{ atenciones_canceladas }} canceladas</p>
+        </div>
+        <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; padding:16px; text-align:center;">
+            <p style="font-size:12px; color:#6b7280; margin:0 0 4px;">Satisfacción promedio</p>
+            <p style="font-size:28px; font-weight:700; color:#7c3aed; margin:0;">
+                {% if satisfaccion_promedio %}{{ satisfaccion_promedio|floatformat:1 }}{% else %}—{% endif %}
+            </p>
+            <p style="font-size:11px; color:#9ca3af; margin:4px 0 0;">sobre 5.0 puntos</p>
+        </div>
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px; text-align:center;">
+            <p style="font-size:12px; color:#6b7280; margin:0 0 4px;">Atenciones pendientes</p>
+            <p style="font-size:28px; font-weight:700; color:#2563eb; margin:0;">{{ atenciones_pendientes }}</p>
+            <p style="font-size:11px; color:#9ca3af; margin:4px 0 0;">requieren seguimiento</p>
+        </div>
+    </div>
+
+    {% if satisfaccion_por_admin %}
+    <h4 style="font-size:13px; font-weight:600; color:#374151; margin:0 0 10px;">Satisfacción por operador</h4>
+    <div class="table-responsive" style="border:none; margin:0;">
+        <table class="table" style="font-size:13px;">
+            <thead>
+                <tr>
+                    <th>Operador</th>
+                    <th class="text-center">Encuestas</th>
+                    <th class="text-center">Promedio</th>
+                    <th>Nivel</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in satisfaccion_por_admin %}
+                <tr>
+                    <td>
+                        {% if item.atencion__operador__first_name or item.atencion__operador__last_name %}
+                            {{ item.atencion__operador__first_name }} {{ item.atencion__operador__last_name }}
+                        {% else %}
+                            {{ item.atencion__operador__username }}
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ item.total }}</td>
+                    <td class="text-center"><strong>{{ item.promedio|floatformat:1 }}</strong></td>
+                    <td>
+                        {% if item.promedio >= 4.5 %}
+                            <span class="badge badge-success">Excelente</span>
+                        {% elif item.promedio >= 3.5 %}
+                            <span class="badge badge-info">Bueno</span>
+                        {% elif item.promedio >= 2.5 %}
+                            <span class="badge badge-warning">Regular</span>
+                        {% else %}
+                            <span class="badge badge-danger">Bajo</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{# ── Reporte de uso de salas ── #}
+{% if uso_por_sala %}
+<div class="card" style="margin-top:16px;">
+    <div class="rpt-card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:16px;">
+        <span style="font-size:18px;">🏛️</span>
+        <div>
+            <h3 style="margin:0; font-size:15px; font-weight:700;">Uso de salas</h3>
+            <p class="muted" style="margin:2px 0 0; font-size:12px;">Habilitaciones registradas en el período (excluye canceladas)</p>
+        </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div>
+            <h4 style="font-size:13px; font-weight:600; color:#374151; margin:0 0 10px;">Salas más utilizadas</h4>
+            <div class="rpt-section" style="border:none; padding:0;">
+                {% for item in uso_por_sala %}
+                <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                    <span class="rpt-row__label">{{ item.sala__nombre }}</span>
+                    {% if uso_por_sala.0.total_usos %}
+                    <div class="rpt-bar"><div class="rpt-bar__fill" style="width:{% widthratio item.total_usos uso_por_sala.0.total_usos 100 %}%"></div></div>
+                    {% endif %}
+                    <span class="rpt-row__val">{{ item.total_usos }} uso{{ item.total_usos|pluralize:"s" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            <h4 style="font-size:13px; font-weight:600; color:#374151; margin:0 0 10px;">Distribución por tipo de uso</h4>
+            <div class="rpt-section" style="border:none; padding:0;">
+                {% with total_usos_salas=uso_por_tipo|length %}
+                {% for item in uso_por_tipo %}
+                <div class="rpt-row {% if forloop.last %}rpt-row--last{% endif %}">
+                    <span class="rpt-row__label">{{ item.tipo_uso_label|default:item.tipo_uso }}</span>
+                    {% if uso_por_tipo.0.total %}
+                    <div class="rpt-bar"><div class="rpt-bar__fill" style="width:{% widthratio item.total uso_por_tipo.0.total 100 %}%"></div></div>
+                    {% endif %}
+                    <span class="rpt-row__val">{{ item.total }}</span>
+                </div>
+                {% endfor %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <style>
 /* ── Filtro ── */

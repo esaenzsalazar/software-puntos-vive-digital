@@ -10,31 +10,36 @@
         <p class="muted">Búsqueda por nombre, apellido, documento, teléfono o barrio.</p>
     </div>
 
-    <form method="GET">
-        <div class="search-row">
+    <form method="GET" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+        <div style="flex:2;min-width:200px;">
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Buscar</label>
             <input type="text" name="q" id="q" value="{{ busqueda }}" class="form-control"
-                   placeholder="Ej. 123456, Juan, Pérez, barrio…" aria-label="Buscar ciudadano">
-            {% if pvd_filtro %}<input type="hidden" name="pvd" value="{{ pvd_filtro }}">{% endif %}
-            <div class="search-row__actions">
-                <button type="submit" class="btn">Buscar</button>
-                <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary">Limpiar</a>
-            </div>
+                   placeholder="Nombre, documento, teléfono, barrio…" aria-label="Buscar ciudadano">
         </div>
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Estado</label>
+            <select name="estado" class="form-control" style="min-width:140px;">
+                <option value="A" {% if estado_filtro == 'A' %}selected{% endif %}>Solo activos</option>
+                <option value="I" {% if estado_filtro == 'I' %}selected{% endif %}>Solo inactivos</option>
+                <option value="" {% if estado_filtro == '' %}selected{% endif %}>Todos</option>
+            </select>
+        </div>
+        {% if pvds_para_filtro %}
+        <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">PVD</label>
+            <select name="pvd" class="form-control" style="min-width:200px;">
+                <option value="">— Todos los PVDs —</option>
+                {% for pvd in pvds_para_filtro %}
+                <option value="{{ pvd.pk }}" {% if pvd_filtro == pvd.pk|stringformat:"s" %}selected{% endif %}>{{ pvd.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn--sm">Filtrar</button>
+        {% if busqueda or pvd_filtro or estado_filtro != 'A' %}
+        <a href="{% url 'modulo_puntos:consultar_ciudadanos' %}" class="btn btn-secondary btn--sm">✕ Limpiar</a>
+        {% endif %}
     </form>
-
-    {# Filtro PVD — solo Admin TIC / Superusuario #}
-    {% if pvds_para_filtro %}
-    <form method="GET" style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        {% if busqueda %}<input type="hidden" name="q" value="{{ busqueda }}">{% endif %}
-        <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">PVD:</label>
-        <select name="pvd" class="form-control" style="width:auto;min-width:200px;" onchange="this.form.submit()">
-            <option value="">— Todos los PVDs —</option>
-            {% for pvd in pvds_para_filtro %}
-            <option value="{{ pvd.pk }}" {% if pvd_filtro == pvd.pk|stringformat:"s" %}selected{% endif %}>{{ pvd.nombre }}</option>
-            {% endfor %}
-        </select>
-    </form>
-    {% endif %}
 </div>
 
 <div class="card">
@@ -98,6 +103,16 @@
                                 <div class="cell-actions">
                                     <a class="btn btn--sm" href="{% url 'modulo_puntos:editar_ciudadano' ciudadano.id %}">Editar</a>
                                     <a class="btn btn-secondary btn--sm" href="{% url 'modulo_puntos:historial_ciudadano' ciudadano.id %}">Historial</a>
+                                    <form method="POST" action="{% url 'modulo_puntos:desactivar_ciudadano' ciudadano.id %}" style="margin:0;display:inline;">
+                                        {% csrf_token %}
+                                        {% if ciudadano.estado == 'A' %}
+                                        <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                                                data-confirm="¿Desactivar a {{ ciudadano.get_nombre_completo }}? Seguirá en el sistema pero marcado como inactivo.">Desactivar</button>
+                                        {% else %}
+                                        <button type="submit" class="btn btn-secondary btn--sm"
+                                                data-confirm="¿Reactivar a {{ ciudadano.get_nombre_completo }}?">Reactivar</button>
+                                        {% endif %}
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -110,14 +125,14 @@
         {% if page_obj.has_other_pages %}
         <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding:16px 0;flex-wrap:wrap;">
             {% if page_obj.has_previous %}
-            <a href="?{% if busqueda %}q={{ busqueda }}&{% endif %}{% if pvd_filtro %}pvd={{ pvd_filtro }}&{% endif %}page={{ page_obj.previous_page_number }}"
+            <a href="?{% if busqueda %}q={{ busqueda }}&{% endif %}{% if pvd_filtro %}pvd={{ pvd_filtro }}&{% endif %}estado={{ estado_filtro }}&page={{ page_obj.previous_page_number }}"
                class="btn btn-secondary btn--sm">← Anterior</a>
             {% endif %}
             <span style="font-size:13px;color:#64748b;padding:0 8px;">
                 Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
             </span>
             {% if page_obj.has_next %}
-            <a href="?{% if busqueda %}q={{ busqueda }}&{% endif %}{% if pvd_filtro %}pvd={{ pvd_filtro }}&{% endif %}page={{ page_obj.next_page_number }}"
+            <a href="?{% if busqueda %}q={{ busqueda }}&{% endif %}{% if pvd_filtro %}pvd={{ pvd_filtro }}&{% endif %}estado={{ estado_filtro }}&page={{ page_obj.next_page_number }}"
                class="btn btn-secondary btn--sm">Siguiente →</a>
             {% endif %}
         </div>

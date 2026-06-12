@@ -66,8 +66,7 @@
         </div>
 
         <div class="actions" style="justify-content:flex-end; margin-top:25px;">
-            <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Añadir Recurso</button>
+            <button type="submit" class="btn">{% if editando %}Guardar cambios{% else %}Añadir Recurso{% endif %}</button>
         </div>
     </form>
 </div>

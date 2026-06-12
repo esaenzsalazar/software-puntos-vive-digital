@@ -12,6 +12,31 @@
         <p class="muted">Detalle, estado e historial de servicios prestados.</p>
     </div>
 
+    {% if atencion.ciudadano %}
+    <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0f4a9b,#1d6ed8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;flex-shrink:0;">
+                {{ atencion.ciudadano.get_nombre_completo|first|upper }}
+            </div>
+            <div>
+                <div style="font-weight:700;font-size:15px;color:#1e3a5f;">{{ atencion.ciudadano.get_nombre_completo }}</div>
+                <div style="font-size:12px;color:#475569;margin-top:2px;">
+                    <span>{{ atencion.ciudadano.tipo_documento }} {{ atencion.ciudadano.numero_documento }}</span>
+                    {% if atencion.ciudadano.telefono %}
+                    <span style="margin-left:12px;">📞 {{ atencion.ciudadano.telefono }}</span>
+                    {% endif %}
+                    {% if atencion.ciudadano.correo %}
+                    <span style="margin-left:12px;">✉ {{ atencion.ciudadano.correo }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <a href="{% url 'modulo_puntos:historial_ciudadano' atencion.ciudadano.pk %}" class="btn btn-secondary btn--sm">
+            Historial →
+        </a>
+    </div>
+    {% endif %}
+
     <div class="callout">
         <div class="info-grid-2">
             <div>
@@ -50,14 +75,14 @@
 
     {# ── Acciones de estado ── #}
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; padding-top:16px;
-                border-top:1px solid var(--border-color);">
+                border-top:1px solid var(--p-border);">
         <a href="{% url 'modulo_puntos:editar_atencion' atencion.pk %}" class="btn btn-secondary btn--sm">✎ Editar datos</a>
         {% if atencion.estado == 'P' %}
         <form method="POST" action="{% url 'modulo_puntos:cambiar_estado_atencion' atencion.pk %}">
             {% csrf_token %}
             <input type="hidden" name="estado" value="F">
             <button type="submit" class="btn btn--sm"
-                    onclick="return confirm('¿Finalizar esta atención?')">
+                    data-confirm="¿Finalizar esta atención?">
                 ✓ Finalizar atención
             </button>
         </form>
@@ -65,8 +90,8 @@
             {% csrf_token %}
             <input type="hidden" name="estado" value="C">
             <button type="submit" class="btn btn-secondary btn--sm"
-                    style="color:var(--color-danger);"
-                    onclick="return confirm('¿Cancelar esta atención?')">
+                    style="color:var(--p-danger);"
+                    data-confirm="¿Cancelar esta atención?">
                 ✕ Cancelar atención
             </button>
         </form>
@@ -75,7 +100,7 @@
             {% csrf_token %}
             <input type="hidden" name="estado" value="P">
             <button type="submit" class="btn btn-secondary btn--sm"
-                    onclick="return confirm('¿Reabrir esta atención como Pendiente?')">
+                    data-confirm="¿Reabrir esta atención como Pendiente?">
                 ↺ Reabrir atención
             </button>
         </form>
@@ -134,21 +159,27 @@
                             <span class="badge">Inactivo</span>
                         {% endif %}
                     </td>
-                    {% if atencion.estado == 'P' %}
                     <td>
-                        {% if svc.estado == 'A' %}
-                        <form method="POST"
-                              action="{% url 'modulo_puntos:finalizar_servicio' atencion.pk svc.pk %}"
-                              style="margin:0;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn--sm"
-                                    onclick="return confirm('¿Finalizar el servicio «{{ svc.nombre }}»?')">
-                                ✓ Finalizar
-                            </button>
-                        </form>
-                        {% endif %}
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <a href="{% url 'modulo_puntos:editar_servicio' svc.pk %}" class="btn btn--sm btn-secondary" title="Editar servicio">✏️</a>
+                            <form method="POST" action="{% url 'modulo_puntos:eliminar_servicio' svc.pk %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm btn-secondary" style="color:#dc2626;"
+                                        data-confirm="¿Eliminar el servicio «{{ svc.nombre }}»? Esta acción no se puede deshacer.">🗑️</button>
+                            </form>
+                            {% if atencion.estado == 'P' and svc.estado == 'A' %}
+                            <form method="POST"
+                                  action="{% url 'modulo_puntos:finalizar_servicio' atencion.pk svc.pk %}"
+                                  style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--sm"
+                                        data-confirm="¿Finalizar el servicio «{{ svc.nombre }}»?">
+                                    ✓ Finalizar
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
-                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -198,6 +229,16 @@
                 <p class="muted">Sin comentarios.</p>
                 {% endif %}
             </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            <a href="{% url 'modulo_puntos:editar_satisfaccion' satisfaccion.pk %}" class="btn btn--sm btn-secondary">✏️ Editar encuesta</a>
+            <form method="POST" action="{% url 'modulo_puntos:eliminar_satisfaccion' satisfaccion.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn--sm" style="color:#dc2626;"
+                    data-confirm="¿Eliminar la encuesta de satisfacción de esta atención? Esta acción no se puede deshacer.">
+                    🗑️ Eliminar
+                </button>
+            </form>
         </div>
     </div>
     {% elif atencion.estado == 'P' %}

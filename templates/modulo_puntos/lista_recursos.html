@@ -14,9 +14,6 @@
                 <p class="muted">{% if pvd %}{{ pvd.nombre }}{% else %}Todos los Puntos Vive Digital{% endif %}</p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                {% if user.is_superuser %}
-                <a href="{% url 'modulo_puntos:crear_recurso' %}" class="btn btn--sm">+ Nuevo recurso</a>
-                {% endif %}
                 <a href="{% url 'modulo_puntos:exportar_prestamos_csv' %}" class="btn btn--sm">Exportar préstamos CSV</a>
             </div>
         </div>
@@ -24,7 +21,7 @@
 
     <div style="display:flex; gap:16px; flex-wrap:wrap; padding-bottom:4px;">
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 24px;text-align:center;min-width:130px;">
-            <div style="font-size:26px;font-weight:700;color:#0f4a9b;">{{ recursos|length }}</div>
+            <div style="font-size:26px;font-weight:700;color:#0f4a9b;">{{ total_recursos }}</div>
             <div style="font-size:12px;color:#64748b;margin-top:2px;">Recursos totales</div>
         </div>
         <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:14px 24px;text-align:center;min-width:130px;">
@@ -40,17 +37,26 @@
 
 {% if recursos %}
 
-{# ── Filtro por tipo ── #}
-<div style="margin-bottom:20px;">
-    <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Filtrar por tipo</label>
-    <select id="filtro-tipo" onchange="filtrarRecursos()"
-            style="padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:220px;background:white;">
-        <option value="">Todos</option>
-        {% for tipo in tipos_disponibles %}
-            <option value="{{ tipo }}">{{ tipo }}</option>
-        {% endfor %}
-    </select>
-</div>
+{# ── Filtros ── #}
+<form method="get" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:20px;">
+    <div style="flex:2;min-width:180px;">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Buscar</label>
+        <input type="search" name="q" value="{{ q_filter }}" placeholder="Tipo o código…" style="width:100%;">
+    </div>
+    <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Tipo</label>
+        <select name="tipo" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:180px;background:white;">
+            <option value="">Todos</option>
+            {% for tipo in tipos_disponibles %}
+                <option value="{{ tipo }}" {% if tipo == tipo_filter %}selected{% endif %}>{{ tipo }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn--sm">Filtrar</button>
+    {% if q_filter or tipo_filter %}
+    <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="btn btn-secondary btn--sm">✕ Limpiar</a>
+    {% endif %}
+</form>
 
 {# ── Bloques por recurso ── #}
 {% for recurso in recursos %}
@@ -69,6 +75,12 @@
             </span>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <a href="{% url 'modulo_puntos:editar_recurso' recurso.pk %}" class="btn btn-secondary btn--sm">✏️ Editar</a>
+            <form method="POST" action="{% url 'modulo_puntos:eliminar_recurso' recurso.pk %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                        data-confirm="¿Eliminar el recurso «{{ recurso.tipo }}»? Solo es posible si no tiene préstamos activos.">🗑️ Eliminar</button>
+            </form>
             {% if recurso.estado == 'A' %}
                 <span class="badge badge--success">Activo</span>
             {% else %}
@@ -124,7 +136,7 @@
                             <form method="POST" action="{% url 'modulo_puntos:devolver_prestamo' prestamo.id %}" style="display:inline;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-success btn--sm"
-                                        onclick="return confirm('¿Confirmar devolución ahora?')">
+                                        data-confirm="¿Confirmar devolución del préstamo?">
                                     Devuelto
                                 </button>
                             </form>
@@ -150,17 +162,16 @@
 </div>
 {% endif %}
 
-<script>
-function filtrarRecursos() {
-    var tipo = document.getElementById('filtro-tipo').value;
-    document.querySelectorAll('.recurso-card').forEach(function(card) {
-        if (!tipo || card.dataset.tipo === tipo) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-</script>
+{% if recursos.has_other_pages %}
+<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0;">
+    {% if recursos.has_previous %}
+    <a href="?tipo={{ tipo_filter }}&page={{ recursos.previous_page_number }}" class="btn btn-secondary btn--sm">← Anterior</a>
+    {% endif %}
+    <span class="muted">Página {{ recursos.number }} de {{ recursos.paginator.num_pages }}</span>
+    {% if recursos.has_next %}
+    <a href="?tipo={{ tipo_filter }}&page={{ recursos.next_page_number }}" class="btn btn-secondary btn--sm">Siguiente →</a>
+    {% endif %}
+</div>
+{% endif %}
 
 {% endblock %}

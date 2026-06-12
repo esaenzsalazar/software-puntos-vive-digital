@@ -106,7 +106,7 @@
     </div>
 
     {% comment %} Fila 2: métricas secundarias {% endcomment %}
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:14px;">
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-top:14px;">
 
         <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
             <div>
@@ -129,6 +129,14 @@
             </div>
         </div>
 
+        <div style="background:#ecfdf5; border:1px solid #6ee7b7; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
+            <div>
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#065f46; margin-bottom:4px;">Atenciones hoy</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#064e3b; line-height:1;">{{ atenciones_hoy_global }}</div>
+                <div style="font-size:11px; color:#10b981; margin-top:4px;">en toda la plataforma</div>
+            </div>
+        </div>
+
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;">
             <div>
                 <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#475569; margin-bottom:4px;">PVDs activos</div>
@@ -145,6 +153,15 @@
     <div class="section-header">
         <h3 class="section-title">{{ pvd_activo.nombre }}</h3>
         <p class="muted" style="margin:4px 0 0 0; font-size:13px;">Indicadores específicos del PVD activo</p>
+    </div>
+
+    {# ── Atenciones de hoy — destacado ── #}
+    <div style="background:linear-gradient(135deg,#0f4a9b,#1d6ed8);border-radius:12px;padding:20px 28px;margin-top:16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd;margin-bottom:6px;">Atenciones registradas hoy</div>
+            <div style="font-size:3rem;font-weight:900;color:#fff;line-height:1;">{{ atenciones_hoy|default:"0" }}</div>
+        </div>
+        <a href="{% url 'modulo_puntos:lista_atenciones' %}" class="btn btn--sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);">Ver todas →</a>
     </div>
 
     <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px;">
@@ -228,6 +245,22 @@
             <p>Informes, estadísticas y exportación de datos del sistema.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🗒️ Log de Auditoría</h3>
+            <p>Historial completo de todas las acciones del sistema.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:log_auditoria' %}">Ver Log</a>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <h3>🔑 Accesos Temporales</h3>
+            <p>Asignar PVDs permanentes y accesos temporales a los Admin PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:accesos_temporales' %}">Gestionar</a>
             </div>
         </div>
 
@@ -318,6 +351,31 @@
     </div>
 </div>
 
+{# ── KPIs Admin TIC ── #}
+<div class="content-section" style="margin-bottom:8px;">
+    <div class="section-header">
+        <h3 class="section-title">Indicadores del Sistema</h3>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:16px;">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:18px 20px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:8px;">Ciudadanos</div>
+            <div style="font-size:2rem;font-weight:800;color:#1e3a5f;line-height:1;">{{ total_ciudadanos }}</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:18px 20px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin-bottom:8px;">Atenciones</div>
+            <div style="font-size:2rem;font-weight:800;color:#14532d;line-height:1;">{{ atenciones_registradas }}</div>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:18px 20px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#b45309;margin-bottom:8px;">Servicios</div>
+            <div style="font-size:2rem;font-weight:800;color:#78350f;line-height:1;">{{ total_servicios }}</div>
+        </div>
+        <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:18px 20px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#065f46;margin-bottom:8px;">Hoy (global)</div>
+            <div style="font-size:2rem;font-weight:800;color:#064e3b;line-height:1;">{{ atenciones_hoy_global }}</div>
+        </div>
+    </div>
+</div>
+
 <div class="content-section">
     <div class="section-header">
         <h3 class="section-title">🖥️ Funciones de Admin TIC</h3>
@@ -332,9 +390,9 @@
             </div>
         </div>
 
-        <div class="menu-card">
+        <div class="menu-card menu-card--featured">
             <h3>📈 Informes</h3>
-            <p>Reportes y exportación de datos.</p>
+            <p>Reportes, estadísticas y exportación de datos.</p>
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
             </div>
@@ -351,9 +409,10 @@
 
         <div class="menu-card menu-card--featured">
             <h3>⚙️ Administración</h3>
-            <p>Crear usuarios administradores PVD.</p>
+            <p>Crear y gestionar usuarios administradores PVD.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Usuario PVD</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_admin_pvd' %}">Crear Admin PVD</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:accesos_temporales' %}">Accesos</a>
             </div>
         </div>
 
@@ -361,15 +420,16 @@
             <h3>🔐 Permisos del Sistema</h3>
             <p>Ver y editar la matriz de permisos por rol.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar Permisos</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_permisos_roles' %}">Gestionar</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:permisos_ofitic' %}">Delegar</a>
             </div>
         </div>
 
-        <div class="menu-card menu-card--featured">
-            <h3>🔑 Delegar Permisos a Admin PVD</h3>
-            <p>Otorga o revoca permisos específicos a los administradores de cada Punto Vive Digital.</p>
+        <div class="menu-card">
+            <h3>🗒️ Log de Auditoría</h3>
+            <p>Historial completo de acciones realizadas en el sistema.</p>
             <div class="menu-card__actions">
-                <a class="btn btn--sm" href="{% url 'modulo_puntos:permisos_ofitic' %}">Gestionar Delegaciones</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:log_auditoria' %}">Ver Log</a>
             </div>
         </div>
 
@@ -389,6 +449,14 @@
             </div>
         </div>
 
+        <div class="menu-card">
+            <h3>📸 Evidencias</h3>
+            <p>Registro fotográfico de actividades del PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_evidencias' %}">Ver Evidencias</a>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -396,6 +464,51 @@
 {# PANEL ADMIN PVD — filtrado por módulos habilitados del PVD activo #}
 {# ============================================================================ #}
 {% elif es_admin_pvd_only %}
+
+{# ── Alerta de ciudadanos pendientes ── #}
+{% if pendientes_count %}
+<div style="background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">⏳</span>
+        <div>
+            <strong style="color:#713f12;font-size:14px;">{{ pendientes_count }} ciudadano{{ pendientes_count|pluralize:"s" }} pendiente{{ pendientes_count|pluralize:"s" }} de aprobación</strong>
+            <p style="margin:2px 0 0;font-size:12px;color:#92400e;">Registros enviados que requieren revisión y aprobación.</p>
+        </div>
+    </div>
+    <a href="{% url 'modulo_puntos:ciudadanos_pendientes' %}" class="btn btn--sm" style="background:#f59e0b;color:#fff;border:none;">Revisar ahora →</a>
+</div>
+{% endif %}
+
+{# ── KPIs del PVD activo ── #}
+{% if pvd_activo %}
+<div class="content-section" style="margin-bottom:8px;">
+    <div style="background:linear-gradient(135deg,#0f4a9b,#1d6ed8);border-radius:12px;padding:18px 24px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd;margin-bottom:4px;">Atenciones de hoy</div>
+            <div style="font-size:2.8rem;font-weight:900;color:#fff;line-height:1;">{{ atenciones_hoy|default:"0" }}</div>
+        </div>
+        <a href="{% url 'modulo_puntos:lista_atenciones' %}" class="btn btn--sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);">Ver atenciones →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #3b82f6;border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#1d4ed8;margin-bottom:6px;">Ciudadanos</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#1e3a5f;line-height:1;">{{ pvd_ciudadanos|default:"0" }}</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#15803d;margin-bottom:6px;">Atenciones</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#14532d;line-height:1;">{{ pvd_atenciones|default:"0" }}</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #8b5cf6;border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6d28d9;margin-bottom:6px;">Cursos</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#4c1d95;line-height:1;">{{ pvd_cursos|default:"0" }}</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#b45309;margin-bottom:6px;">Salas</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#78350f;line-height:1;">{{ pvd_salas|default:"0" }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {# ── Módulos estándar del sistema ── #}
 <div class="content-section">
@@ -470,6 +583,25 @@
             <div class="menu-card__actions">
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_mantenimientos' %}">Ver Registros</a>
                 <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_mantenimiento' %}">Registrar</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="menu-card">
+            <h3>📸 Evidencias</h3>
+            <p>Registro fotográfico de actividades del PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_evidencias' %}">Ver</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_evidencia' %}">+ Nueva</a>
+            </div>
+        </div>
+
+        {% if not restringir_modulos or 'reportes' in modulos_pvd_activo %}
+        <div class="menu-card">
+            <h3>📊 Reportes</h3>
+            <p>Indicadores, estadísticas y exportación de datos del PVD.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:reportes' %}">Ver Reportes</a>
             </div>
         </div>
         {% endif %}

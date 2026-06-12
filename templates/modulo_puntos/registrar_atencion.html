@@ -19,6 +19,13 @@
         <div class="alert alert-error">Revisa los campos en rojo antes de continuar.</div>
     {% endif %}
 
+    {% if ciudadano_prefill %}
+    <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d6ed8" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <span style="font-size:13px;color:#1e3a5f;">Ciudadano pre-seleccionado: <strong>{{ ciudadano_prefill.get_nombre_completo }}</strong> — {{ ciudadano_prefill.tipo_documento }} {{ ciudadano_prefill.numero_documento }}</span>
+    </div>
+    {% endif %}
+
     <form method="POST">
         {% csrf_token %}
         <div class="grid form-grid-2">
@@ -73,10 +80,8 @@
 
         <div class="actions" style="justify-content:flex-end; margin-top:25px;">
             {% if atencion %}
-            <a href="{% url 'modulo_puntos:detalle_atencion' atencion.pk %}" class="btn btn-secondary">← Cancelar</a>
             <button type="submit" class="btn">Guardar cambios</button>
             {% else %}
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn">Guardar atención</button>
             {% endif %}
         </div>
@@ -133,6 +138,12 @@ document.addEventListener('DOMContentLoaded', function () {
         inp.style.borderColor = '';
         filtrar();
     });
+
+    // Si hay ciudadano pre-seleccionado, mostrar su nombre en el buscador
+    if (sel.value) {
+        const selOpt = todasOpciones.find(o => o.value === sel.value);
+        if (selOpt) inp.value = selOpt.text;
+    }
 
     // Ajustar altura del select para que sea cómodo de usar
     sel.style.minHeight = '42px';

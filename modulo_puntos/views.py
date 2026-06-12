@@ -16,6 +16,7 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
+from django.core.cache import cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import (
@@ -83,6 +84,10 @@ def inicio(request):
     return redirect('modulo_puntos:login')
 
 
+_LOGIN_MAX_INTENTOS = 5
+_LOGIN_BLOQUEO_SEGUNDOS = 300  # 5 minutos
+
+
 @never_cache
 @ensure_csrf_cookie
 def login_usuario(request):
@@ -94,11 +99,36 @@ def login_usuario(request):
         next_url = raw_next
     else:
         next_url = reverse('modulo_puntos:panel_control')
+
+    # Control de intentos fallidos por IP
+    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+    ip = ip.split(',')[0].strip()
+    cache_key = f'login_intentos_{ip}'
+    bloqueo_key = f'login_bloqueo_{ip}'
+
+    bloqueado_hasta = cache.get(bloqueo_key)
+    segundos_restantes = 0
+    if bloqueado_hasta:
+        import time
+        segundos_restantes = max(0, int(bloqueado_hasta - time.time()))
+        if segundos_restantes > 0:
+            minutos = segundos_restantes // 60
+            segundos = segundos_restantes % 60
+            messages.error(request, f'Demasiados intentos fallidos. Espera {minutos}m {segundos}s antes de intentar de nuevo.')
+            return render(request, 'registration/login.html', {
+                'form': LoginForm(),
+                'next': next_url,
+                'bloqueado': True,
+                'segundos_restantes': segundos_restantes,
+            })
+
     form = LoginForm(request=request, data=request.POST or None)
 
     if request.method == 'POST':
         if form.is_valid():
             user = form.get_user()
+            cache.delete(cache_key)
+            cache.delete(bloqueo_key)
             login(request, user)
             messages.success(request, 'Inicio de sesión correcto.')
             if usuario_necesita_seleccionar_pvd(user):
@@ -115,7 +145,17 @@ def login_usuario(request):
                     pass
                 return redirect('modulo_puntos:seleccionar_pvd_view')
             return redirect(next_url)
-        messages.error(request, 'Usuario o contraseña incorrectos.')
+        else:
+            import time
+            intentos = cache.get(cache_key, 0) + 1
+            cache.set(cache_key, intentos, _LOGIN_BLOQUEO_SEGUNDOS)
+            restantes = _LOGIN_MAX_INTENTOS - intentos
+            if intentos >= _LOGIN_MAX_INTENTOS:
+                cache.set(bloqueo_key, time.time() + _LOGIN_BLOQUEO_SEGUNDOS, _LOGIN_BLOQUEO_SEGUNDOS)
+                cache.delete(cache_key)
+                messages.error(request, f'Cuenta bloqueada por {_LOGIN_BLOQUEO_SEGUNDOS // 60} minutos por múltiples intentos fallidos.')
+            else:
+                messages.error(request, f'Usuario o contraseña incorrectos. Te quedan {restantes} intento(s).')
 
     return render(request, 'registration/login.html', {'form': form, 'next': next_url})
 
@@ -130,15 +170,26 @@ def logout_usuario(request):
 @login_required(login_url='/login/')
 def perfil_usuario(request):
     if request.method == 'POST':
+        if request.POST.get('cambiar_password'):
+            old_pw = request.POST.get('old_password', '').strip()
+            new_pw1 = request.POST.get('new_password1', '').strip()
+            new_pw2 = request.POST.get('new_password2', '').strip()
+            if not request.user.check_password(old_pw):
+                messages.error(request, 'La contraseña actual no es correcta.')
+            elif len(new_pw1) < 8:
+                messages.error(request, 'La nueva contraseña debe tener al menos 8 caracteres.')
+            elif new_pw1 != new_pw2:
+                messages.error(request, 'Las contraseñas nuevas no coinciden.')
+            else:
+                request.user.set_password(new_pw1)
+                request.user.save()
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'Contraseña cambiada correctamente.')
+            return redirect('modulo_puntos:perfil_usuario')
+
         form = PerfilUsuarioForm(request.POST, instance=request.user)
         if form.is_valid():
-            usuario = form.save(commit=False)
-            nueva_password = form.cleaned_data.get('password1')
-            if nueva_password:
-                usuario.set_password(nueva_password)
-            usuario.save()
-            if nueva_password:
-                update_session_auth_hash(request, usuario)
+            form.save()
             messages.success(request, 'Tu perfil fue actualizado correctamente.')
             return redirect('modulo_puntos:perfil_usuario')
         messages.error(request, 'No se pudo actualizar el perfil. Revisa los datos ingresados.')
@@ -164,6 +215,8 @@ def panel_control(request):
             messages.info(request, 'Selecciona un Punto Vive Digital para comenzar.')
             return redirect('modulo_puntos:seleccionar_pvd_view')
 
+    from datetime import date as date_cls
+    hoy = date_cls.today()
     context = {
         'total_ciudadanos': Ciudadano.objects.count(),
         'atenciones_registradas': Atencion.objects.count(),
@@ -173,6 +226,7 @@ def panel_control(request):
         'total_pvds': PuntoViveDigital.objects.count(),
         'total_recursos': Recurso.objects.count(),
         'total_cursos': Curso.objects.count(),
+        'atenciones_hoy_global': Atencion.objects.filter(fecha=hoy).count(),
 
         'es_superusuario': usuario_es_superusuario(user),
         'es_admin_tic_only': user.groups.filter(name='Administrador TIC').exists() and not user.is_superuser,
@@ -193,6 +247,7 @@ def panel_control(request):
             context['pvd_cursos']         = Curso.objects.filter(punto_vive_digital_id=pvd_id).count()
             context['pvd_mantenimientos'] = MantenimientoEquipo.objects.filter(punto_vive_digital_id=pvd_id).count()
             context['pvd_habilitaciones'] = HabilitacionSala.objects.filter(sala__punto_vive_digital_id=pvd_id).count()
+            context['atenciones_hoy'] = Atencion.objects.filter(punto_vive_digital_id=pvd_id, fecha=hoy).count()
             context['atenciones_pendientes'] = (
                 Atencion.objects
                 .filter(punto_vive_digital_id=pvd_id, estado='P')
@@ -288,11 +343,16 @@ def consultar_ciudadanos(request):
         and user.groups.filter(name='Administrador PVD').exists()
     )
 
-    busqueda  = request.GET.get('q', '').strip()
+    busqueda   = request.GET.get('q', '').strip()
     pvd_filtro = request.GET.get('pvd', '').strip()
+    estado_filtro = request.GET.get('estado', 'A').strip()  # Por defecto solo activos
 
     # Ciudadanos globales — todos los roles ven todos los ciudadanos
     ciudadanos = Ciudadano.objects.select_related('punto_vive_digital').order_by('-pk')
+
+    if estado_filtro in ('A', 'I'):
+        ciudadanos = ciudadanos.filter(estado=estado_filtro)
+    # '' → todos (activos + inactivos)
 
     if pvd_filtro:
         ciudadanos = ciudadanos.filter(punto_vive_digital_id=pvd_filtro)
@@ -323,6 +383,7 @@ def consultar_ciudadanos(request):
         'page_obj': page_obj,
         'busqueda': busqueda,
         'pvd_filtro': pvd_filtro,
+        'estado_filtro': estado_filtro,
         'pvds_para_filtro': pvds_para_filtro,
         'total_resultados': total_resultados,
         'es_admin_pvd_solo': es_admin_pvd_solo,
@@ -377,6 +438,24 @@ def editar_ciudadano(request, ciu_cdgo):
         'form': form,
         'ciudadano': ciudadano,
     })
+
+
+@login_required(login_url='/login/')
+def desactivar_ciudadano(request, ciu_cdgo):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+    if request.method != 'POST':
+        return redirect('modulo_puntos:consultar_ciudadanos')
+    ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
+    nuevo_estado = 'I' if ciudadano.estado == 'A' else 'A'
+    ciudadano.estado = nuevo_estado
+    ciudadano.save(update_fields=['estado'])
+    etiqueta = 'desactivado' if nuevo_estado == 'I' else 'reactivado'
+    registrar_auditoria(request, 'UPDATE', 'Ciudadano', ciudadano.pk,
+                        f'Ciudadano {etiqueta}: {ciudadano.get_nombre_completo()}')
+    messages.success(request, f'Ciudadano {etiqueta} correctamente.')
+    return redirect('modulo_puntos:consultar_ciudadanos')
 
 
 @login_required(login_url='/login/')
@@ -600,6 +679,54 @@ def reportes(request):
         .order_by('-mes')[:12]
     )
 
+    # Reporte de salas
+    habilitacion_qs = HabilitacionSala.objects.all()
+    if es_admin_pvd_rpt and pvd_id_rpt:
+        habilitacion_qs = habilitacion_qs.filter(sala__punto_vive_digital_id=pvd_id_rpt)
+    elif pvd_id_rpt and not es_admin_pvd_rpt:
+        habilitacion_qs = habilitacion_qs.filter(sala__punto_vive_digital_id=pvd_id_rpt)
+    if fecha_desde:
+        habilitacion_qs = habilitacion_qs.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        habilitacion_qs = habilitacion_qs.filter(fecha__lte=fecha_hasta)
+
+    uso_por_sala = list(
+        habilitacion_qs
+        .exclude(estado='X')
+        .values('sala__nombre', 'sala__capacidad')
+        .annotate(total_usos=Count('id'), total_personas=Avg('capacidad_requerida'))
+        .order_by('-total_usos')[:10]
+    )
+    tipo_uso_map = dict(HabilitacionSala.TIPO_USO_CHOICES)
+    uso_por_tipo = list(
+        habilitacion_qs
+        .exclude(estado='X')
+        .values('tipo_uso')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+    for item in uso_por_tipo:
+        item['tipo_uso_label'] = tipo_uso_map.get(item['tipo_uso'], item['tipo_uso'])
+
+    # KPIs operacionales
+    from django.db.models import ExpressionWrapper, DurationField, F
+    tasa_finalizacion = (
+        round(atenciones_finalizadas * 100 / total_atenciones, 1)
+        if total_atenciones > 0 else 0
+    )
+    tasa_cancelacion = (
+        round(atenciones_canceladas * 100 / total_atenciones, 1)
+        if total_atenciones > 0 else 0
+    )
+
+    satisfaccion_por_admin = list(
+        satisfaccion_qs
+        .filter(atencion__operador__isnull=False)
+        .values('atencion__operador__first_name', 'atencion__operador__last_name', 'atencion__operador__username')
+        .annotate(promedio=Avg('calificacion'), total=Count('id'))
+        .order_by('-promedio')
+    )
+
     return render(request, 'modulo_puntos/reportes.html', {
         'total_ciudadanos': total_ciudadanos,
         'ciudadanos_activos': ciudadanos_activos,
@@ -625,6 +752,12 @@ def reportes(request):
         'fecha_desde': fecha_desde_str,
         'fecha_hasta': fecha_hasta_str,
         'pvd_nombre_rpt': pvd_nombre_rpt,
+        'tasa_finalizacion': tasa_finalizacion,
+        'tasa_cancelacion': tasa_cancelacion,
+        'satisfaccion_por_admin': satisfaccion_por_admin,
+        'uso_por_sala': uso_por_sala,
+        'uso_por_tipo': uso_por_tipo,
+        'tipo_uso_map': tipo_uso_map,
     })
 
 
@@ -673,7 +806,17 @@ def registrar_atencion(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    form = AtencionForm(request.POST or None)
+    ciudadano_id = request.GET.get('ciudadano')
+    ciudadano_prefill = None
+    initial = {}
+    if ciudadano_id:
+        try:
+            ciudadano_prefill = Ciudadano.objects.get(pk=ciudadano_id, estado='A')
+            initial['ciudadano'] = ciudadano_prefill
+        except Ciudadano.DoesNotExist:
+            pass
+
+    form = AtencionForm(request.POST or None, initial=initial)
 
     if request.method == 'POST':
         if form.is_valid():
@@ -691,7 +834,10 @@ def registrar_atencion(request):
         else:
             messages.error(request, 'No se pudo guardar la atención. Revisa los datos ingresados.')
 
-    return render(request, 'modulo_puntos/registrar_atencion.html', {'form': form})
+    return render(request, 'modulo_puntos/registrar_atencion.html', {
+        'form': form,
+        'ciudadano_prefill': ciudadano_prefill,
+    })
 
 
 @login_required(login_url='/login/')
@@ -735,7 +881,9 @@ def lista_atenciones(request):
 
     q = request.GET.get('q', '').strip()
     estado_filter = request.GET.get('estado', '').strip()
-    fecha_filter = request.GET.get('fecha', '').strip()
+    fecha_desde_filter = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_filter = request.GET.get('fecha_hasta', '').strip()
+    pvd_filter = request.GET.get('pvd', '').strip()
 
     atenciones = Atencion.objects.select_related(
         'ciudadano', 'punto_vive_digital', 'operador'
@@ -744,6 +892,8 @@ def lista_atenciones(request):
     if es_admin_pvd_solo:
         pvd_id = request.session.get('pvd_activo_id')
         atenciones = atenciones.filter(punto_vive_digital_id=pvd_id) if pvd_id else atenciones.none()
+    elif pvd_filter:
+        atenciones = atenciones.filter(punto_vive_digital_id=pvd_filter)
 
     if q:
         atenciones = atenciones.filter(
@@ -753,12 +903,16 @@ def lista_atenciones(request):
         )
     if estado_filter:
         atenciones = atenciones.filter(estado=estado_filter)
-    if fecha_filter:
-        atenciones = atenciones.filter(fecha=fecha_filter)
+    if fecha_desde_filter:
+        atenciones = atenciones.filter(fecha__gte=fecha_desde_filter)
+    if fecha_hasta_filter:
+        atenciones = atenciones.filter(fecha__lte=fecha_hasta_filter)
 
     total = atenciones.count()
     paginator = Paginator(atenciones, 25)
     page_obj = paginator.get_page(request.GET.get('page'))
+
+    pvds_para_filtro = PuntoViveDigital.objects.filter(estado='A').order_by('nombre') if not es_admin_pvd_solo else None
 
     return render(request, 'modulo_puntos/lista_atenciones.html', {
         'atenciones': page_obj,
@@ -766,7 +920,10 @@ def lista_atenciones(request):
         'total': total,
         'q': q,
         'estado_filter': estado_filter,
-        'fecha_filter': fecha_filter,
+        'fecha_desde_filter': fecha_desde_filter,
+        'fecha_hasta_filter': fecha_hasta_filter,
+        'pvd_filter': pvd_filter,
+        'pvds_para_filtro': pvds_para_filtro,
     })
 
 
@@ -803,13 +960,15 @@ def cambiar_estado_atencion(request, atencion_id):
     nuevo_estado = request.POST.get('estado', '').strip()
     estados_validos = {'P', 'F', 'C'}
 
-    if nuevo_estado in estados_validos:
+    etiquetas = {'P': 'Pendiente', 'F': 'Finalizada', 'C': 'Cancelada'}
+    if nuevo_estado not in estados_validos:
+        messages.error(request, 'Estado no válido.')
+    elif nuevo_estado == 'C' and atencion.estado == 'P':
+        messages.error(request, 'No se puede cancelar una atención pendiente directamente. Primero finalízala o cambia el motivo.')
+    else:
         atencion.estado = nuevo_estado
         atencion.save(update_fields=['estado'])
-        etiquetas = {'P': 'Pendiente', 'F': 'Finalizada', 'C': 'Cancelada'}
         messages.success(request, f'Atención marcada como {etiquetas[nuevo_estado]}.')
-    else:
-        messages.error(request, 'Estado no válido.')
 
     next_url = request.POST.get('next', '').strip()
     if next_url == 'lista':
@@ -888,7 +1047,7 @@ def editar_prestamo(request, prestamo_id):
                 f'Préstamo editado: {prestamo.recurso} – entrega {prestamo.fecha_entrega}'
             )
             messages.success(request, 'Préstamo actualizado correctamente.')
-            return redirect('modulo_puntos:registrar_recurso')
+            return redirect('modulo_puntos:registrar_recurso')  # lista_recursos
         messages.error(request, 'Revisa los datos del formulario.')
 
     return render(request, 'modulo_puntos/editar_prestamo.html', {
@@ -972,12 +1131,28 @@ def lista_recursos(request):
     prestados_count = sum(1 for r in recursos if r.prestado_ahora)
     disponibles_count = len(recursos) - prestados_count
 
+    tipo_filter = request.GET.get('tipo', '').strip()
+    q_filter = request.GET.get('q', '').strip()
+    if tipo_filter:
+        recursos = [r for r in recursos if r.tipo == tipo_filter]
+    if q_filter:
+        q_lower = q_filter.lower()
+        recursos = [r for r in recursos if q_lower in r.tipo.lower() or (r.codigo and q_lower in r.codigo.lower())]
+
+    total_filtrados = len(recursos)
+    paginator = Paginator(recursos, 20)
+    page = request.GET.get('page')
+    recursos_page = paginator.get_page(page)
+
     return render(request, 'modulo_puntos/lista_recursos.html', {
-        'recursos': recursos,
+        'recursos': recursos_page,
         'pvd': pvd,
+        'total_recursos': total_filtrados,
         'prestados_count': prestados_count,
         'disponibles_count': disponibles_count,
         'tipos_disponibles': tipos_disponibles,
+        'tipo_filter': tipo_filter,
+        'q_filter': q_filter,
     })
 
 
@@ -1090,14 +1265,19 @@ def gestionar_servicios_pvd(request):
     from .forms import TIPO_SERVICIO_CHOICES
     tipos = [c for c in TIPO_SERVICIO_CHOICES if c[0]]
 
+    total = servicios.count()
+    paginator = Paginator(servicios, 25)
+    page = request.GET.get('page')
+    servicios_page = paginator.get_page(page)
+
     return render(request, 'modulo_puntos/gestionar_servicios_pvd.html', {
-        'servicios': servicios,
+        'servicios': servicios_page,
         'q': q,
         'tipo_filter': tipo_filter,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
         'tipos': tipos,
-        'total': servicios.count(),
+        'total': total,
     })
 
 
@@ -1142,6 +1322,194 @@ def registrar_servicio(request, atencion_id=None):
         'form': form,
         'atencion': atencion,
     })
+
+
+# ── EDITAR SERVICIO ────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def editar_servicio(request, servicio_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    servicio = get_object_or_404(Servicio, pk=servicio_id)
+    atencion = servicio.atencion
+
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id:
+        recursos_pvd = Recurso.objects.filter(punto_vive_digital_id=pvd_id, estado='A').order_by('tipo', 'codigo')
+    else:
+        recursos_pvd = Recurso.objects.filter(estado='A').order_by('tipo', 'codigo')
+
+    form = ServicioForm(request.POST or None, instance=servicio, recursos_pvd=recursos_pvd)
+    form.fields['atencion'].widget.attrs['disabled'] = True
+    form.fields['atencion'].required = False
+
+    if request.method == 'POST':
+        if form.is_valid():
+            s = form.save(commit=False)
+            s.atencion = atencion
+            s.save()
+            registrar_auditoria(request, 'UPDATE', 'Servicio', servicio.pk, f'Servicio editado: {servicio.nombre}')
+            messages.success(request, 'Servicio actualizado correctamente.')
+            return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/registrar_servicio.html', {
+        'form': form,
+        'atencion': atencion,
+        'editando': True,
+        'servicio': servicio,
+    })
+
+
+# ── ELIMINAR SERVICIO ─────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def eliminar_servicio(request, servicio_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    servicio = get_object_or_404(Servicio, pk=servicio_id)
+    atencion_id = servicio.atencion_id
+
+    if request.method == 'POST':
+        registrar_auditoria(request, 'DELETE', 'Servicio', servicio.pk,
+                            f'Servicio eliminado: {servicio.nombre} — Atención #{atencion_id}')
+        servicio.delete()
+        messages.success(request, 'Servicio eliminado correctamente.')
+
+    return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
+
+
+# ── EDITAR/ELIMINAR SATISFACCIÓN ───────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def editar_satisfaccion(request, satisfaccion_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    satisfaccion = get_object_or_404(Satisfaccion, pk=satisfaccion_id)
+    atencion = satisfaccion.atencion
+
+    form = SatisfaccionForm(request.POST or None, instance=satisfaccion)
+    form.fields['atencion'].widget = forms.HiddenInput()
+
+    if request.method == 'POST':
+        if form.is_valid():
+            s = form.save(commit=False)
+            s.atencion = atencion
+            s.save()
+            registrar_auditoria(request, 'UPDATE', 'Satisfaccion', satisfaccion.pk, f'Satisfacción editada — Atención #{atencion.pk}')
+            messages.success(request, 'Encuesta de satisfacción actualizada.')
+            return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
+        messages.error(request, 'Revisa los datos.')
+
+    return render(request, 'modulo_puntos/registrar_satisfaccion.html', {
+        'form': form,
+        'atencion': atencion,
+        'editando': True,
+    })
+
+
+@login_required(login_url='/login/')
+def eliminar_satisfaccion(request, satisfaccion_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    satisfaccion = get_object_or_404(Satisfaccion, pk=satisfaccion_id)
+    atencion_id = satisfaccion.atencion_id
+
+    if request.method == 'POST':
+        registrar_auditoria(request, 'DELETE', 'Satisfaccion', satisfaccion.pk, f'Satisfacción eliminada — Atención #{atencion_id}')
+        satisfaccion.delete()
+        messages.success(request, 'Encuesta de satisfacción eliminada.')
+
+    return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
+
+
+# ── EDITAR EVIDENCIA ───────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def editar_evidencia(request, evidencia_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    evidencia = get_object_or_404(Evidencia, pk=evidencia_id)
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and evidencia.punto_vive_digital_id != pvd_id:
+        messages.error(request, 'No tienes permisos para editar esta evidencia.')
+        return redirect('modulo_puntos:lista_evidencias')
+
+    form = EvidenciaForm(request.POST or None, request.FILES or None, instance=evidencia)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            registrar_auditoria(request, 'UPDATE', 'Evidencia', evidencia.pk, f'Evidencia editada: {evidencia.titulo}')
+            messages.success(request, f'Evidencia "{evidencia.titulo}" actualizada.')
+            return redirect('modulo_puntos:lista_evidencias')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/crear_evidencia.html', {
+        'form': form,
+        'pvd': evidencia.punto_vive_digital,
+        'editando': True,
+        'evidencia': evidencia,
+    })
+
+
+# ── EDITAR RECURSO ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def editar_recurso(request, recurso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    recurso = get_object_or_404(Recurso, pk=recurso_id)
+    form = RecursoForm(request.POST or None, instance=recurso)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            registrar_auditoria(request, 'UPDATE', 'Recurso', recurso.pk, f'Recurso editado: {recurso.tipo} ({recurso.codigo})')
+            messages.success(request, f'Recurso "{recurso.tipo}" actualizado correctamente.')
+            return redirect('modulo_puntos:registrar_recurso')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/registrar_recurso.html', {
+        'form': form,
+        'editando': True,
+        'recurso': recurso,
+    })
+
+
+# ── ELIMINAR RECURSO ──────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def eliminar_recurso(request, recurso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+
+    recurso = get_object_or_404(Recurso, pk=recurso_id)
+
+    if request.method == 'POST':
+        prestamos_activos = PrestamoRecurso.objects.filter(recurso=recurso, fecha_devolucion=None).count()
+        if prestamos_activos:
+            messages.error(request, f'No se puede eliminar: el recurso tiene {prestamos_activos} préstamo(s) activo(s).')
+            return redirect('modulo_puntos:registrar_recurso')
+        registrar_auditoria(request, 'DELETE', 'Recurso', recurso.pk,
+                            f'Recurso eliminado: {recurso.tipo} ({recurso.codigo or "sin código"})')
+        recurso.delete()
+        messages.success(request, 'Recurso eliminado correctamente.')
+
+    return redirect('modulo_puntos:registrar_recurso')
 
 
 # ── EXPORTACIÓN XLSX ───────────────────────────────────────────────────────────
@@ -1259,6 +1627,9 @@ def exportar_atenciones_csv(request):
     is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
     pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
 
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+
     headers = [
         'ID Atención', 'Punto Vive Digital', 'Fecha', 'Hora Inicio', 'Hora Fin', 'Estado',
         'Documento Ciudadano', 'Nombre Completo', 'Género', 'Etnia',
@@ -1269,6 +1640,10 @@ def exportar_atenciones_csv(request):
     qs = Atencion.objects.select_related('ciudadano', 'operador', 'punto_vive_digital').order_by('-fecha', '-hora_inicio')
     if pvd_id:
         qs = qs.filter(punto_vive_digital_id=pvd_id)
+    if fecha_desde:
+        qs = qs.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha__lte=fecha_hasta)
     filas = []
     for a in qs:
         c = a.ciudadano
@@ -1354,6 +1729,9 @@ def exportar_servicios_csv(request):
     is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
     pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
 
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+
     headers = [
         'ID Servicio', 'Punto Vive Digital', 'ID Atención', 'Fecha Atención',
         'Documento Ciudadano', 'Nombre Ciudadano',
@@ -1364,6 +1742,10 @@ def exportar_servicios_csv(request):
     ).order_by('-pk')
     if pvd_id:
         qs = qs.filter(atencion__punto_vive_digital_id=pvd_id)
+    if fecha_desde:
+        qs = qs.filter(atencion__fecha__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(atencion__fecha__lte=fecha_hasta)
     filas = []
     for s in qs:
         atn = s.atencion
@@ -1444,6 +1826,9 @@ def exportar_prestamos_csv(request):
     is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
     pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
 
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+
     headers = [
         'ID Préstamo', 'Punto Vive Digital', 'Tipo Recurso', 'Código Recurso',
         'Fecha de Entrega', 'Fecha de Devolución', 'Observaciones', 'Estado',
@@ -1451,6 +1836,10 @@ def exportar_prestamos_csv(request):
     qs = PrestamoRecurso.objects.select_related('recurso', 'recurso__punto_vive_digital').order_by('-pk')
     if pvd_id:
         qs = qs.filter(recurso__punto_vive_digital_id=pvd_id)
+    if fecha_desde:
+        qs = qs.filter(fecha_entrega__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha_entrega__lte=fecha_hasta)
     filas = []
     for p in qs:
         tipo = p.recurso.tipo if p.recurso else ''
@@ -1481,6 +1870,9 @@ def exportar_cursos_csv(request):
     is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
     pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
 
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+
     # Hoja 1 – Cursos / Talleres
     qs_cursos = (
         Curso.objects
@@ -1489,6 +1881,10 @@ def exportar_cursos_csv(request):
     )
     if pvd_id:
         qs_cursos = qs_cursos.filter(punto_vive_digital_id=pvd_id)
+    if fecha_desde:
+        qs_cursos = qs_cursos.filter(fecha_inicio__gte=fecha_desde)
+    if fecha_hasta:
+        qs_cursos = qs_cursos.filter(fecha_inicio__lte=fecha_hasta)
 
     headers_cursos = [
         'ID', 'Punto Vive Digital', 'Nombre del Curso/Taller',
@@ -1586,6 +1982,9 @@ def exportar_mantenimientos_csv(request):
     is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
     pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
 
+    fecha_desde_m = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_m = request.GET.get('fecha_hasta', '').strip()
+
     headers = [
         'ID', 'Punto Vive Digital', 'Tipo', 'Fecha',
         'Equipos Intervenidos', 'Descripción del Trabajo',
@@ -1598,6 +1997,10 @@ def exportar_mantenimientos_csv(request):
     )
     if pvd_id:
         qs = qs.filter(punto_vive_digital_id=pvd_id)
+    if fecha_desde_m:
+        qs = qs.filter(fecha__gte=fecha_desde_m)
+    if fecha_hasta_m:
+        qs = qs.filter(fecha__lte=fecha_hasta_m)
 
     filas = []
     for m in qs:
@@ -1856,8 +2259,23 @@ def lista_pvd(request):
         return redirect('modulo_puntos:panel_control')
     pvds = PuntoViveDigital.objects.order_by('nombre')
     puede_eliminar_pvd = tiene_permiso(request.user, 'infraestructura.eliminar_pvd')
+
+    # Adjuntar admin y conteos a cada PVD
+    from .models import UserProfile
+    profiles = UserProfile.objects.select_related('user', 'punto_asignado').filter(punto_asignado__isnull=False)
+    admin_por_pvd = {}
+    for p in profiles:
+        admin_por_pvd.setdefault(p.punto_asignado_id, []).append(p.user)
+
+    pvd_list = []
+    for pvd in pvds:
+        pvd.admins = admin_por_pvd.get(pvd.pk, [])
+        pvd.total_atenciones = Atencion.objects.filter(punto_vive_digital=pvd).count()
+        pvd.total_ciudadanos = Ciudadano.objects.filter(punto_vive_digital=pvd, estado='A').count()
+        pvd_list.append(pvd)
+
     return render(request, 'modulo_puntos/lista_pvd.html', {
-        'pvds': pvds,
+        'pvds': pvd_list,
         'puede_eliminar_pvd': puede_eliminar_pvd,
     })
 
@@ -1914,11 +2332,14 @@ def activar_pvd(request, pvd_cdgo):
     if not usuario_es_admin_tic(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if request.method != 'POST':
+        return redirect('modulo_puntos:lista_pvd')
 
     pvd = get_object_or_404(PuntoViveDigital, pk=pvd_cdgo)
     pvd.estado = 'I' if pvd.estado == 'A' else 'A'
     pvd.save()
     estado_str = 'activado' if pvd.estado == 'A' else 'desactivado'
+    registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pk, f'PVD {estado_str}: {pvd.nombre}')
     messages.success(request, f'PVD "{pvd.nombre}" {estado_str} correctamente.')
     return redirect('modulo_puntos:lista_pvd')
 
@@ -2044,10 +2465,13 @@ def activar_sala(request, sala_cdgo):
         messages.error(request, 'No tienes permiso para cambiar el estado de salas.')
         return redirect('modulo_puntos:lista_salas')
 
+    if request.method != 'POST':
+        return redirect('modulo_puntos:lista_salas')
     sala = get_object_or_404(Sala, pk=sala_cdgo)
     sala.estado = 'I' if sala.estado == 'A' else 'A'
     sala.save()
     estado_str = 'activada' if sala.estado == 'A' else 'desactivada'
+    registrar_auditoria(request, 'UPDATE', 'Sala', sala.pk, f'Sala {estado_str}: {sala.nombre}')
     messages.success(request, f'Sala "{sala.nombre}" {estado_str} correctamente.')
     return redirect('modulo_puntos:lista_salas')
 
@@ -2631,14 +3055,35 @@ def lista_cursos(request):
         qs = Curso.objects.none()
 
     estado_filtro = request.GET.get('estado', '')
+    fecha_desde_filtro = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_filtro = request.GET.get('fecha_hasta', '').strip()
+    q_filtro = request.GET.get('q', '').strip()
     if estado_filtro:
         qs = qs.filter(estado=estado_filtro)
+    if fecha_desde_filtro:
+        qs = qs.filter(fecha_inicio__gte=fecha_desde_filtro)
+    if fecha_hasta_filtro:
+        qs = qs.filter(fecha_inicio__lte=fecha_hasta_filtro)
+    if q_filtro:
+        qs = qs.filter(
+            Q(nombre__icontains=q_filtro) |
+            Q(poblacion_objetivo__icontains=q_filtro) |
+            Q(descripcion__icontains=q_filtro)
+        )
+
+    paginator = Paginator(qs.order_by('-fecha_inicio'), 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'modulo_puntos/cursos/lista_cursos.html', {
-        'cursos': qs,
+        'cursos': page_obj,
+        'page_obj': page_obj,
         'estado_filtro': estado_filtro,
+        'fecha_desde_filtro': fecha_desde_filtro,
+        'fecha_hasta_filtro': fecha_hasta_filtro,
+        'q_filtro': q_filtro,
         'estados': Curso.ESTADO_CHOICES,
         'es_admin_tic': es_admin_tic,
+        'total_cursos': qs.count(),
     })
 
 
@@ -2839,6 +3284,83 @@ def marcar_asistencia(request, sesion_id):
     })
 
 
+@login_required(login_url='/login/')
+def cambiar_estado_curso(request, curso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.editar'):
+        messages.error(request, 'No tienes permiso para editar cursos.')
+        return redirect('modulo_puntos:lista_cursos')
+    if request.method != 'POST':
+        return redirect('modulo_puntos:lista_cursos')
+
+    curso = get_object_or_404(Curso, pk=curso_id)
+    nuevo_estado = request.POST.get('estado', '').strip()
+    estados_validos = {'PL', 'AC', 'FI', 'CA'}
+    if nuevo_estado not in estados_validos:
+        messages.error(request, 'Estado no válido.')
+    else:
+        curso.estado = nuevo_estado
+        curso.save(update_fields=['estado'])
+        registrar_auditoria(request, 'UPDATE', 'Curso', curso.pk,
+                            f'Estado cambiado a {curso.get_estado_display()}')
+        messages.success(request, f'Curso marcado como "{curso.get_estado_display()}".')
+    return redirect('modulo_puntos:detalle_curso', curso_id=curso.pk)
+
+
+@login_required(login_url='/login/')
+def eliminar_curso(request, curso_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.editar'):
+        messages.error(request, 'No tienes permiso para eliminar cursos.')
+        return redirect('modulo_puntos:lista_cursos')
+    curso = get_object_or_404(Curso, pk=curso_id)
+    if request.method == 'POST':
+        nombre = curso.nombre
+        registrar_auditoria(request, 'DELETE', 'Curso', curso.pk, f'Curso eliminado: {nombre}')
+        curso.delete()
+        messages.success(request, f'Curso "{nombre}" eliminado.')
+        return redirect('modulo_puntos:lista_cursos')
+    return redirect('modulo_puntos:detalle_curso', curso_id=curso.pk)
+
+
+@login_required(login_url='/login/')
+def eliminar_sesion_curso(request, sesion_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'cursos.sesiones'):
+        messages.error(request, 'No tienes permiso para gestionar sesiones.')
+        return redirect('modulo_puntos:lista_cursos')
+    sesion = get_object_or_404(SesionCurso, pk=sesion_id)
+    curso_id = sesion.curso_id
+    if request.method == 'POST':
+        registrar_auditoria(request, 'DELETE', 'SesionCurso', sesion.pk,
+                            f'Sesión {sesion.numero_sesion} eliminada del curso #{curso_id}')
+        sesion.delete()
+        messages.success(request, f'Sesión {sesion.numero_sesion} eliminada.')
+    return redirect('modulo_puntos:detalle_curso', curso_id=curso_id)
+
+
+@login_required(login_url='/login/')
+def eliminar_inscripcion(request, inscripcion_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos.')
+        return redirect('modulo_puntos:panel_control')
+    inscripcion = get_object_or_404(InscripcionCurso, pk=inscripcion_id)
+    curso_id = inscripcion.curso_id
+    if request.method == 'POST':
+        nombre = inscripcion.ciudadano.get_nombre_completo() if inscripcion.ciudadano else '—'
+        registrar_auditoria(request, 'DELETE', 'InscripcionCurso', inscripcion.pk,
+                            f'Inscripción eliminada: {nombre} del curso #{curso_id}')
+        inscripcion.delete()
+        messages.success(request, f'Inscripción de {nombre} eliminada.')
+    return redirect('modulo_puntos:detalle_curso', curso_id=curso_id)
+
+
 # ==============================================================================
 # MANTENIMIENTO DE EQUIPOS
 # ==============================================================================
@@ -2863,14 +3385,36 @@ def lista_mantenimientos(request):
         qs = MantenimientoEquipo.objects.none()
 
     tipo_filtro = request.GET.get('tipo', '')
+    fecha_desde_filtro = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_filtro = request.GET.get('fecha_hasta', '').strip()
+    q_filtro = request.GET.get('q', '').strip()
     if tipo_filtro:
         qs = qs.filter(tipo=tipo_filtro)
+    if fecha_desde_filtro:
+        qs = qs.filter(fecha__gte=fecha_desde_filtro)
+    if fecha_hasta_filtro:
+        qs = qs.filter(fecha__lte=fecha_hasta_filtro)
+    if q_filtro:
+        qs = qs.filter(
+            Q(equipos_intervenidos__icontains=q_filtro) |
+            Q(descripcion__icontains=q_filtro) |
+            Q(realizado_por__first_name__icontains=q_filtro) |
+            Q(realizado_por__last_name__icontains=q_filtro)
+        )
+
+    paginator = Paginator(qs.order_by('-fecha'), 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'modulo_puntos/mantenimientos/lista_mantenimientos.html', {
-        'mantenimientos': qs,
+        'mantenimientos': page_obj,
+        'page_obj': page_obj,
         'tipo_filtro': tipo_filtro,
+        'fecha_desde_filtro': fecha_desde_filtro,
+        'fecha_hasta_filtro': fecha_hasta_filtro,
+        'q_filtro': q_filtro,
         'tipos': MantenimientoEquipo.TIPO_CHOICES,
         'es_admin_tic': es_admin_tic,
+        'total_mantenimientos': qs.count(),
     })
 
 
@@ -2939,6 +3483,24 @@ def editar_mantenimiento(request, mant_id):
     })
 
 
+@login_required(login_url='/login/')
+def eliminar_mantenimiento(request, mant_id):
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        messages.error(request, 'No tienes permisos para acceder a este módulo.')
+        return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'mantenimiento.editar'):
+        messages.error(request, 'No tienes permiso para eliminar mantenimientos.')
+        return redirect('modulo_puntos:lista_mantenimientos')
+
+    mant = get_object_or_404(MantenimientoEquipo, pk=mant_id)
+
+    if request.method == 'POST':
+        registrar_auditoria(request, 'DELETE', 'MantenimientoEquipo', mant.pk,
+                            f'Mantenimiento eliminado: {mant.get_tipo_display()} — {mant.fecha}')
+        mant.delete()
+        messages.success(request, 'Registro de mantenimiento eliminado.')
+
+    return redirect('modulo_puntos:lista_mantenimientos')
 
 
 # ── ACCESOS TEMPORALES ─────────────────────────────────────────────────────────
@@ -3014,5 +3576,89 @@ def accesos_temporales(request):
         'admins_pvd': admins_pvd,
         'pvds_activos': pvds_activos,
     })
+
+
+# ── LOG DE AUDITORÍA ───────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def log_auditoria(request):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Solo Administradores TIC y Superusuarios pueden ver el log de auditoría.')
+        return redirect('modulo_puntos:panel_control')
+
+    q = request.GET.get('q', '').strip()
+    accion_filter = request.GET.get('accion', '').strip()
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+
+    qs = AuditoriaAccion.objects.all()
+    if q:
+        qs = qs.filter(
+            Q(usuario__icontains=q) |
+            Q(descripcion__icontains=q) |
+            Q(modelo_afectado__icontains=q)
+        )
+    if accion_filter:
+        qs = qs.filter(accion=accion_filter)
+    if fecha_desde:
+        qs = qs.filter(fecha_accion__date__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha_accion__date__lte=fecha_hasta)
+
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'modulo_puntos/log_auditoria.html', {
+        'registros': page_obj,
+        'page_obj': page_obj,
+        'q': q,
+        'accion_filter': accion_filter,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'tipo_choices': AuditoriaAccion.TIPO_ACCION,
+    })
+
+
+@login_required(login_url='/login/')
+def exportar_auditoria(request):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'Solo Administradores TIC y Superusuarios pueden exportar el log de auditoría.')
+        return redirect('modulo_puntos:panel_control')
+
+    q = request.GET.get('q', '').strip()
+    accion_filter = request.GET.get('accion', '').strip()
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+
+    qs = AuditoriaAccion.objects.all()
+    if q:
+        qs = qs.filter(
+            Q(usuario__icontains=q) |
+            Q(descripcion__icontains=q) |
+            Q(modelo_afectado__icontains=q)
+        )
+    if accion_filter:
+        qs = qs.filter(accion=accion_filter)
+    if fecha_desde:
+        qs = qs.filter(fecha_accion__date__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha_accion__date__lte=fecha_hasta)
+
+    headers = ['Fecha / Hora', 'Usuario', 'Acción', 'Modelo', 'ID Objeto', 'Descripción', 'IP']
+    filas = []
+    for reg in qs:
+        filas.append([
+            reg.fecha_accion.strftime('%d/%m/%Y %H:%M') if reg.fecha_accion else '',
+            reg.usuario or '',
+            reg.get_accion_display(),
+            reg.modelo_afectado or '',
+            str(reg.objeto_id) if reg.objeto_id else '',
+            reg.descripcion or '',
+            reg.direccion_ip or '',
+        ])
+
+    registrar_auditoria(request, 'EXPORT', 'AuditoriaAccion', None, f'Exportación log auditoría ({len(filas)} registros)')
+    wb = _crear_hoja('Log Auditoría', headers, filas)
+    return _xlsx_response('Log_Auditoria_PVD', wb)
 
 

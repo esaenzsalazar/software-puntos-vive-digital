@@ -3,64 +3,72 @@
 {% block title %}Mi Perfil{% endblock %}
 
 {% block content %}
-<div class="card card--narrow">
-    <div class="page-hero">
-        <span class="eyebrow">Cuenta</span>
-        <h2 class="page-title">Mi perfil</h2>
-        <p class="muted">Actualiza tus datos y contraseña.</p>
-    </div>
-    
-    <div class="user-banner">
-        <p><strong>Usuario:</strong> {{ user.username }}</p>
-        <p><strong>Nombre:</strong> {{ user.get_full_name|default:user.username }}</p>
-        <p><strong>Rol:</strong> <span class="text-accent">{{ rol_usuario }}</span></p>
-    </div>
+<div style="max-width:580px;margin:0 auto;">
 
-    <!-- Recordatorio de Seguridad Social (Contrato CD-224-2026) -->
-    <div class="alert alert-info" style="margin-bottom: 24px;">
-        <strong>📋 Recordatorio - Seguridad Social (Décima Cuarta Cláusula)</strong>
-        <p style="margin: 8px 0 0 0; font-size: 13px;">
-            Debes cumplir obligatoriamente con el pago al Sistema de Seguridad Social Integral 
-            (Salud, Pensiones, ARL y parafiscales). Presenta al supervisor las constancias de pago 
-            periódicamente. El incumplimiento dará lugar a sanciones.
-        </p>
-    </div>
-
-    <!-- Formulario de datos -->
-    <form method="POST">
-        {% csrf_token %}
-        
-        <fieldset style="margin-bottom: 20px; padding: 16px; border: 1px solid var(--p-border); border-radius: var(--p-radius-sm);">
-            <legend style="font-size: 14px; font-weight: 600; padding: 0 8px;">Datos de la cuenta</legend>
-            {{ form.as_p }}
-        </fieldset>
-
-        <div class="actions">
-            <button type="submit" class="btn">Guardar cambios</button>
-            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Volver al panel</a>
+    <div class="card" style="margin-bottom:20px;">
+        <div class="page-hero" style="padding-bottom:16px;">
+            <span class="eyebrow">Cuenta</span>
+            <h1 class="page-title">Mi perfil</h1>
         </div>
-    </form>
 
-    <!-- Cambio de contraseña separado -->
-    <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid var(--p-border);">
-        <h3 style="font-size: 16px; margin: 0 0 16px 0;">🔒 Cambiar contraseña</h3>
+        <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;background:#f8fafc;border-radius:8px;margin-bottom:20px;">
+            <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0f4a9b,#1d6ed8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;flex-shrink:0;">
+                {{ user.get_full_name|default:user.username|first|upper }}
+            </div>
+            <div>
+                <div style="font-weight:700;font-size:16px;color:#1e293b;">{{ user.get_full_name|default:user.username }}</div>
+                <div style="font-size:13px;color:#64748b;">@{{ user.username }}</div>
+                <div style="margin-top:4px;">
+                    <span class="badge badge--info" style="font-size:11px;">{{ rol_usuario }}</span>
+                    {% if user.last_login %}
+                    <span style="font-size:11px;color:#94a3b8;margin-left:8px;">Último acceso: {{ user.last_login|date:"d/m/Y H:i" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                {% for field in form %}
+                <div class="form-group" style="margin:0;">
+                    <label>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<p style="color:#dc2626;font-size:12px;margin:4px 0 0;">{{ field.errors.0 }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top:20px;">
+                <button type="submit" class="btn">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">🔒 Cambiar contraseña</h3>
         <form method="POST" action="{% url 'modulo_puntos:perfil_usuario' %}">
             {% csrf_token %}
             <div class="form-group">
                 <label for="old_password">Contraseña actual</label>
                 <input type="password" name="old_password" id="old_password" class="form-control" required>
             </div>
-            <div class="form-group">
-                <label for="new_password1">Nueva contraseña</label>
-                <input type="password" name="new_password1" id="new_password1" class="form-control" required>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group" style="margin:0;">
+                    <label for="new_password1">Nueva contraseña</label>
+                    <input type="password" name="new_password1" id="new_password1" class="form-control" required minlength="8">
+                    <small class="muted">Mínimo 8 caracteres</small>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="new_password2">Confirmar nueva</label>
+                    <input type="password" name="new_password2" id="new_password2" class="form-control" required>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="new_password2">Confirmar nueva contraseña</label>
-                <input type="password" name="new_password2" id="new_password2" class="form-control" required>
+            <div style="margin-top:16px;">
+                <button type="submit" name="cambiar_password" value="1" class="btn btn-secondary">Cambiar contraseña</button>
             </div>
-            <button type="submit" name="cambiar_password" value="1" class="btn btn-warning">Cambiar contraseña</button>
         </form>
     </div>
+
 </div>
 
 {% block extra_scripts %}
@@ -68,57 +76,29 @@
 document.addEventListener('DOMContentLoaded', function () {
     const pw1 = document.getElementById('new_password1');
     const pw2 = document.getElementById('new_password2');
-    const oldPw = document.getElementById('old_password');
 
-    function wrapInGroup(input) {
-        if (!input) return;
-        if (!input.closest('.form-group')) {
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            input.parentNode.insertBefore(div, input);
-            div.appendChild(input);
-        }
-    }
-    [oldPw, pw1, pw2].forEach(wrapInGroup);
-
-    function validarPassword(valor, nombre) {
-        if (!valor || valor.trim() === '') return { valido: false, mensaje: `${nombre} es requerida` };
-        if (valor.length < 8) return { valido: false, mensaje: `${nombre} debe tener al menos 8 caracteres` };
-        return { valido: true, mensaje: '' };
-    }
-
-    function validarConfirmacion() {
-        if (!pw2 || !pw1) return true;
-        if (pw2.value && pw1.value && pw2.value !== pw1.value) {
-            ValidacionPVD.mostrarError(pw2, 'Las contraseñas no coinciden');
-            return false;
-        }
-        if (pw2.value === pw1.value && pw2.value) {
-            ValidacionPVD.ocultarError(pw2);
-            pw2.style.borderColor = '#10b981';
-        }
-        return true;
-    }
-
-    if (pw1) {
-        pw1.addEventListener('input', function () {
-            ValidacionPVD.validarYMostrar(this, (v) => validarPassword(v, 'Nueva contraseña'), 'Nueva contraseña');
-            if (pw2.value) validarConfirmacion();
-        });
-    }
     if (pw2) {
-        pw2.addEventListener('input', validarConfirmacion);
-        pw2.addEventListener('blur', validarConfirmacion);
+        pw2.addEventListener('input', function () {
+            if (pw1.value && pw2.value !== pw1.value) {
+                pw2.style.borderColor = '#dc2626';
+            } else if (pw2.value) {
+                pw2.style.borderColor = '#10b981';
+            }
+        });
     }
 
     const pwForm = pw1 ? pw1.closest('form') : null;
     if (pwForm) {
         pwForm.addEventListener('submit', function (e) {
-            let ok = true;
-            if (oldPw && !ValidacionPVD.validarYMostrar(oldPw, ValidacionPVD.validarRequerido, 'Contraseña actual').valido) ok = false;
-            if (pw1 && !ValidacionPVD.validarYMostrar(pw1, (v) => validarPassword(v, 'Nueva contraseña'), 'Nueva contraseña').valido) ok = false;
-            if (!validarConfirmacion()) ok = false;
-            if (!ok) e.preventDefault();
+            if (pw1.value.length < 8) {
+                e.preventDefault();
+                pw1.style.borderColor = '#dc2626';
+                pw1.focus();
+            } else if (pw2.value !== pw1.value) {
+                e.preventDefault();
+                pw2.style.borderColor = '#dc2626';
+                pw2.focus();
+            }
         });
     }
 });

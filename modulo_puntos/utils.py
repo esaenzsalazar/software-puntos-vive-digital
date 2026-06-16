@@ -2,6 +2,7 @@
 Utilidades para el sistema PVD - Contrato CD-224-2026
 Funciones helper para auditoría, validaciones y otras utilidades.
 """
+import random
 import re
 import secrets
 import string
@@ -236,24 +237,38 @@ def tiene_permiso(user, codigo):
     1. Superusuario → siempre True
     2. Override individual (PermisoUsuario) → concedido=True/False
     3. Permiso de rol (PermisoRol según grupo del usuario)
+
+    Usa un cache por petición HTTP (atributo _permiso_cache en el objeto User)
+    para evitar múltiples queries SQL cuando la misma vista llama a esta función
+    varias veces con el mismo código de permiso.
     """
     if not user or not user.is_authenticated:
         return False
     if user.is_superuser:
         return True
 
+    # Cache por petición: el objeto User vive una sola petición, así que
+    # _permiso_cache se resetea automáticamente en cada nueva petición.
+    if not hasattr(user, '_permiso_cache'):
+        user._permiso_cache = {}
+    if codigo in user._permiso_cache:
+        return user._permiso_cache[codigo]
+
     from modulo_puntos.models import PermisoDefinicion, PermisoRol, PermisoUsuario
 
     try:
         permiso_def = PermisoDefinicion.objects.get(codigo=codigo, activo=True)
     except PermisoDefinicion.DoesNotExist:
+        user._permiso_cache[codigo] = False
         return False
 
     override = PermisoUsuario.objects.filter(usuario=user, permiso=permiso_def).first()
     if override is not None:
-        return override.concedido
+        result = override.concedido
+        user._permiso_cache[codigo] = result
+        return result
 
-    grupos = user.groups.values_list('name', flat=True)
+    grupos = list(user.groups.values_list('name', flat=True))
     rol = None
     if 'Administrador TIC' in grupos:
         rol = 'admin_tic'
@@ -261,8 +276,11 @@ def tiene_permiso(user, codigo):
         rol = 'admin_pvd'
 
     if rol:
-        return PermisoRol.objects.filter(rol=rol, permiso=permiso_def).exists()
+        result = PermisoRol.objects.filter(rol=rol, permiso=permiso_def).exists()
+        user._permiso_cache[codigo] = result
+        return result
 
+    user._permiso_cache[codigo] = False
     return False
 
 

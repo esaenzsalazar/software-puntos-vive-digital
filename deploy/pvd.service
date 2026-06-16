@@ -1,0 +1,45 @@
+# ============================================================
+# systemd — Servicio de Gunicorn
+# Puntos Vive Digital · Alcaldía de Bugalagrande
+#
+# ANTES DE USAR:
+#   1. Copiar a /etc/systemd/system/pvd.service
+#   2. sudo systemctl daemon-reload
+#   3. sudo systemctl enable pvd     ← arranca solo al reiniciar el servidor
+#   4. sudo systemctl start pvd
+#   5. sudo systemctl status pvd     ← verificar que esté corriendo
+# ============================================================
+
+[Unit]
+Description=Puntos Vive Digital — Gunicorn WSGI
+Documentation=https://docs.djangoproject.com/
+After=network.target
+
+[Service]
+Type=notify
+
+# Usuario del servidor (no root)
+User=www-data
+Group=www-data
+
+# Directorio del proyecto en el servidor
+WorkingDirectory=/var/www/pvd
+
+# Variables de entorno de producción
+EnvironmentFile=/var/www/pvd/.env
+
+# Comando de arranque
+ExecStart=/var/www/pvd/entorno/bin/gunicorn \
+    core.wsgi:application \
+    --config /var/www/pvd/gunicorn.conf.py
+
+# Reiniciar automáticamente si el proceso falla
+Restart=on-failure
+RestartSec=5s
+
+# Límites de seguridad
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

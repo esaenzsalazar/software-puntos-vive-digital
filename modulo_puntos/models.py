@@ -121,6 +121,9 @@ class Recurso(models.Model):
         db_table = 'pvd_recursos'
         verbose_name = 'Recurso'
         verbose_name_plural = 'Recursos'
+        indexes = [
+            models.Index(fields=['punto_vive_digital', 'estado'], name='idx_rec_pvd_estdo'),
+        ]
 
     def __str__(self):
         if self.codigo:
@@ -283,6 +286,11 @@ class AuditoriaAccion(models.Model):
         ordering = ['-fecha_accion']
         verbose_name = 'Registro de Auditoría'
         verbose_name_plural = 'Registros de Auditoría'
+        indexes = [
+            models.Index(fields=['fecha_accion'], name='idx_aud_fecha'),
+            models.Index(fields=['usuario'], name='idx_aud_usuario'),
+            models.Index(fields=['accion'], name='idx_aud_accion'),
+        ]
 
     def __str__(self):
         return f"[{self.get_accion_display()}] {self.usuario} - {self.modelo_afectado}"
@@ -523,6 +531,10 @@ class Curso(models.Model):
         ordering = ['-fecha_inicio']
         verbose_name = 'Curso / Taller'
         verbose_name_plural = 'Cursos / Talleres'
+        indexes = [
+            models.Index(fields=['punto_vive_digital', 'estado'], name='idx_crs_pvd_estdo'),
+            models.Index(fields=['fecha_inicio'], name='idx_crs_fecha'),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -640,6 +652,9 @@ class MantenimientoEquipo(models.Model):
         ordering = ['-fecha']
         verbose_name = 'Mantenimiento de Equipo'
         verbose_name_plural = 'Mantenimientos de Equipos'
+        indexes = [
+            models.Index(fields=['punto_vive_digital', 'fecha'], name='idx_mant_pvd_fecha'),
+        ]
 
     def __str__(self):
         return f"{self.get_tipo_display()} – {self.punto_vive_digital.nombre} ({self.fecha})"
@@ -680,6 +695,10 @@ class Evidencia(models.Model):
         ordering = ['-fecha', '-fecha_registro']
         verbose_name = 'Evidencia'
         verbose_name_plural = 'Evidencias'
+        indexes = [
+            models.Index(fields=['punto_vive_digital', 'fecha'], name='idx_evi_pvd_fecha'),
+            models.Index(fields=['categoria'], name='idx_evi_categoria'),
+        ]
 
     def __str__(self):
         return f"{self.titulo} – {self.punto_vive_digital.nombre} ({self.fecha})"

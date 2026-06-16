@@ -10,3 +10,9 @@ db.sqlite3
 .DS_Store
 .idea/
 *.swp
+# Generados por collectstatic
+staticfiles/
+# Logs de aplicación
+logs/
+# Uploads de evidencias (no deben ir al repo)
+media/

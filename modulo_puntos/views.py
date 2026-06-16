@@ -847,6 +847,18 @@ def editar_atencion(request, atencion_id):
         return redirect('modulo_puntos:panel_control')
 
     atencion = get_object_or_404(Atencion, pk=atencion_id)
+
+    # Admin PVD solo puede editar atenciones de su PVD activo
+    pvd_id = request.session.get('pvd_activo_id')
+    es_admin_pvd_solo = (
+        not request.user.is_superuser
+        and not usuario_es_admin_tic(request.user)
+        and request.user.groups.filter(name='Administrador PVD').exists()
+    )
+    if es_admin_pvd_solo and pvd_id and atencion.punto_vive_digital_id != int(pvd_id):
+        messages.error(request, 'No tienes permiso para editar esta atención.')
+        return redirect('modulo_puntos:lista_atenciones')
+
     form = AtencionForm(request.POST or None, instance=atencion)
 
     if request.method == 'POST':
@@ -2151,8 +2163,12 @@ def crear_admin_pvd(request):
             grupo, _ = Group.objects.get_or_create(name='Administrador PVD')
             user.groups.add(grupo)
 
-            messages.success(request, f'Administrador PVD "{user.get_full_name() or user.username}" creado correctamente.')
-            return redirect('modulo_puntos:panel_control')
+            messages.success(
+                request,
+                f'Administrador PVD "{user.get_full_name() or user.username}" creado. '
+                f'Ahora asígnale un Punto Vive Digital desde esta pantalla.'
+            )
+            return redirect('modulo_puntos:accesos_temporales')
         messages.error(request, 'No se pudo crear el usuario. Revisa los errores.')
 
     return render(request, 'modulo_puntos/crear_usuario.html', {
@@ -2257,21 +2273,32 @@ def lista_pvd(request):
     if not usuario_es_admin_tic(request.user):
         messages.error(request, 'No tienes permisos para gestionar PVDs.')
         return redirect('modulo_puntos:panel_control')
-    pvds = PuntoViveDigital.objects.order_by('nombre')
     puede_eliminar_pvd = tiene_permiso(request.user, 'infraestructura.eliminar_pvd')
 
-    # Adjuntar admin y conteos a cada PVD
+    # Conteos en una sola query con annotate
+    pvds = (
+        PuntoViveDigital.objects
+        .order_by('nombre')
+        .annotate(
+            total_atenciones=Count('atencion', distinct=True),
+            total_ciudadanos=Count(
+                'ciudadano',
+                filter=Q(ciudadano__estado='A'),
+                distinct=True,
+            ),
+        )
+    )
+
+    # Admins por PVD en una sola query
     from .models import UserProfile
-    profiles = UserProfile.objects.select_related('user', 'punto_asignado').filter(punto_asignado__isnull=False)
+    profiles = UserProfile.objects.select_related('usuario', 'punto_asignado').filter(punto_asignado__isnull=False)
     admin_por_pvd = {}
     for p in profiles:
-        admin_por_pvd.setdefault(p.punto_asignado_id, []).append(p.user)
+        admin_por_pvd.setdefault(p.punto_asignado_id, []).append(p.usuario)
 
     pvd_list = []
     for pvd in pvds:
         pvd.admins = admin_por_pvd.get(pvd.pk, [])
-        pvd.total_atenciones = Atencion.objects.filter(punto_vive_digital=pvd).count()
-        pvd.total_ciudadanos = Ciudadano.objects.filter(punto_vive_digital=pvd, estado='A').count()
         pvd_list.append(pvd)
 
     return render(request, 'modulo_puntos/lista_pvd.html', {
@@ -2785,20 +2812,24 @@ def _actualizar_estados_habilitaciones(qs):
     hoy = ahora.date()
     hora_actual = ahora.time()
 
-    for hab in qs:
-        if hab.estado in ('X', 'F'):
-            continue
-        if hab.fecha < hoy:
-            if hab.estado != 'F':
-                HabilitacionSala.objects.filter(pk=hab.pk).update(estado='F')
-                hab.estado = 'F'
-        elif hab.fecha == hoy:
-            if hab.hora_inicio <= hora_actual <= hab.hora_fin and hab.estado not in ('E',):
-                HabilitacionSala.objects.filter(pk=hab.pk).update(estado='E')
-                hab.estado = 'E'
-            elif hora_actual > hab.hora_fin and hab.estado != 'F':
-                HabilitacionSala.objects.filter(pk=hab.pk).update(estado='F')
-                hab.estado = 'F'
+    ids = [h.pk for h in qs]
+    base = HabilitacionSala.objects.filter(pk__in=ids).exclude(estado__in=('X', 'F'))
+
+    # Fechas pasadas → Finalizado
+    base.filter(fecha__lt=hoy).update(estado='F')
+
+    # Hoy, hora en rango → En curso
+    base.filter(
+        fecha=hoy,
+        hora_inicio__lte=hora_actual,
+        hora_fin__gte=hora_actual,
+    ).exclude(estado='E').update(estado='E')
+
+    # Hoy, hora superada → Finalizado
+    base.filter(
+        fecha=hoy,
+        hora_fin__lt=hora_actual,
+    ).update(estado='F')
 
 
 @login_required(login_url='/login/')
@@ -2839,8 +2870,12 @@ def lista_habilitaciones(request):
     _actualizar_estados_habilitaciones(list(qs))
     qs = qs.order_by('fecha', 'hora_inicio')
 
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'modulo_puntos/habilitaciones/lista_habilitaciones.html', {
-        'habilitaciones': qs,
+        'habilitaciones': page_obj,
+        'page_obj': page_obj,
         'salas_pvd': salas_pvd,
         'pvd': pvd,
         'fecha_filtro': fecha_filtro,

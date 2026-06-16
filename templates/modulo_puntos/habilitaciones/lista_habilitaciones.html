@@ -139,6 +139,21 @@
             </tbody>
         </table>
     </div>
+
+    {% if page_obj.has_other_pages %}
+    <div style="display:flex; justify-content:center; gap:4px; margin-top:16px; flex-wrap:wrap;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if fecha_filtro %}&fecha={{ fecha_filtro }}{% endif %}{% if sala_filtro %}&sala_id={{ sala_filtro }}{% endif %}{% if estado_filtro %}&estado={{ estado_filtro }}{% endif %}" class="btn btn-secondary btn--sm">‹ Anterior</a>
+        {% endif %}
+        <span style="padding:6px 12px; font-size:0.85rem; color:var(--text-muted);">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if fecha_filtro %}&fecha={{ fecha_filtro }}{% endif %}{% if sala_filtro %}&sala_id={{ sala_filtro }}{% endif %}{% if estado_filtro %}&estado={{ estado_filtro }}{% endif %}" class="btn btn-secondary btn--sm">Siguiente ›</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="card card--hint" style="text-align:center; padding:48px 24px;">
         <p style="font-size:48px; margin:0 0 16px 0;">📅</p>

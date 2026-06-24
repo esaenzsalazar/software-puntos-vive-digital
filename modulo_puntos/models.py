@@ -152,6 +152,7 @@ class PrestamoRecurso(models.Model):
         indexes = [
             models.Index(fields=['recurso', 'fecha_entrega'], name='idx_prs_recurso_fecha'),
             models.Index(fields=['ciudadano'], name='idx_prs_ciudadano'),
+            models.Index(fields=['fecha_devolucion'], name='idx_prs_devolucion'),
         ]
 
     def __str__(self):
@@ -198,6 +199,8 @@ class Atencion(models.Model):
         indexes = [
             models.Index(fields=['punto_vive_digital', 'fecha'], name='idx_atn_pvd_fecha'),
             models.Index(fields=['estado'], name='idx_atn_estdo'),
+            models.Index(fields=['ciudadano'], name='idx_atn_ciudadano'),
+            models.Index(fields=['operador'], name='idx_atn_operador'),
         ]
 
     def __str__(self):
@@ -260,6 +263,12 @@ class Satisfaccion(models.Model):
         indexes = [
             models.Index(fields=['atencion'], name='idx_sat_atencion'),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(calificacion__gte=1) & models.Q(calificacion__lte=5),
+                name='chk_sat_calificacion',
+            ),
+        ]
 
     def __str__(self):
         return f"Calificación: {self.calificacion}"
@@ -290,6 +299,7 @@ class AuditoriaAccion(models.Model):
             models.Index(fields=['fecha_accion'], name='idx_aud_fecha'),
             models.Index(fields=['usuario'], name='idx_aud_usuario'),
             models.Index(fields=['accion'], name='idx_aud_accion'),
+            models.Index(fields=['modelo_afectado'], name='idx_aud_modelo'),
         ]
 
     def __str__(self):
@@ -324,6 +334,9 @@ class UserProfile(models.Model):
         db_table = 'pvd_perfiles'
         verbose_name = 'Perfil de Usuario'
         verbose_name_plural = 'Perfiles de Usuario'
+        indexes = [
+            models.Index(fields=['rol'], name='idx_perfil_rol'),
+        ]
 
     def __str__(self):
         pvd_name = self.punto_asignado.nombre if self.punto_asignado else 'Sin PVD'

@@ -16,12 +16,12 @@ load_dotenv(BASE_DIR / '.env')
 
 # ── SEGURIDAD ──────────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.getenv(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-g9@zgxyl-bfe0qrc9h8@$=d09ldfo7+oygr6q&=ykp=y2xzqb)',
-)
-
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+_secret_fallback = 'django-insecure-g9@zgxyl-bfe0qrc9h8@$=d09ldfo7+oygr6q&=ykp=y2xzqb)' if DEBUG else None
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', _secret_fallback)
+if not SECRET_KEY:
+    raise RuntimeError('DJANGO_SECRET_KEY no está configurada. Define esta variable de entorno en producción.')
 
 # En desarrollo acepta cualquier host; en producción SOLO el dominio real.
 if DEBUG:
@@ -170,6 +170,9 @@ STORAGES = {
 }
 
 # ── ARCHIVOS DE MEDIA (imágenes de Evidencias) ─────────────────────────────────
+# En desarrollo Django sirve /media/ automáticamente (ver core/urls.py).
+# En producción Nginx debe servir /media/ apuntando a MEDIA_ROOT:
+#   location /media/ { alias /ruta/al/proyecto/media/; }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -177,14 +180,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # ── AUTENTICACIÓN ──────────────────────────────────────────────────────────────
 
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/panel/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+SESSION_COOKIE_AGE = 28800  # 8 horas
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ── SEGURIDAD EN PRODUCCIÓN ────────────────────────────────────────────────────
 # Se activan automáticamente cuando DEBUG=False.
 # Requieren HTTPS funcionando; no activar antes de tener el certificado SSL.
+
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -203,7 +210,10 @@ if not DEBUG:
 # Producción: consola + archivo rotativo en logs/pvd.log (máx. 5 MB × 5 archivos).
 
 _LOG_DIR = BASE_DIR / 'logs'
-_LOG_DIR.mkdir(exist_ok=True)
+try:
+    _LOG_DIR.mkdir(exist_ok=True)
+except OSError:
+    pass
 
 LOGGING = {
     'version': 1,

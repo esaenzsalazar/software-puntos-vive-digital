@@ -188,10 +188,6 @@
     {% else %}
     <div class="callout" style="text-align:center; padding:24px;">
         <p class="muted">No se han registrado servicios en esta atención.</p>
-        {% if atencion.estado == 'P' %}
-        <a href="{% url 'modulo_puntos:registrar_servicio_atencion' atencion.pk %}"
-           class="btn btn--sm" style="margin-top:12px;">+ Agregar primer servicio</a>
-        {% endif %}
     </div>
     {% endif %}
 </div>

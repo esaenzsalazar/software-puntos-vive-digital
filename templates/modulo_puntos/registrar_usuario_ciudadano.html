@@ -67,6 +67,12 @@
             {% endfor %}
             {% endif %}
 
+            {% if bloqueado %}
+            <div class="alert alert-error" style="margin-bottom:16px;">
+                <strong>Demasiadas solicitudes.</strong> Por seguridad, el formulario está bloqueado temporalmente. Inténtalo de nuevo en unos minutos.
+            </div>
+            {% else %}
+
             <div class="info-banner">
                 <h4>ℹ️ Información Importante</h4>
                 <p>Tu registro será revisado por un administrador del Punto Vive Digital. Una vez aprobado, podrás hacer uso de los servicios del PVD. Este proceso puede tomar unos minutos.</p>
@@ -206,6 +212,7 @@
                     <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Enviar Registro para Aprobación</button>
                 </div>
             </form>
+            {% endif %}
         </div>
     </div>
 

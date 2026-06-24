@@ -22,7 +22,7 @@
     {# ===== SIDEBAR ===== #}
     <aside class="app-sidebar" id="appSidebar" aria-label="Navegación principal">
         <a href="{% url 'modulo_puntos:panel_control' %}" class="sidebar-brand">
-            <span class="sidebar-brand__logo">PVD</span>
+            <img src="{% static 'img/logo-alcaldia.png' %}" alt="Alcaldía" class="sidebar-brand__logo" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#fff;padding:2px;">
             <span class="sidebar-brand__text">
                 <span class="sidebar-brand__title">Puntos Vive Digital</span>
                 <span class="sidebar-brand__sub">Bugalagrande · Valle</span>
@@ -238,9 +238,12 @@
                         {% if nav_super %}Superusuario{% elif es_admin_tic_only %}Administrador TIC{% elif es_admin_pvd_only %}Administrador PVD{% else %}Sin rol{% endif %}
                     </span>
                 </span>
-                <a href="{% url 'modulo_puntos:logout' %}" class="sidebar-user__logout" title="Cerrar sesión">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                </a>
+                <form method="POST" action="{% url 'modulo_puntos:logout' %}" style="display:contents;">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-user__logout" title="Cerrar sesión" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </button>
+                </form>
             </div>
         </div>
     </aside>
@@ -286,9 +289,12 @@
             <a href="{% url 'modulo_puntos:perfil_usuario' %}" class="icon-btn" title="Mi perfil">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </a>
-            <a href="{% url 'modulo_puntos:logout' %}" class="icon-btn" title="Cerrar sesión">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </a>
+            <form method="POST" action="{% url 'modulo_puntos:logout' %}" style="display:contents;">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn" title="Cerrar sesión" style="background:none;border:none;cursor:pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </button>
+            </form>
         </div>
     </header>
 

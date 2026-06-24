@@ -288,12 +288,13 @@ class CiudadanoForm(forms.ModelForm):
 
         # Obligatorios explícitos (modelos tienen null/blank=True por compatibilidad)
         for f in ('tipo_documento', 'numero_documento', 'primer_nombre',
-                  'primer_apellido', 'segundo_apellido', 'fecha_nacimiento',
+                  'primer_apellido', 'fecha_nacimiento',
                   'genero', 'barrio', 'etnia', 'nivel_educativo', 'ocupacion', 'estrato'):
             self.fields[f].required = True
 
         # Opcionales
         self.fields['segundo_nombre'].required = False
+        self.fields['segundo_apellido'].required = False
         self.fields['correo'].required = False
         self.fields['telefono'].required = False
         self.fields['tiene_discapacidad'].required = False
@@ -694,26 +695,7 @@ class LoginForm(AuthenticationForm):
 
 
 class PerfilUsuarioForm(forms.ModelForm):
-    """
-    Formulario para editar perfil de usuario y cambiar contraseña.
-    """
-    password1 = forms.CharField(
-        label='Nueva contraseña',
-        required=False,
-        widget=forms.PasswordInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Déjalo vacío si no deseas cambiarla'
-            }
-        )
-    )
-    password2 = forms.CharField(
-        label='Confirmar nueva contraseña',
-        required=False,
-        widget=forms.PasswordInput(
-            attrs={'class': 'form-control'}
-        )
-    )
+    """Formulario para editar datos básicos del perfil (nombre, email). Cambio de contraseña se maneja por separado en la vista."""
 
     class Meta:
         model = User
@@ -724,22 +706,6 @@ class PerfilUsuarioForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
-
-    def clean(self):
-        """Validar que las contraseñas coincidan."""
-        cleaned_data = super().clean()
-        password1 = cleaned_data.get('password1')
-        password2 = cleaned_data.get('password2')
-
-        if password1 or password2:
-            if not password1:
-                self.add_error('password1', 'Requerido')
-            if not password2:
-                self.add_error('password2', 'Requerido')
-            if password1 and password2 and password1 != password2:
-                self.add_error('password2', 'No coinciden')
-
-        return cleaned_data
 
 
 class CrearUsuarioForm(UserCreationForm):

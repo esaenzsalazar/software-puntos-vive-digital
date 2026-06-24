@@ -1,4 +1,4 @@
-import random
+import logging
 from io import BytesIO
 from django import forms
 from datetime import datetime, date as date_type, time as time_type
@@ -35,6 +35,7 @@ from .forms import (
 )
 from .utils import registrar_auditoria, tiene_permiso
 
+logger = logging.getLogger('modulo_puntos')
 
 # ── HELPERS ────────────────────────────────────────────────────────────────────
 
@@ -100,9 +101,9 @@ def login_usuario(request):
     else:
         next_url = reverse('modulo_puntos:panel_control')
 
-    # Control de intentos fallidos por IP
-    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
-    ip = ip.split(',')[0].strip()
+    # Control de intentos fallidos por IP (última entrada XFF = puesta por proxy, no por cliente)
+    _xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    ip = _xff.split(',')[-1].strip() if _xff else request.META.get('REMOTE_ADDR', 'unknown')
     cache_key = f'login_intentos_{ip}'
     bloqueo_key = f'login_bloqueo_{ip}'
 
@@ -160,7 +161,10 @@ def login_usuario(request):
     return render(request, 'registration/login.html', {'form': form, 'next': next_url})
 
 
+@login_required(login_url='/login/')
 def logout_usuario(request):
+    if request.method != 'POST':
+        return redirect('modulo_puntos:panel_control')
     logout(request)
     return redirect('modulo_puntos:login')
 
@@ -408,7 +412,8 @@ def registrar_ciudadano(request):
                 messages.success(request, 'Ciudadano registrado exitosamente en la base de datos.')
                 return redirect('modulo_puntos:panel_control')
             except Exception as e:
-                messages.error(request, f'Error al guardar en BD: {e}')
+                logger.error('Error al guardar ciudadano: %s', e, exc_info=True)
+                messages.error(request, 'Error al guardar los datos. Inténtalo de nuevo.')
         else:
             messages.error(request, 'Formulario inválido. Revisa los campos.')
 
@@ -422,6 +427,12 @@ def editar_ciudadano(request, ciu_cdgo):
         return redirect('modulo_puntos:panel_control')
 
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and not request.user.is_superuser and not usuario_es_admin_tic(request.user):
+        if ciudadano.punto_vive_digital_id != pvd_id:
+            messages.error(request, 'No tienes permiso para editar ciudadanos de otro PVD.')
+            return redirect('modulo_puntos:consultar_ciudadanos')
+
     form = CiudadanoForm(request.POST or None, instance=ciudadano)
     if request.method == 'POST':
         if form.is_valid():
@@ -430,7 +441,8 @@ def editar_ciudadano(request, ciu_cdgo):
                 messages.success(request, 'Ciudadano actualizado correctamente en la base de datos.')
                 return redirect('modulo_puntos:consultar_ciudadanos')
             except Exception as e:
-                messages.error(request, f'Error al actualizar en BD: {e}')
+                logger.error('Error al actualizar ciudadano %s: %s', ciu_cdgo, e, exc_info=True)
+                messages.error(request, 'Error al guardar los datos. Inténtalo de nuevo.')
         else:
             messages.error(request, 'No se pudo actualizar el ciudadano. Revisa los datos ingresados.')
 
@@ -466,22 +478,20 @@ def historial_ciudadano(request, ciu_cdgo):
 
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
 
-    atenciones = Atencion.objects.filter(
-        ciudadano=ciudadano
-    ).select_related(
-        'operador',
-        'prestamo',
-        'prestamo__recurso'
-    ).order_by('-fecha', '-hora_inicio')
-
-    for atencion in atenciones:
-        atencion.servicios_rel = Servicio.objects.filter(atencion=atencion)
-        atencion.satisfacciones_rel = Satisfaccion.objects.filter(atencion=atencion)
+    atenciones = list(
+        Atencion.objects.filter(ciudadano=ciudadano)
+        .select_related('operador', 'prestamo', 'prestamo__recurso')
+        .prefetch_related(
+            Prefetch('servicio_set', queryset=Servicio.objects.order_by('pk'), to_attr='servicios_rel'),
+            Prefetch('satisfaccion_set', to_attr='satisfacciones_rel'),
+        )
+        .order_by('-fecha', '-hora_inicio')
+    )
 
     return render(request, 'modulo_puntos/historial_ciudadano.html', {
         'ciudadano': ciudadano,
         'atenciones': atenciones,
-        'total_atenciones': atenciones.count(),
+        'total_atenciones': len(atenciones),
     })
 
 
@@ -491,10 +501,10 @@ def ciudadanos_pendientes(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    pendientes = Ciudadano.objects.filter(estado='P').order_by('-fecha_registro')
+    pendientes = list(Ciudadano.objects.filter(estado='P').order_by('-fecha_registro'))
     return render(request, 'modulo_puntos/ciudadanos_pendientes.html', {
         'ciudadanos_pendientes': pendientes,
-        'total_pendientes': pendientes.count(),
+        'total_pendientes': len(pendientes),
     })
 
 
@@ -534,8 +544,18 @@ def rechazar_ciudadano(request, ciu_id):
 # ── REGISTRO CIUDADANO PÚBLICO (sin login) ─────────────────────────────────────
 
 def registrar_usuario_ciudadano(request):
+    _xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    _ip = _xff.split(',')[-1].strip() if _xff else request.META.get('REMOTE_ADDR', 'unknown')
+    _rate_key = f'reg_pub_{_ip}'
+    if cache.get(_rate_key, 0) >= 5:
+        return render(request, 'modulo_puntos/registrar_usuario_ciudadano.html', {
+            'form': CiudadanoForm(),
+            'bloqueado': True,
+        }, status=429)
+
     form = CiudadanoForm(request.POST or None)
     if request.method == 'POST':
+        cache.set(_rate_key, cache.get(_rate_key, 0) + 1, 300)
         if form.is_valid():
             ciudadano = form.save(commit=False)
             ciudadano.estado = 'P'
@@ -1120,8 +1140,21 @@ def lista_recursos(request):
     if es_admin_pvd_solo:
         recursos_qs = recursos_qs.filter(punto_vive_digital_id=pvd_id) if pvd_id else recursos_qs.none()
 
+    tipo_filter = request.GET.get('tipo', '').strip()
+    q_filter = request.GET.get('q', '').strip()
+
+    tipos_disponibles = sorted(recursos_qs.values_list('tipo', flat=True).distinct())
+
+    display_qs = recursos_qs
+    if tipo_filter:
+        display_qs = display_qs.filter(tipo=tipo_filter)
+    if q_filter:
+        display_qs = display_qs.filter(
+            Q(tipo__icontains=q_filter) | Q(codigo__icontains=q_filter)
+        )
+
     recursos = list(
-        recursos_qs
+        display_qs
           .annotate(total_prestamos=Count('prestamorecurso'))
           .prefetch_related(
               Prefetch('prestamorecurso_set',
@@ -1131,25 +1164,14 @@ def lista_recursos(request):
           .order_by('tipo')
     )
 
-    tipos_disponibles = sorted({r.tipo for r in recursos})
-
     for recurso in recursos:
         for p in recurso.todos_los_prestamos:
-            # Devuelto solo si la fecha de devolución ya pasó
             p.ya_devuelto = p.fecha_devolucion is not None and p.fecha_devolucion <= now
         ultimo = recurso.todos_los_prestamos[0] if recurso.todos_los_prestamos else None
         recurso.prestado_ahora = ultimo is not None and not ultimo.ya_devuelto if ultimo else False
 
     prestados_count = sum(1 for r in recursos if r.prestado_ahora)
     disponibles_count = len(recursos) - prestados_count
-
-    tipo_filter = request.GET.get('tipo', '').strip()
-    q_filter = request.GET.get('q', '').strip()
-    if tipo_filter:
-        recursos = [r for r in recursos if r.tipo == tipo_filter]
-    if q_filter:
-        q_lower = q_filter.lower()
-        recursos = [r for r in recursos if q_lower in r.tipo.lower() or (r.codigo and q_lower in r.codigo.lower())]
 
     total_filtrados = len(recursos)
     paginator = Paginator(recursos, 20)
@@ -1539,94 +1561,49 @@ def _xlsx_response(filename_base, wb):
     return response
 
 
-def _crear_hoja(titulo, headers, filas):
-    import openpyxl
+def _estilizar_hoja(ws, headers, filas):
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = titulo[:31]
-
-    cabecera_fondo = PatternFill(start_color='0B1220', end_color='0B1220', fill_type='solid')
-    cabecera_fuente = Font(bold=True, color='FFFFFF', size=10)
-    fila_par = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
-    borde_cabecera = Border(
-        left=Side(style='thin', color='FFFFFF'),
-        right=Side(style='thin', color='FFFFFF'),
-        bottom=Side(style='medium', color='4A90D9'),
-    )
-    borde_dato = Border(
-        left=Side(style='thin', color='D1D5DB'),
-        right=Side(style='thin', color='D1D5DB'),
-        top=Side(style='thin', color='D1D5DB'),
-        bottom=Side(style='thin', color='D1D5DB'),
-    )
-
-    for col, texto in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=texto)
-        cell.font = cabecera_fuente
-        cell.fill = cabecera_fondo
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        cell.border = borde_cabecera
-    ws.row_dimensions[1].height = 32
-
-    for row_idx, fila in enumerate(filas, 2):
-        for col_idx, valor in enumerate(fila, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=valor)
-            cell.alignment = Alignment(vertical='center', wrap_text=False)
-            cell.border = borde_dato
-            if row_idx % 2 == 0:
-                cell.fill = fila_par
-        ws.row_dimensions[row_idx].height = 18
-
-    ws.freeze_panes = 'A2'
-
-    for col in ws.columns:
-        max_len = max(
-            (len(str(c.value)) for c in col if c.value is not None),
-            default=8,
-        )
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
-
-    return wb
-
-
-def _agregar_hoja(wb, titulo, headers, filas):
-    """Agrega una hoja estilizada a un workbook openpyxl existente."""
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-    ws = wb.create_sheet(titulo[:31])
-    cabecera_fondo  = PatternFill(start_color='0B1220', end_color='0B1220', fill_type='solid')
-    cabecera_fuente = Font(bold=True, color='FFFFFF', size=10)
-    fila_par  = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
+    cab_fondo = PatternFill(start_color='0B1220', end_color='0B1220', fill_type='solid')
+    cab_fuente = Font(bold=True, color='FFFFFF', size=10)
+    par_fondo = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
     borde_cab = Border(
         left=Side(style='thin', color='FFFFFF'), right=Side(style='thin', color='FFFFFF'),
         bottom=Side(style='medium', color='4A90D9'),
     )
     borde_dato = Border(
         left=Side(style='thin', color='D1D5DB'), right=Side(style='thin', color='D1D5DB'),
-        top=Side(style='thin', color='D1D5DB'),  bottom=Side(style='thin', color='D1D5DB'),
+        top=Side(style='thin', color='D1D5DB'), bottom=Side(style='thin', color='D1D5DB'),
     )
     for col, texto in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=texto)
-        cell.font = cabecera_fuente
-        cell.fill = cabecera_fondo
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        cell.border = borde_cab
+        c = ws.cell(row=1, column=col, value=texto)
+        c.font = cab_fuente; c.fill = cab_fondo; c.border = borde_cab
+        c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
     ws.row_dimensions[1].height = 32
-    for row_idx, fila in enumerate(filas, 2):
-        for col_idx, valor in enumerate(fila, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=valor)
-            cell.alignment = Alignment(vertical='center', wrap_text=False)
-            cell.border = borde_dato
-            if row_idx % 2 == 0:
-                cell.fill = fila_par
-        ws.row_dimensions[row_idx].height = 18
+    for ri, fila in enumerate(filas, 2):
+        for ci, valor in enumerate(fila, 1):
+            c = ws.cell(row=ri, column=ci, value=valor)
+            c.alignment = Alignment(vertical='center', wrap_text=False)
+            c.border = borde_dato
+            if ri % 2 == 0:
+                c.fill = par_fondo
+        ws.row_dimensions[ri].height = 18
     ws.freeze_panes = 'A2'
     for col in ws.columns:
         max_len = max((len(str(c.value)) for c in col if c.value is not None), default=8)
         ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+
+
+def _crear_hoja(titulo, headers, filas):
+    import openpyxl
+    wb = openpyxl.Workbook()
+    wb.active.title = titulo[:31]
+    _estilizar_hoja(wb.active, headers, filas)
+    return wb
+
+
+def _agregar_hoja(wb, titulo, headers, filas):
+    ws = wb.create_sheet(titulo[:31])
+    _estilizar_hoja(ws, headers, filas)
     return ws
 
 
@@ -1690,22 +1667,30 @@ def exportar_atenciones_csv(request):
 
 
 @login_required(login_url='/login/')
+@login_required(login_url='/login/')
 def exportar_ciudadanos_csv(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
+    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
+    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+
     headers = [
-        'ID', 'Tipo Documento', 'Número Documento',
+        'ID', 'Punto Vive Digital', 'Tipo Documento', 'Número Documento',
         'Primer Nombre', 'Segundo Nombre', 'Primer Apellido', 'Segundo Apellido',
         'Fecha Nacimiento', 'Género', 'Etnia', 'Nivel Educativo', 'Ocupación',
         'Discapacidad', 'Descripción Discapacidad',
         'Dirección', 'Barrio', 'Zona Rural', 'Estrato', 'Estado', 'Email', 'Teléfono',
     ]
+    qs = Ciudadano.objects.select_related('punto_vive_digital').order_by('-pk')
+    if pvd_id:
+        qs = qs.filter(punto_vive_digital_id=pvd_id)
     filas = []
-    for c in Ciudadano.objects.all().order_by('-pk'):
+    for c in qs:
         filas.append([
             c.pk,
+            c.punto_vive_digital.nombre if c.punto_vive_digital else '',
             c.tipo_documento or '',
             c.numero_documento or '',
             c.primer_nombre or '',
@@ -2341,6 +2326,7 @@ def editar_pvd(request, pvd_cdgo):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
+            cache.delete('pvds_disponibles_activos')
             registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pk, f'PVD editado: {pvd.nombre}')
             messages.success(request, f'PVD "{pvd.nombre}" actualizado correctamente.')
             return redirect('modulo_puntos:lista_pvd')
@@ -2366,6 +2352,7 @@ def activar_pvd(request, pvd_cdgo):
     pvd.estado = 'I' if pvd.estado == 'A' else 'A'
     pvd.save()
     estado_str = 'activado' if pvd.estado == 'A' else 'desactivado'
+    cache.delete('pvds_disponibles_activos')
     registrar_auditoria(request, 'UPDATE', 'PuntoViveDigital', pvd.pk, f'PVD {estado_str}: {pvd.nombre}')
     messages.success(request, f'PVD "{pvd.nombre}" {estado_str} correctamente.')
     return redirect('modulo_puntos:lista_pvd')
@@ -2806,14 +2793,13 @@ def vista_permisos_ofitic(request):
 
 # ── HABILITACIÓN DE SALAS ──────────────────────────────────────────────────────
 
-def _actualizar_estados_habilitaciones(qs):
+def _actualizar_estados_habilitaciones(base_qs):
     """Actualiza automáticamente el estado de habilitaciones según la hora actual."""
     ahora = datetime.now()
     hoy = ahora.date()
     hora_actual = ahora.time()
 
-    ids = [h.pk for h in qs]
-    base = HabilitacionSala.objects.filter(pk__in=ids).exclude(estado__in=('X', 'F'))
+    base = base_qs.exclude(estado__in=('X', 'F'))
 
     # Fechas pasadas → Finalizado
     base.filter(fecha__lt=hoy).update(estado='F')
@@ -2867,7 +2853,7 @@ def lista_habilitaciones(request):
     if estado_filtro:
         qs = qs.filter(estado=estado_filtro)
 
-    _actualizar_estados_habilitaciones(list(qs))
+    _actualizar_estados_habilitaciones(qs)
     qs = qs.order_by('fecha', 'hora_inicio')
 
     paginator = Paginator(qs, 25)
@@ -2978,6 +2964,9 @@ def cancelar_habilitacion(request, hab_id):
         messages.warning(request, 'La habilitación ya no existe.')
         return redirect('modulo_puntos:lista_habilitaciones')
 
+    if request.method != 'POST':
+        return redirect('modulo_puntos:lista_habilitaciones')
+
     if hab.estado in ('F', 'X'):
         messages.warning(request, 'Esta habilitación ya está finalizada o cancelada.')
         return redirect('modulo_puntos:lista_habilitaciones')
@@ -2999,6 +2988,9 @@ def eliminar_habilitacion(request, hab_id):
         return redirect('modulo_puntos:panel_control')
     if not tiene_permiso(request.user, 'habilitaciones.eliminar'):
         messages.error(request, 'No tienes permiso para eliminar habilitaciones.')
+        return redirect('modulo_puntos:lista_habilitaciones')
+
+    if request.method != 'POST':
         return redirect('modulo_puntos:lista_habilitaciones')
 
     try:
@@ -3026,18 +3018,13 @@ def agenda_sala(request, sala_id):
 
     sala = get_object_or_404(Sala, pk=sala_id)
 
+    from datetime import date as dt_date, timedelta
     fecha_str = request.GET.get('fecha', '')
     try:
-        from datetime import date as dt_date, timedelta
-        if fecha_str:
-            fecha_base = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        else:
-            fecha_base = dt_date.today()
+        fecha_base = datetime.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else dt_date.today()
     except ValueError:
-        from datetime import date as dt_date, timedelta
         fecha_base = dt_date.today()
 
-    from datetime import timedelta
     fecha_inicio_semana = fecha_base - timedelta(days=fecha_base.weekday())
     dias_semana = [fecha_inicio_semana + timedelta(days=i) for i in range(7)]
 
@@ -3046,7 +3033,7 @@ def agenda_sala(request, sala_id):
         fecha__range=[dias_semana[0], dias_semana[-1]],
     ).order_by('fecha', 'hora_inicio')
 
-    _actualizar_estados_habilitaciones(list(habilitaciones_semana))
+    _actualizar_estados_habilitaciones(habilitaciones_semana)
 
     agenda = {d: [] for d in dias_semana}
     for hab in habilitaciones_semana:
@@ -3088,6 +3075,7 @@ def lista_cursos(request):
         qs = Curso.objects.filter(punto_vive_digital_id=pvd_id).select_related('punto_vive_digital', 'registrado_por')
     else:
         qs = Curso.objects.none()
+    qs = qs.annotate(total_inscritos=Count('inscripciones', filter=Q(inscripciones__estado__in=['I', 'C'])))
 
     estado_filtro = request.GET.get('estado', '')
     fecha_desde_filtro = request.GET.get('fecha_desde', '').strip()
@@ -3290,7 +3278,10 @@ def marcar_asistencia(request, sesion_id):
     }
 
     if request.method == 'POST':
-        presentes = set(map(int, request.POST.getlist('asistio')))
+        try:
+            presentes = {int(v) for v in request.POST.getlist('asistio') if str(v).strip().isdigit()}
+        except (ValueError, TypeError):
+            presentes = set()
         for insc in inscritos:
             cid = insc.ciudadano_id
             asistio = cid in presentes
@@ -3499,6 +3490,12 @@ def editar_mantenimiento(request, mant_id):
         return redirect('modulo_puntos:lista_mantenimientos')
 
     mant = get_object_or_404(MantenimientoEquipo, pk=mant_id)
+    pvd_id = request.session.get('pvd_activo_id')
+    if pvd_id and not request.user.is_superuser and not usuario_es_admin_tic(request.user):
+        if mant.punto_vive_digital_id != pvd_id:
+            messages.error(request, 'No tienes permiso para editar mantenimientos de otro PVD.')
+            return redirect('modulo_puntos:lista_mantenimientos')
+
     form = MantenimientoEquipoForm(request.POST or None, instance=mant)
 
     if request.method == 'POST':

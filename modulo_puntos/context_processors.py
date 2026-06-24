@@ -4,6 +4,7 @@ Proporciona variables de contexto disponibles en todos los templates.
 """
 from .models import PuntoViveDigital, Ciudadano
 from django.urls import reverse, NoReverseMatch
+from django.core.cache import cache
 
 # (label, parent_label, parent_url_name)
 _BREADCRUMB_MAP = {
@@ -207,9 +208,12 @@ def pvd_navigation(request):
     if ctx['pvd_activo'] and bc_parent_label == 'Panel':
         ctx['bc_parent_label'] = ctx['pvd_activo'].nombre
 
-    ctx['pvds_disponibles'] = list(
-        PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
-    )
+    _pvds_key = 'pvds_disponibles_activos'
+    pvds_cache = cache.get(_pvds_key)
+    if pvds_cache is None:
+        pvds_cache = list(PuntoViveDigital.objects.filter(estado='A').order_by('nombre'))
+        cache.set(_pvds_key, pvds_cache, 60)
+    ctx['pvds_disponibles'] = pvds_cache
 
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])
     resolved = []
@@ -230,7 +234,12 @@ def pvd_navigation(request):
     ctx['topbar_actions'] = resolved
 
     if u.is_authenticated and ctx['nav_pvd']:
-        ctx['pendientes_count'] = Ciudadano.objects.filter(estado='P').count()
+        _pend_key = 'ciudadanos_pendientes_count'
+        pend = cache.get(_pend_key)
+        if pend is None:
+            pend = Ciudadano.objects.filter(estado='P').count()
+            cache.set(_pend_key, pend, 30)
+        ctx['pendientes_count'] = pend
     else:
         ctx['pendientes_count'] = 0
 

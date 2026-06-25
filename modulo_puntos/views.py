@@ -107,6 +107,8 @@ def login_usuario(request):
     cache_key = f'login_intentos_{ip}'
     bloqueo_key = f'login_bloqueo_{ip}'
 
+    pvd_count = PuntoViveDigital.objects.filter(estado='A').count()
+
     bloqueado_hasta = cache.get(bloqueo_key)
     segundos_restantes = 0
     if bloqueado_hasta:
@@ -121,6 +123,7 @@ def login_usuario(request):
                 'next': next_url,
                 'bloqueado': True,
                 'segundos_restantes': segundos_restantes,
+                'pvd_count': pvd_count,
             })
 
     form = LoginForm(request=request, data=request.POST or None)
@@ -158,7 +161,7 @@ def login_usuario(request):
             else:
                 messages.error(request, f'Usuario o contraseña incorrectos. Te quedan {restantes} intento(s).')
 
-    return render(request, 'registration/login.html', {'form': form, 'next': next_url})
+    return render(request, 'registration/login.html', {'form': form, 'next': next_url, 'pvd_count': pvd_count})
 
 
 @login_required(login_url='/login/')
@@ -3322,7 +3325,7 @@ def cambiar_estado_curso(request, curso_id):
         return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
-    nuevo_estado = request.POST.get('estado', '').strip()
+    nuevo_estado = (request.POST.get('nuevo_estado') or request.POST.get('estado', '')).strip()
     estados_validos = {'PL', 'AC', 'FI', 'CA'}
     if nuevo_estado not in estados_validos:
         messages.error(request, 'Estado no válido.')

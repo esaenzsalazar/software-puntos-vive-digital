@@ -248,14 +248,10 @@
         </div>
 
         {# Fila 3: complemento #}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
           <div class="addr-cell">
             <span class="addr-lbl">Complemento <span style="text-transform:none;font-weight:400;">(Apto, Local, Interior, Piso…)</span></span>
             <input type="text" id="u-comp" placeholder="Apto 301, Local 2, Piso 3…" maxlength="80" oninput="updateAddr()">
-          </div>
-          <div class="addr-cell">
-            <span class="addr-lbl">Barrio <span style="text-transform:none;font-weight:400;">(opcional)</span></span>
-            <input type="text" id="u-barrio" placeholder="Centro, El Carmen…" maxlength="64" oninput="updateAddr()">
           </div>
         </div>
       </div>
@@ -382,7 +378,7 @@
         </div>
       </div>
 
-      {# Resultado y campo real #}
+      {# Resultado y campos reales ocultos #}
       <div class="addr-result-wrap" style="margin-top:10px;">
         <span style="font-size:16px;flex-shrink:0;">📍</span>
         <span id="addr-preview-text"
@@ -399,7 +395,7 @@
       {% endif %}
     </div>
 
-    {# ── Barrio (campo real del modelo) ── #}
+    {# ── Barrio / Vereda ── #}
     <div style="margin-bottom: 20px;">
       <label for="{{ form.barrio.id_for_label }}">Barrio / Vereda</label>
       {{ form.barrio }}
@@ -497,7 +493,6 @@ function buildEstandar() {
   const ccruce   = vv('u-ccruce');
   const placa    = vv('u-placa');
   const comp     = vv('u-comp');
-  const barrio   = vv('u-barrio');
 
   if (!tipo || !num) return '';
 
@@ -510,8 +505,7 @@ function buildEstandar() {
     if (ccruce) dir += ' ' + ccruce;
     if (placa)  dir += ' – ' + placa;
   }
-  if (comp)   dir += ' ' + comp;
-  if (barrio) dir += ', ' + barrio;
+  if (comp) dir += ' ' + comp;
   return dir.trim();
 }
 

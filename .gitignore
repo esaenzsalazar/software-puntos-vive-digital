@@ -1,18 +1,59 @@
+# ── Entorno virtual Python ─────────────────────────────────────────────────────
 entorno/
 venv/
 .venv/
+
+# ── Cachés de Python ───────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*.pyo
+
+# ── Bases de datos locales ─────────────────────────────────────────────────────
 *.sqlite3
 db.sqlite3
+
+# ── Variables de entorno (secretos) ───────────────────────────────────────────
 .env
-*.log
+.env.*
+!.env.example
+
+# ── Archivos del sistema operativo ────────────────────────────────────────────
 .DS_Store
-.idea/
+Thumbs.db
 *.swp
-# Generados por collectstatic
+*.swo
+
+# ── IDEs y editores ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.code-workspace
+
+# ── Archivos estáticos generados (collectstatic) ──────────────────────────────
 staticfiles/
-# Logs de aplicación
+
+# ── Logs de aplicación ────────────────────────────────────────────────────────
 logs/
-# Uploads de evidencias (no deben ir al repo)
+*.log
+
+# ── Uploads de usuarios (evidencias, etc.) ────────────────────────────────────
 media/
+
+# ── Node.js (herramientas de desarrollo / MCP, no del proyecto Django) ────────
+node_modules/
+package.json
+package-lock.json
+skills-lock.json
+
+# ── Configuraciones de herramientas de IA ─────────────────────────────────────
+.claude/
+.qwen/
+.continue/
+.agents/
+
+# ── Migraciones compiladas / temporales ───────────────────────────────────────
+*.pyc
+
+# ── Cobertura y tests ─────────────────────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/

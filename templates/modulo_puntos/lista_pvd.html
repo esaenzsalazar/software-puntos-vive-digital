@@ -77,13 +77,6 @@
                                     {% if pvd.estado == 'A' %}⏸️{% else %}▶️{% endif %}
                                 </button>
                             </form>
-                            {% if puede_eliminar_pvd %}
-                            <form method="POST" action="{% url 'modulo_puntos:eliminar_pvd' pvd.pk %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn--sm btn-secondary" style="color:#dc2626;"
-                                        data-confirm="¿Eliminar definitivamente el PVD «{{ pvd.nombre }}»? Esta acción no se puede deshacer.">🗑️</button>
-                            </form>
-                            {% endif %}
                         </div>
                     </td>
                 </tr>

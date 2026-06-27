@@ -1,0 +1,394 @@
+{% extends 'modulo_puntos/base.html' %}
+{% load static %}
+
+{% block title %}Usuarios del Sistema{% endblock %}
+
+{% block content %}
+<div class="card card--sm">
+    <div class="page-hero">
+        <span class="eyebrow">Administración</span>
+        <h2 class="page-title">Usuarios del Sistema</h2>
+        <p class="muted">
+            Nuevo rol en el sistema. Completa los datos del nuevo administrador a crear.
+            El nombre de usuario se generará automáticamente y tú asignas la contraseña.
+        </p>
+    </div>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert {% if msg.tags == 'error' %}alert-error{% else %}alert-info{% endif %}" style="margin-bottom:16px;">
+        {{ msg }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="POST" id="form-crear-usuario" novalidate>
+        {% csrf_token %}
+
+        {# ── Selector de rol ── #}
+        <fieldset class="form-section" style="margin-bottom:20px;">
+            <legend class="form-section__legend">Rol a asignar</legend>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;padding:4px 0 8px;">
+                {% for value, label in form.rol.field.choices %}
+                <label class="rol-option {% if solo_pvd and value == 'admin_tic' %}rol-option--disabled{% endif %}"
+                       style="display:flex;align-items:center;gap:10px;cursor:{% if solo_pvd and value == 'admin_tic' %}not-allowed{% else %}pointer{% endif %};opacity:{% if solo_pvd and value == 'admin_tic' %}0.45{% else %}1{% endif %};">
+                    <input type="radio" name="rol" value="{{ value }}"
+                           {% if forloop.first %}checked{% endif %}
+                           {% if solo_pvd and value == 'admin_tic' %}disabled{% endif %}
+                           style="width:18px;height:18px;accent-color:#1d4ed8;flex-shrink:0;">
+                    <span>
+                        <strong style="font-size:14px;">{{ label }}</strong>
+                        {% if value == 'admin_pvd' %}
+                        <span style="display:block;font-size:12px;color:#64748b;">Gestiona un Punto Vive Digital</span>
+                        {% else %}
+                        <span style="display:block;font-size:12px;color:#64748b;">Gestión global del sistema</span>
+                        {% endif %}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if form.rol.errors %}<span class="field-error">{{ form.rol.errors.0 }}</span>{% endif %}
+        </fieldset>
+
+        {# ── Información Personal ── #}
+        <fieldset class="form-section" style="margin-bottom:20px;">
+            <legend class="form-section__legend">Información personal</legend>
+
+            <div class="form-row form-row--2col">
+                <div class="form-field">
+                    <label for="id_primer_nombre">Primer Nombre <span class="req">*</span></label>
+                    {{ form.primer_nombre }}
+                    {% if form.primer_nombre.errors %}<span class="field-error">{{ form.primer_nombre.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="id_segundo_nombre">Segundo Nombre <span class="opt">(opcional)</span></label>
+                    {{ form.segundo_nombre }}
+                </div>
+            </div>
+
+            <div class="form-row form-row--2col">
+                <div class="form-field">
+                    <label for="id_primer_apellido">Primer Apellido <span class="req">*</span></label>
+                    {{ form.primer_apellido }}
+                    {% if form.primer_apellido.errors %}<span class="field-error">{{ form.primer_apellido.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="form-field">
+                    <label for="id_segundo_apellido">Segundo Apellido <span class="opt">(opcional)</span></label>
+                    {{ form.segundo_apellido }}
+                    {% if form.segundo_apellido.errors %}<span class="field-error">{{ form.segundo_apellido.errors.0 }}</span>{% endif %}
+                </div>
+            </div>
+        </fieldset>
+
+        {# ── Nombre de usuario (autogenerado) ── #}
+        <fieldset class="form-section" style="margin-bottom:20px;background:#f0fdf4;border-color:#bbf7d0;border-left:4px solid #22c55e;">
+            <legend class="form-section__legend" style="color:#15803d;">Nombre de usuario</legend>
+            <p style="font-size:13px;color:#166534;margin:0 0 12px 0;">
+                Se genera automáticamente tomando el primer nombre, el primer apellido y el segundo apellido.
+            </p>
+            <div class="form-field" style="margin-bottom:0;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="text" id="username-preview" readonly
+                           style="flex:1;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:10px 14px;
+                                  font-size:15px;font-weight:700;color:#166534;letter-spacing:.5px;cursor:default;">
+                    <span style="font-size:12px;color:#15803d;white-space:nowrap;font-weight:600;">⚙ Generado automáticamente</span>
+                </div>
+                <span style="display:block;font-size:12px;color:#64748b;margin-top:5px;">
+                    El sistema ajustará el nombre si ya existe otro usuario con el mismo.
+                </span>
+            </div>
+        </fieldset>
+
+        {# ── Contraseña ── #}
+        <fieldset class="form-section form-section--blue" style="margin-bottom:20px;">
+            <legend class="form-section__legend legend--blue">Contraseña</legend>
+
+            {# Fila simétrica: ambos inputs a la misma altura #}
+            <div class="form-row form-row--2col" style="margin-bottom:14px;">
+                <div class="form-field" style="margin-bottom:0;">
+                    <label for="id_password1_visible">Contraseña <span class="req">*</span></label>
+                    <div style="display:flex;gap:6px;">
+                        {{ form.password1 }}
+                        <button type="button" class="btn btn-secondary btn--icon" id="btn-toggle-pwd1" title="Mostrar/ocultar">
+                            <svg id="ico-pwd1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    {% if form.password1.errors %}
+                    <span class="field-error">{{ form.password1.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-field" style="margin-bottom:0;">
+                    <label for="id_password2">Confirmar contraseña <span class="req">*</span></label>
+                    <div style="display:flex;gap:6px;">
+                        {{ form.password2 }}
+                        <button type="button" class="btn btn-secondary btn--icon" id="btn-toggle-pwd2" title="Mostrar/ocultar">
+                            <svg id="ico-pwd2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    {% if form.password2.errors %}<span class="field-error">{{ form.password2.errors.0 }}</span>{% endif %}
+                </div>
+            </div>
+
+            {# Barra de fortaleza y checklist — ancho completo debajo de los dos inputs #}
+            <div style="margin-top:4px;">
+                <div style="display:flex;gap:4px;margin-bottom:5px;">
+                    <div class="pwd-bar" id="bar1"></div>
+                    <div class="pwd-bar" id="bar2"></div>
+                    <div class="pwd-bar" id="bar3"></div>
+                    <div class="pwd-bar" id="bar4"></div>
+                    <div class="pwd-bar" id="bar5"></div>
+                </div>
+                <span id="pwd-strength-label" style="font-size:11px;font-weight:600;color:#94a3b8;"></span>
+            </div>
+
+            <ul class="pwd-checklist" id="pwd-checklist" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;">
+                <li id="req-len">    <span class="req-icon">○</span> Mínimo 8 caracteres</li>
+                <li id="req-upper">  <span class="req-icon">○</span> Al menos una mayúscula (A-Z)</li>
+                <li id="req-lower">  <span class="req-icon">○</span> Al menos una minúscula (a-z)</li>
+                <li id="req-digit">  <span class="req-icon">○</span> Al menos un número (0-9)</li>
+                <li id="req-special"><span class="req-icon">○</span> Al menos un carácter especial (!@#$%...)</li>
+            </ul>
+        </fieldset>
+
+        <div class="actions" style="justify-content:flex-end;margin-top:8px;">
+            <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">← Cancelar</a>
+            <button type="submit" class="btn" id="btn-submit">Crear usuario</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-section {
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+.form-section--blue {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    border-left: 4px solid #3b82f6;
+}
+.form-section__legend {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 6px;
+    color: #374151;
+    letter-spacing: .3px;
+}
+.legend--blue { color: #1e40af; }
+.form-row--2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+@media (max-width: 600px) { .form-row--2col { grid-template-columns: 1fr; } }
+.form-field { margin-bottom: 14px; }
+.form-field:last-child { margin-bottom: 0; }
+.req  { color: #ef4444; }
+.opt  { color: #6b7280; font-size: 12px; font-weight: normal; }
+.field-error { display: block; font-size: 12px; color: #ef4444; margin-top: 3px; font-weight: 500; }
+.btn--icon { padding: 8px 10px; flex-shrink: 0; }
+
+/* Fortaleza de contraseña */
+.pwd-bar { flex: 1; height: 4px; border-radius: 2px; background: #e5e7eb; transition: background .25s; }
+.pwd-checklist {
+    list-style: none; margin: 8px 0 0; padding: 10px 12px;
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.pwd-checklist li { font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 6px; }
+.pwd-checklist li.ok   { color: #059669; }
+.pwd-checklist li.fail { color: #dc2626; }
+.req-icon { font-size: 13px; flex-shrink: 0; }
+
+/* Feedback inline */
+.pvd-valid   { border-color: #10b981 !important; }
+.pvd-invalid { border-color: #ef4444 !important; }
+.pvd-feedback { font-size: 11px; margin-top: 2px; display: block; }
+.pvd-feedback--error { color: #ef4444; font-weight: 500; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Generación de username en tiempo real ──────────────────────────────
+    function limpiarUsername(s, n) {
+        return (s || '')
+            .normalize('NFKD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-z0-9]/gi, '')
+            .toLowerCase()
+            .slice(0, n);
+    }
+
+    function getRolPrefijo() {
+        var radios = document.querySelectorAll('input[name="rol"]');
+        for (var i = 0; i < radios.length; i++) {
+            if (radios[i].checked) return radios[i].value === 'admin_tic' ? 'tic' : 'pvd';
+        }
+        return 'pvd';
+    }
+
+    function actualizarUsername() {
+        var n1 = document.getElementById('id_primer_nombre').value;
+        var a1 = document.getElementById('id_primer_apellido').value;
+        var a2 = document.getElementById('id_segundo_apellido').value;
+        var prefijo = getRolPrefijo();
+        var u = prefijo + limpiarUsername(n1, 5) + limpiarUsername(a1, 4) + limpiarUsername(a2, 3);
+        var preview = document.getElementById('username-preview');
+        if (preview) preview.value = u || '(completa los nombres)';
+    }
+
+    ['id_primer_nombre', 'id_primer_apellido', 'id_segundo_apellido'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', actualizarUsername);
+    });
+    document.querySelectorAll('input[name="rol"]').forEach(function(r) {
+        r.addEventListener('change', actualizarUsername);
+    });
+    actualizarUsername();
+
+    // ── Toggle visibilidad contraseñas ─────────────────────────────────────
+    function togglePwd(inputId, btnId) {
+        var input = document.getElementById(inputId);
+        var btn   = document.getElementById(btnId);
+        if (!input) return;
+        var visible = input.type === 'text';
+        input.type  = visible ? 'password' : 'text';
+        if (btn) {
+            var svg = btn.querySelector('svg');
+            if (svg) svg.style.opacity = visible ? '1' : '.5';
+        }
+    }
+    var b1 = document.getElementById('btn-toggle-pwd1');
+    var b2 = document.getElementById('btn-toggle-pwd2');
+    if (b1) b1.addEventListener('click', function(){ togglePwd('id_password1_visible','btn-toggle-pwd1'); });
+    if (b2) b2.addEventListener('click', function(){ togglePwd('id_password2','btn-toggle-pwd2'); });
+
+    // ── Feedback visual de campos ──────────────────────────────────────────
+    function feedback(campo, valido, msg) {
+        if (!campo) return;
+        campo.parentElement.querySelectorAll('.pvd-feedback').forEach(function(e){ e.remove(); });
+        campo.classList.remove('pvd-valid','pvd-invalid');
+        if (valido) {
+            campo.classList.add('pvd-valid');
+        } else if (msg) {
+            campo.classList.add('pvd-invalid');
+            var el = document.createElement('span');
+            el.className = 'pvd-feedback pvd-feedback--error';
+            el.textContent = '⚠ ' + msg;
+            campo.parentElement.appendChild(el);
+        }
+    }
+
+    // Validar letras en nombre/apellidos
+    [
+        ['id_primer_nombre',    'Primer nombre',    true ],
+        ['id_segundo_nombre',   'Segundo nombre',   false],
+        ['id_primer_apellido',  'Primer apellido',  true ],
+        ['id_segundo_apellido', 'Segundo apellido', false],
+    ].forEach(function(cfg) {
+        var el = document.getElementById(cfg[0]);
+        if (!el) return;
+        el.addEventListener('blur', function() {
+            var val = this.value.trim();
+            if (!val && cfg[2]) { feedback(this, false, cfg[1] + ' es requerido'); return; }
+            if (val && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(val))
+                feedback(this, false, 'Solo se permiten letras');
+            else if (val && val.length < 2)
+                feedback(this, false, 'Mínimo 2 caracteres');
+            else
+                feedback(this, val.length >= 2 || (!cfg[2] && !val), '');
+        });
+    });
+
+    // ── Checklist y fortaleza de contraseña ───────────────────────────────
+    var pwd1 = document.getElementById('id_password1_visible');
+    var pwd2 = document.querySelector('[name="password2"]');
+
+    var REQS = [
+        { id: 'req-len',     test: function(p){ return p.length >= 8; } },
+        { id: 'req-upper',   test: function(p){ return /[A-Z]/.test(p); } },
+        { id: 'req-lower',   test: function(p){ return /[a-z]/.test(p); } },
+        { id: 'req-digit',   test: function(p){ return /\d/.test(p); } },
+        { id: 'req-special', test: function(p){ return /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/.test(p); } },
+    ];
+    var STRENGTH = [
+        { label: '',           color: '#e5e7eb' },
+        { label: 'Muy débil',  color: '#ef4444' },
+        { label: 'Débil',      color: '#f97316' },
+        { label: 'Regular',    color: '#eab308' },
+        { label: 'Fuerte',     color: '#22c55e' },
+        { label: 'Muy fuerte', color: '#10b981' },
+    ];
+
+    function evalPassword(p) {
+        if (!pwd1) return;
+        var score = 0;
+        REQS.forEach(function(req) {
+            var li = document.getElementById(req.id);
+            if (!li) return;
+            var ok = req.test(p);
+            if (ok) score++;
+            li.className = p.length === 0 ? '' : (ok ? 'ok' : 'fail');
+            li.querySelector('.req-icon').textContent = p.length === 0 ? '○' : (ok ? '✓' : '✗');
+        });
+        var s = STRENGTH[p.length === 0 ? 0 : score];
+        [1,2,3,4,5].forEach(function(i){
+            var bar = document.getElementById('bar' + i);
+            if (bar) bar.style.background = i <= score ? s.color : '#e5e7eb';
+        });
+        var lbl = document.getElementById('pwd-strength-label');
+        if (lbl) { lbl.textContent = s.label; lbl.style.color = s.color; }
+    }
+
+    if (pwd1) pwd1.addEventListener('input', function(){ evalPassword(this.value); });
+
+    function validarMatch() {
+        if (!pwd1 || !pwd2) return;
+        if (pwd2.value && pwd1.value !== pwd2.value)
+            feedback(pwd2, false, 'Las contraseñas no coinciden');
+        else if (pwd2.value)
+            feedback(pwd2, true, '');
+    }
+    if (pwd1)  pwd1.addEventListener('blur', validarMatch);
+    if (pwd2) { pwd2.addEventListener('blur', validarMatch); pwd2.addEventListener('input', validarMatch); }
+
+    // ── Validación al enviar ───────────────────────────────────────────────
+    var formEl = document.getElementById('form-crear-usuario');
+    if (formEl) {
+        formEl.addEventListener('submit', function(e) {
+            var ok = true;
+
+            var n1 = document.getElementById('id_primer_nombre');
+            if (n1 && !n1.value.trim()) { feedback(n1, false, 'El primer nombre es requerido'); ok = false; }
+
+            var a1 = document.getElementById('id_primer_apellido');
+            if (a1 && !a1.value.trim()) { feedback(a1, false, 'El primer apellido es requerido'); ok = false; }
+
+
+
+            if (pwd1 && !pwd1.value) {
+                feedback(pwd1, false, 'La contraseña es requerida'); ok = false;
+            } else if (pwd1 && pwd1.value) {
+                var p = pwd1.value;
+                var allOk = p.length >= 8 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p) && /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/.test(p);
+                if (!allOk) { feedback(pwd1, false, 'La contraseña no cumple todos los requisitos'); ok = false; }
+            }
+            if (pwd2 && !pwd2.value) { feedback(pwd2, false, 'Confirma la contraseña'); ok = false; }
+            if (pwd1 && pwd2 && pwd1.value && pwd2.value && pwd1.value !== pwd2.value) {
+                feedback(pwd2, false, 'Las contraseñas no coinciden'); ok = false;
+            }
+
+            if (!ok) {
+                e.preventDefault();
+                var first = formEl.querySelector('.pvd-invalid');
+                if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

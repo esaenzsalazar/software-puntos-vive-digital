@@ -30,11 +30,12 @@ _BREADCRUMB_MAP = {
     'registrar_satisfaccion':        ('Satisfacción',         'Panel',       'panel_control'),
     'registrar_satisfaccion_atencion':('Satisfacción',        'Atenciones',  'lista_atenciones'),
     # Recursos
-    'registrar_recurso':     ('Recursos',              'Panel',                 'panel_control'),
-    'crear_recurso':         ('Nuevo Recurso',         'Recursos',              'registrar_recurso'),
-    'editar_recurso':        ('Editar Recurso',        'Recursos',              'registrar_recurso'),
-    'registrar_prestamo':    ('Nuevo Préstamo',        'Recursos',              'registrar_recurso'),
-    'editar_prestamo':       ('Editar Préstamo',       'Recursos',              'registrar_recurso'),
+    'registrar_recurso':        ('Recursos',              'Panel',                    'panel_control'),
+    'crear_recurso':            ('Nuevo Recurso',         'Recursos',                 'registrar_recurso'),
+    'editar_recurso':           ('Editar Recurso',        'Recursos',                 'registrar_recurso'),
+    'registrar_prestamo':       ('Nuevo Préstamo',        'Recursos',                 'registrar_recurso'),
+    'editar_prestamo':          ('Editar Préstamo',       'Recursos',                 'registrar_recurso'),
+    'lista_prestamos_global':   ('Visualizar Préstamos',  'Panel',                    'panel_control'),
     # Reportes
     'reportes':              ('Reportes',              'Panel',                 'panel_control'),
     # PVDs
@@ -42,13 +43,13 @@ _BREADCRUMB_MAP = {
     'crear_pvd':             ('Nuevo PVD',             'Puntos Vive Digital',   'lista_pvd'),
     'editar_pvd':            ('Editar PVD',            'Puntos Vive Digital',   'lista_pvd'),
     # Salas
-    'lista_salas':           ('Salas',                 'Panel',                 'panel_control'),
-    'crear_sala':            ('Nueva Sala',            'Salas',                 'lista_salas'),
-    'editar_sala':           ('Editar Sala',           'Salas',                 'lista_salas'),
-    'lista_habilitaciones':  ('Habilitaciones',        'Panel',                 'panel_control'),
-    'crear_habilitacion':    ('Nueva Habilitación',    'Habilitaciones',        'lista_habilitaciones'),
-    'editar_habilitacion':   ('Editar Habilitación',   'Habilitaciones',        'lista_habilitaciones'),
-    'agenda_sala':           ('Agenda de Sala',        'Salas',                 'lista_salas'),
+    'lista_salas':           ('Salas / Habilitaciones', 'Panel',                'panel_control'),
+    'crear_sala':            ('Nueva Sala',             'Salas / Habilitaciones', 'lista_salas'),
+    'editar_sala':           ('Editar Sala',            'Salas / Habilitaciones', 'lista_salas'),
+    'lista_habilitaciones':  ('Habilitaciones',         'Salas / Habilitaciones', 'lista_salas'),
+    'crear_habilitacion':    ('Nueva Habilitación',     'Salas / Habilitaciones', 'lista_salas'),
+    'editar_habilitacion':   ('Editar Habilitación',    'Salas / Habilitaciones', 'lista_salas'),
+    'agenda_sala':           ('Agenda de Sala',         'Salas / Habilitaciones', 'lista_salas'),
     # Permisos
     'lista_permisos_roles':  ('Permisos',              'Panel',                 'panel_control'),
     'editar_permiso':        ('Editar Permiso',        'Permisos',              'lista_permisos_roles'),
@@ -71,11 +72,24 @@ _BREADCRUMB_MAP = {
     'crear_evidencia':       ('Nueva Evidencia',       'Evidencias',            'lista_evidencias'),
     'editar_evidencia':      ('Editar Evidencia',      'Evidencias',            'lista_evidencias'),
     # Usuarios y roles
-    'gestionar_roles':       ('Gestión de Roles',      'Panel',                 'panel_control'),
-    'crear_admin_tic':       ('Nuevo Admin TIC',       'Panel',                 'panel_control'),
-    'crear_admin_pvd':       ('Nuevo Admin PVD',       'Panel',                 'panel_control'),
-    'accesos_temporales':    ('Accesos Temporales',    'Panel',                 'panel_control'),
+    'gestionar_roles':         ('Gestión de Roles',      'Panel',               'panel_control'),
+    'crear_usuario_sistema':   ('Usuarios del Sistema',  'Panel',               'panel_control'),
+    'crear_admin_tic':         ('Nuevo Admin TIC',       'Panel',               'panel_control'),
+    'crear_admin_pvd':         ('Nuevo Admin PVD',       'Panel',               'panel_control'),
+    'accesos_temporales':      ('Accesos Temporales',    'Panel',               'panel_control'),
 }
+
+# Acciones que requieren PVD activo en sesión para mostrarse en el topbar
+_TOPBAR_REQUIERE_PVD = {
+    'registrar_atencion', 'registrar_ciudadano', 'crear_recurso',
+    'registrar_prestamo', 'crear_sala', 'crear_habilitacion', 'crear_curso',
+}
+
+# Acciones que solo se muestran para superusuario o Admin TIC
+_TOPBAR_SOLO_SUPERTIC = {'crear_sala'}
+
+# Acciones que solo se muestran para Admin PVD (no super, no TIC)
+_TOPBAR_SOLO_ADMINPVD = {'crear_mantenimiento', 'crear_evidencia'}
 
 _TOPBAR_MODULO_REQUERIDO = {
     'registrar_atencion':  {'atencion_ciudadana', 'atenciones', 'ciudadanos'},
@@ -115,7 +129,7 @@ _TOPBAR_ACTIONS = {
     'lista_salas':           [('+ Nueva sala', 'crear_sala', '')],
     'crear_sala':            [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_sala':           [('← Cancelar', '__back__', 'btn-secondary')],
-    'lista_habilitaciones':  [('+ Nueva habilitación', 'crear_habilitacion', '')],
+    'lista_habilitaciones':  [],
     'crear_habilitacion':    [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_habilitacion':   [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_permiso':        [('← Cancelar', '__back__', 'btn-secondary')],
@@ -134,14 +148,16 @@ _TOPBAR_ACTIONS = {
     'crear_sesion_curso':    [('← Cancelar', '__back__', 'btn-secondary')],
     'inscribir_ciudadano':   [('← Cancelar', '__back__', 'btn-secondary')],
     'marcar_asistencia':     [('← Cancelar', '__back__', 'btn-secondary')],
-    'lista_mantenimientos':  [('+ Nuevo mantenimiento', 'crear_mantenimiento', '')],
-    'crear_mantenimiento':   [('← Cancelar', '__back__', 'btn-secondary')],
-    'editar_mantenimiento':  [('← Cancelar', '__back__', 'btn-secondary')],
-    'lista_evidencias':      [('+ Nueva evidencia', 'crear_evidencia', '')],
-    'crear_evidencia':       [('← Cancelar', '__back__', 'btn-secondary')],
-    'perfil_usuario':        [('← Volver', '__back__', 'btn-secondary')],
-    'crear_admin_tic':       [('← Cancelar', '__back__', 'btn-secondary')],
-    'crear_admin_pvd':       [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_mantenimientos':     [('+ Nuevo mantenimiento', 'crear_mantenimiento', '')],
+    'crear_mantenimiento':      [('← Cancelar', '__back__', 'btn-secondary')],
+    'editar_mantenimiento':     [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_evidencias':         [('+ Nueva evidencia', 'crear_evidencia', '')],
+    'crear_evidencia':          [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_prestamos_global':   [],
+    'perfil_usuario':           [('← Volver', '__back__', 'btn-secondary')],
+    'crear_usuario_sistema':    [('← Cancelar', '__back__', 'btn-secondary')],
+    'crear_admin_tic':          [('← Cancelar', '__back__', 'btn-secondary')],
+    'crear_admin_pvd':          [('← Cancelar', '__back__', 'btn-secondary')],
 }
 
 
@@ -218,6 +234,10 @@ def pvd_navigation(request):
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])
     resolved = []
     modulos_activos = ctx.get('modulos_pvd_activo', set())
+    es_nav_tic   = ctx.get('nav_tic', False)
+    es_admin_pvd = ctx.get('es_admin_pvd_only', False)
+    tiene_pvd    = ctx['pvd_activo'] is not None
+
     for label, target, css in raw_actions:
         if target == '__back__':
             action_url = bc_parent_url
@@ -226,11 +246,22 @@ def pvd_navigation(request):
                 action_url = reverse(f'modulo_puntos:{target}')
             except NoReverseMatch:
                 action_url = None
-        if action_url:
-            if ctx.get('restringir_modulos') and target in _TOPBAR_MODULO_REQUERIDO:
-                if not _TOPBAR_MODULO_REQUERIDO[target].intersection(modulos_activos):
-                    continue
-            resolved.append({'label': label, 'url': action_url, 'css': css})
+        if not action_url:
+            continue
+        # Filtro por módulos habilitados
+        if ctx.get('restringir_modulos') and target in _TOPBAR_MODULO_REQUERIDO:
+            if not _TOPBAR_MODULO_REQUERIDO[target].intersection(modulos_activos):
+                continue
+        # Filtro: requiere PVD activo en sesión
+        if target in _TOPBAR_REQUIERE_PVD and not tiene_pvd:
+            continue
+        # Filtro: solo superusuario o Admin TIC
+        if target in _TOPBAR_SOLO_SUPERTIC and not es_nav_tic:
+            continue
+        # Filtro: solo Admin PVD (no super, no TIC)
+        if target in _TOPBAR_SOLO_ADMINPVD and not es_admin_pvd:
+            continue
+        resolved.append({'label': label, 'url': action_url, 'css': css})
     ctx['topbar_actions'] = resolved
 
     if u.is_authenticated and ctx['nav_pvd']:

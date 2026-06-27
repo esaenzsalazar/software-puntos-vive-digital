@@ -72,6 +72,7 @@ urlpatterns = [
     path('registrar-prestamo/', views.registrar_prestamo, name='registrar_prestamo'),
     path('prestamos/<int:prestamo_id>/editar/', views.editar_prestamo, name='editar_prestamo'),
     path('prestamos/<int:prestamo_id>/devolver/', views.devolver_prestamo, name='devolver_prestamo'),
+    path('prestamos/', views.lista_prestamos_global, name='lista_prestamos_global'),
     
     # ==========================================================================
     # REPORTES Y EXPORTACIÓN
@@ -87,6 +88,7 @@ urlpatterns = [
     # ==========================================================================
     # GESTIÓN DE USUARIOS
     # ==========================================================================
+    path('usuarios-del-sistema/', views.crear_usuario_sistema, name='crear_usuario_sistema'),
     path('crear-admin-tic/', views.crear_admin_tic, name='crear_admin_tic'),
     path('crear-admin-pvd/', views.crear_admin_pvd, name='crear_admin_pvd'),
 

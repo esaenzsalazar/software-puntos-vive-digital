@@ -3,10 +3,39 @@ Forms for Puntos Vive Digital system.
 Defines all form classes with validation and custom widgets.
 Contract CD-224-2026 - Alcaldía de Bugalagrande
 """
+import re
+import unicodedata
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+
+
+def _limpiar_para_username(texto):
+    """Quita tildes, caracteres especiales y pone en minúsculas."""
+    texto = unicodedata.normalize('NFKD', texto.strip())
+    texto = ''.join(c for c in texto if not unicodedata.combining(c))
+    return re.sub(r'[^a-z0-9]', '', texto.lower())
+
+
+def _generar_username(primer_nombre, primer_apellido, segundo_apellido='', prefijo=''):
+    """
+    Genera un username único: prefijo + primer nombre (5) + primer apellido (4) + segundo apellido (3).
+    Añade sufijo numérico si ya existe.
+    """
+    base = (
+        prefijo
+        + _limpiar_para_username(primer_nombre)[:5]
+        + _limpiar_para_username(primer_apellido)[:4]
+        + (_limpiar_para_username(segundo_apellido)[:3] if segundo_apellido else '')
+    )
+    if not User.objects.filter(username=base).exists():
+        return base
+    i = 1
+    while User.objects.filter(username=f'{base}{i}').exists():
+        i += 1
+    return f'{base}{i}'
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
@@ -477,14 +506,25 @@ class SatisfaccionForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
-        """Inicializar campo de atención como opcional."""
+    def __init__(self, *args, pvd_id=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['atencion'].required = False
+        self.fields['atencion'].required = True
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
+        # Filtrar atenciones por PVD activo y solo las que tengan ciudadano asignado
+        qs = Atencion.objects.filter(ciudadano__isnull=False).select_related('ciudadano').order_by('-fecha', '-pk')
+        if pvd_id:
+            qs = qs.filter(punto_vive_digital_id=pvd_id)
+        self.fields['atencion'].queryset = qs
+
+    def clean_atencion(self):
+        atencion = self.cleaned_data.get('atencion')
+        if not atencion:
+            raise ValidationError('Debes seleccionar una atención.')
+        if not atencion.ciudadano_id:
+            raise ValidationError('La atención seleccionada no tiene un ciudadano asociado.')
+        return atencion
 
     def clean_calificacion(self):
-        """Valida que la calificación esté entre 1 y 5."""
         calif = self.cleaned_data.get('calificacion')
         if calif is not None and (calif < 1 or calif > 5):
             raise ValidationError('La calificación debe estar entre 1 y 5 estrellas.')
@@ -796,6 +836,122 @@ class CrearUsuarioForm(UserCreationForm):
         email = self.cleaned_data.get('email')
         if email:
             user.email = email
+        if commit:
+            user.save()
+        return user
+
+
+class CrearUsuarioSistemaForm(UserCreationForm):
+    """
+    Formulario unificado para crear Administradores TIC o PVD.
+    El username se genera automáticamente desde los datos personales.
+    """
+    ROL_CHOICES = [
+        ('admin_pvd', 'Administrador PVD'),
+        ('admin_tic', 'Administrador TIC'),
+    ]
+
+    rol = forms.ChoiceField(
+        choices=ROL_CHOICES,
+        label='Rol en el sistema',
+        widget=forms.RadioSelect(attrs={'class': 'radio-rol'}),
+    )
+    primer_nombre = forms.CharField(
+        label='Primer Nombre',
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Juan'}),
+    )
+    segundo_nombre = forms.CharField(
+        label='Segundo Nombre',
+        required=False,
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
+    )
+    primer_apellido = forms.CharField(
+        label='Primer Apellido',
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Pérez'}),
+    )
+    segundo_apellido = forms.CharField(
+        label='Segundo Apellido',
+        required=False,
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
+    )
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = []  # username se genera; no se expone en el form
+
+    def __init__(self, *args, solo_pvd=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Si el creador es Admin TIC (no super), solo puede crear Admin PVD
+        if solo_pvd:
+            self.fields['rol'].choices = [('admin_pvd', 'Administrador PVD')]
+        # Quitar username del form (UserCreationForm lo agrega via ModelForm)
+        self.fields.pop('username', None)
+
+        self.fields['password1'].widget = forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Contraseña (mínimo 8 caracteres)',
+            'autocomplete': 'new-password',
+            'id': 'id_password1_visible',
+        })
+        self.fields['password2'].widget = forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Repite la contraseña',
+            'autocomplete': 'new-password',
+        })
+        self.fields['password1'].label = 'Contraseña'
+        self.fields['password2'].label = 'Confirmar contraseña'
+
+    def clean_primer_nombre(self):
+        val = self.cleaned_data.get('primer_nombre', '').strip()
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$', val):
+            raise ValidationError('Solo se permiten letras.')
+        return val
+
+    def clean_primer_apellido(self):
+        val = self.cleaned_data.get('primer_apellido', '').strip()
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$', val):
+            raise ValidationError('Solo se permiten letras.')
+        return val
+
+    def clean_segundo_apellido(self):
+        val = self.cleaned_data.get('segundo_apellido', '').strip()
+        if val and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$', val):
+            raise ValidationError('Solo se permiten letras.')
+        return val
+
+    def clean_password1(self):
+        pwd = self.cleaned_data.get('password1', '')
+        errores = []
+        if len(pwd) < 8:
+            errores.append('Debe tener al menos 8 caracteres.')
+        if not re.search(r'[A-Z]', pwd):
+            errores.append('Debe incluir al menos una letra mayúscula.')
+        if not re.search(r'[a-z]', pwd):
+            errores.append('Debe incluir al menos una letra minúscula.')
+        if not re.search(r'\d', pwd):
+            errores.append('Debe incluir al menos un número.')
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>/?]', pwd):
+            errores.append('Debe incluir al menos un carácter especial (!@#$%...).')
+        if errores:
+            raise ValidationError(errores)
+        return pwd
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        primer_nombre    = self.cleaned_data.get('primer_nombre', '')
+        segundo_nombre   = self.cleaned_data.get('segundo_nombre', '')
+        primer_apellido  = self.cleaned_data.get('primer_apellido', '')
+        segundo_apellido = self.cleaned_data.get('segundo_apellido', '')
+
+        rol      = self.cleaned_data.get('rol', 'admin_pvd')
+        prefijo  = 'pvd' if rol == 'admin_pvd' else 'tic'
+        user.username   = _generar_username(primer_nombre, primer_apellido, segundo_apellido, prefijo=prefijo)
+        user.first_name = f'{primer_nombre} {segundo_nombre}'.strip()
+        user.last_name  = f'{primer_apellido} {segundo_apellido}'.strip()
         if commit:
             user.save()
         return user

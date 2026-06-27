@@ -52,8 +52,9 @@ class Ciudadano(models.Model):
     ]
 
     punto_vive_digital = models.ForeignKey(
-        'PuntoViveDigital', models.SET_NULL,
-        null=True, blank=True, verbose_name='Punto Vive Digital'
+        'PuntoViveDigital',
+        on_delete=models.PROTECT,
+        verbose_name='Punto Vive Digital',
     )
     tipo_documento = models.CharField(max_length=32, null=True, blank=True, verbose_name='Tipo de Documento')
     numero_documento = models.CharField(max_length=32, null=True, blank=True, unique=True, verbose_name='Número de Documento')

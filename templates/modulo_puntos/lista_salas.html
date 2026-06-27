@@ -84,13 +84,6 @@
                                     {% if sala.estado == 'A' %}⏸️{% else %}▶️{% endif %}
                                 </button>
                             </form>
-                            {% if puede_eliminar %}
-                            <form method="POST" action="{% url 'modulo_puntos:eliminar_sala' sala.id %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn--sm btn-secondary" style="color:#dc2626;"
-                                    data-confirm="¿Eliminar permanentemente la sala «{{ sala.nombre }}»? Esta acción no se puede deshacer.">🗑️</button>
-                            </form>
-                            {% endif %}
                         </div>
                     </td>
                 </tr>

@@ -55,14 +55,9 @@
             <div style="margin-top:auto;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:12px;color:#94a3b8;">{{ ev.fecha|date:"d/m/Y" }}</span>
                 <div style="display:flex;gap:6px;">
+                    {% if es_admin_pvd_solo %}
                     <a href="{% url 'modulo_puntos:editar_evidencia' ev.pk %}" class="btn btn-secondary btn--sm">✏️ Editar</a>
-                    <form method="POST" action="{% url 'modulo_puntos:eliminar_evidencia' ev.pk %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
-                                data-confirm="¿Eliminar la evidencia «{{ ev.titulo }}»? Esta acción no se puede deshacer.">
-                            🗑️
-                        </button>
-                    </form>
+                    {% endif %}
                 </div>
             </div>
         </div>

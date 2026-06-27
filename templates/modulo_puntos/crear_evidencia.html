@@ -60,9 +60,23 @@
 
         <div class="actions" style="justify-content:flex-end;margin-top:25px;">
             <a href="{% url 'modulo_puntos:lista_evidencias' %}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn">Guardar evidencia</button>
+            <button type="button" class="btn" id="btn-guardar-evidencia">Guardar evidencia</button>
         </div>
     </form>
+</div>
+
+{# Diálogo de confirmación antes de subir la evidencia #}
+<div id="modal-confirmar-evidencia" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;padding:32px 28px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+        <h3 style="margin:0 0 12px 0;font-size:18px;color:#1e293b;">¿Confirmar carga de evidencia?</h3>
+        <p style="margin:0 0 24px 0;font-size:14px;color:#475569;line-height:1.5;">
+            Una vez guardada, la evidencia no podrá ser eliminada. Asegúrate de que la imagen y la descripción sean correctas antes de continuar.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+            <button type="button" id="btn-cancelar-modal" class="btn btn-secondary">Revisar</button>
+            <button type="button" id="btn-confirmar-modal" class="btn">Sí, guardar</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -81,6 +95,28 @@
                 wrap.style.display = 'none';
                 img.src = '';
             }
+        });
+    }
+
+    var modal   = document.getElementById('modal-confirmar-evidencia');
+    var btnAbrir = document.getElementById('btn-guardar-evidencia');
+    var btnCancelar = document.getElementById('btn-cancelar-modal');
+    var btnConfirmar = document.getElementById('btn-confirmar-modal');
+    var form = btnAbrir ? btnAbrir.closest('form') : null;
+
+    if(btnAbrir && modal && form){
+        btnAbrir.addEventListener('click', function(){
+            modal.style.display = 'flex';
+        });
+        btnCancelar.addEventListener('click', function(){
+            modal.style.display = 'none';
+        });
+        btnConfirmar.addEventListener('click', function(){
+            modal.style.display = 'none';
+            form.submit();
+        });
+        modal.addEventListener('click', function(e){
+            if(e.target === modal) modal.style.display = 'none';
         });
     }
 })();

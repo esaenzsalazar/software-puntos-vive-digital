@@ -491,7 +491,6 @@ if u_pvd:
     check("Asignar rol (form)",       c_su.get(f'/asignar-rol/{u_pvd.pk}/'))
     check("Permisos individuales",    c_su.get(f'/permisos/usuario/{u_pvd.pk}/'))
 check("Matriz permisos × roles",  c_su.get('/permisos/'))
-check("Delegación permisos TIC",  c_tic.get('/permisos/ofitic/'))
 check("Accesos temporales",       c_su.get('/accesos-temporales/'))
 
 # ════════════════════════════════════════════════════════════════════════════

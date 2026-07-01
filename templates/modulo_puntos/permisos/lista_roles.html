@@ -129,27 +129,6 @@
 </div>
 {% endif %}
 
-{# ── Acceso rápido a delegación (solo admin TIC, no superusuario) ── #}
-{% if not es_superusuario %}
-<div class="card" style="margin-top:16px; border:2px solid #0f172a;">
-    <div style="padding:20px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-        <span style="font-size:36px;">🔑</span>
-        <div style="flex:1; min-width:200px;">
-            <h3 style="margin:0 0 4px; font-size:16px; font-weight:700; color:#0f172a;">
-                Delegación de Permisos a Admin PVD
-            </h3>
-            <p class="muted" style="margin:0; font-size:13px;">
-                Otorga o revoca permisos específicos a los administradores de cada Punto Vive Digital.
-                Solo puedes delegar los permisos que el Superusuario habilitó para ello.
-            </p>
-        </div>
-        <a href="{% url 'modulo_puntos:permisos_ofitic' %}" class="btn" style="flex-shrink:0;">
-            Gestionar delegaciones →
-        </a>
-    </div>
-</div>
-{% endif %}
-
 {# ── Ajustes individuales por usuario ── #}
 {% if usuarios_con_permisos %}
 <div class="card" style="margin-top:16px;">

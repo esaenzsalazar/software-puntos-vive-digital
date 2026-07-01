@@ -135,7 +135,6 @@ urlpatterns = [
     path('permisos/', views.lista_permisos_roles, name='lista_permisos_roles'),
     path('permisos/editar/<int:permiso_id>/', views.editar_permiso, name='editar_permiso'),
     path('permisos/usuario/<int:user_id>/', views.permisos_usuario, name='permisos_usuario'),
-    path('permisos/ofitic/', views.vista_permisos_ofitic, name='permisos_ofitic'),
 
     # ==========================================================================
     # CURSOS / TALLERES

@@ -54,7 +54,6 @@ _BREADCRUMB_MAP = {
     'lista_permisos_roles':  ('Permisos',              'Panel',                 'panel_control'),
     'editar_permiso':        ('Editar Permiso',        'Permisos',              'lista_permisos_roles'),
     'permisos_usuario':      ('Permisos de Usuario',   'Permisos',              'lista_permisos_roles'),
-    'permisos_ofitic':       ('Delegar Permisos PVD',  'Permisos',              'lista_permisos_roles'),
     # Cursos
     'lista_cursos':          ('Cursos',                'Panel',                 'panel_control'),
     'crear_curso':           ('Nuevo Curso',           'Cursos',                'lista_cursos'),
@@ -134,7 +133,6 @@ _TOPBAR_ACTIONS = {
     'editar_habilitacion':   [('← Cancelar', '__back__', 'btn-secondary')],
     'editar_permiso':        [('← Cancelar', '__back__', 'btn-secondary')],
     'permisos_usuario':      [('← Volver', '__back__', 'btn-secondary')],
-    'permisos_ofitic':       [('← Volver', '__back__', 'btn-secondary')],
     'accesos_temporales':    [('← Volver', '__back__', 'btn-secondary')],
     'log_auditoria':         [],
     'editar_recurso':        [('← Cancelar', '__back__', 'btn-secondary')],

@@ -2,7 +2,7 @@
 Contexto global para navegación según permisos (contrato PVD / roles).
 Proporciona variables de contexto disponibles en todos los templates.
 """
-from .models import PuntoViveDigital, Ciudadano
+from .models import PuntoViveDigital, Ciudadano, UserProfile
 from django.urls import reverse, NoReverseMatch
 from django.core.cache import cache
 
@@ -76,18 +76,20 @@ _BREADCRUMB_MAP = {
     'crear_admin_tic':         ('Nuevo Admin TIC',       'Panel',               'panel_control'),
     'crear_admin_pvd':         ('Nuevo Admin PVD',       'Panel',               'panel_control'),
     'accesos_temporales':      ('Accesos Temporales',    'Panel',               'panel_control'),
+    'lista_admins_pvd':        ('Administradores PVD',   'Panel',               'panel_control'),
+    'editar_admin_pvd':        ('Editar Administrador',  'Administradores PVD', 'lista_admins_pvd'),
 }
 
 # Acciones que requieren PVD activo en sesión para mostrarse en el topbar
 _TOPBAR_REQUIERE_PVD = {
     'registrar_atencion', 'registrar_ciudadano', 'crear_recurso',
-    'registrar_prestamo', 'crear_sala', 'crear_habilitacion', 'crear_curso',
+    'registrar_prestamo', 'crear_habilitacion', 'crear_curso',
 }
 
 # Acciones que solo se muestran para superusuario o Admin TIC
 _TOPBAR_SOLO_SUPERTIC = {'crear_sala'}
 
-# Acciones que solo se muestran para Admin PVD (no super, no TIC)
+# Acciones que solo se muestran para Admin PVD o Superusuario (no Admin TIC)
 _TOPBAR_SOLO_ADMINPVD = {'crear_mantenimiento', 'crear_evidencia'}
 
 _TOPBAR_MODULO_REQUERIDO = {
@@ -156,6 +158,8 @@ _TOPBAR_ACTIONS = {
     'crear_usuario_sistema':    [('← Cancelar', '__back__', 'btn-secondary')],
     'crear_admin_tic':          [('← Cancelar', '__back__', 'btn-secondary')],
     'crear_admin_pvd':          [('← Cancelar', '__back__', 'btn-secondary')],
+    'lista_admins_pvd':         [('+ Nuevo Admin PVD', 'crear_usuario_sistema', '')],
+    'editar_admin_pvd':         [('← Cancelar', '__back__', 'btn-secondary')],
 }
 
 
@@ -182,6 +186,7 @@ def pvd_navigation(request):
         'nav_pvd': False,
         'nav_tic': False,
         'nav_super': False,
+        'puede_cambiar_pvd': False,
         'current_url_name': url_name,
         'pvd_activo': None,
         'pvds_disponibles': [],
@@ -229,11 +234,28 @@ def pvd_navigation(request):
         cache.set(_pvds_key, pvds_cache, 60)
     ctx['pvds_disponibles'] = pvds_cache
 
+    # El botón "Cambiar PVD": Superusuario y Admin TIC ven todos los PVDs, así
+    # que siempre pueden cambiar. Admin PVD solo lo ve si tiene un acceso
+    # temporal activo a un PVD distinto de su PVD permanente asignado.
+    ctx['puede_cambiar_pvd'] = False
+    if ctx['nav_tic']:
+        ctx['puede_cambiar_pvd'] = True
+    elif es_admin_pvd:
+        try:
+            profile = u.pvd_profile
+            ctx['puede_cambiar_pvd'] = (
+                profile.pvd_temporal_id is not None
+                and profile.pvd_temporal_id != profile.punto_asignado_id
+            )
+        except UserProfile.DoesNotExist:
+            ctx['puede_cambiar_pvd'] = False
+
     raw_actions = _TOPBAR_ACTIONS.get(url_name, [])
     resolved = []
     modulos_activos = ctx.get('modulos_pvd_activo', set())
     es_nav_tic   = ctx.get('nav_tic', False)
     es_admin_pvd = ctx.get('es_admin_pvd_only', False)
+    es_super     = ctx.get('es_superusuario', False)
     tiene_pvd    = ctx['pvd_activo'] is not None
 
     for label, target, css in raw_actions:
@@ -256,8 +278,8 @@ def pvd_navigation(request):
         # Filtro: solo superusuario o Admin TIC
         if target in _TOPBAR_SOLO_SUPERTIC and not es_nav_tic:
             continue
-        # Filtro: solo Admin PVD (no super, no TIC)
-        if target in _TOPBAR_SOLO_ADMINPVD and not es_admin_pvd:
+        # Filtro: solo Admin PVD (no TIC) o Superusuario
+        if target in _TOPBAR_SOLO_ADMINPVD and not es_admin_pvd and not es_super:
             continue
         resolved.append({'label': label, 'url': action_url, 'css': css})
     ctx['topbar_actions'] = resolved

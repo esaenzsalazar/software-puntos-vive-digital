@@ -91,6 +91,8 @@ urlpatterns = [
     path('usuarios-del-sistema/', views.crear_usuario_sistema, name='crear_usuario_sistema'),
     path('crear-admin-tic/', views.crear_admin_tic, name='crear_admin_tic'),
     path('crear-admin-pvd/', views.crear_admin_pvd, name='crear_admin_pvd'),
+    path('administradores-pvd/', views.lista_admins_pvd, name='lista_admins_pvd'),
+    path('administradores-pvd/editar/<int:user_id>/', views.editar_admin_pvd, name='editar_admin_pvd'),
 
     # ==========================================================================
     # GESTIÓN DE ROLES Y PERMISOS (Solo Superusuario)

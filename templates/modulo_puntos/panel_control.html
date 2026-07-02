@@ -26,9 +26,11 @@
             <div>
                 {% if pvd_activo %}
                 <span class="badge badge--success">PVD Activo</span>
+                {% if puede_cambiar_pvd %}
                 <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left: 8px;">
                     🔄 Cambiar PVD
                 </a>
+                {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -59,7 +61,9 @@
             <strong style="font-size:14px; color:#1e293b;">PVD activo para módulos operacionales:</strong>
             {% if pvd_activo %}
                 <span class="badge badge-success" style="margin-left:8px;">{{ pvd_activo.nombre }}</span>
+                {% if puede_cambiar_pvd %}
                 <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm btn-secondary" style="margin-left:10px;">Cambiar</a>
+                {% endif %}
             {% else %}
                 <span class="badge badge-warning" style="margin-left:8px;">Sin PVD seleccionado — se mostrarán datos globales</span>
                 <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left:10px;">Seleccionar PVD</a>
@@ -326,6 +330,15 @@
             </div>
         </div>
 
+        <div class="menu-card">
+            <h3>📎 Evidencias</h3>
+            <p>Evidencias de trabajo registradas en los PVDs.</p>
+            <div class="menu-card__actions">
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:lista_evidencias' %}">Ver Evidencias</a>
+                <a class="btn btn--sm" href="{% url 'modulo_puntos:crear_evidencia' %}">+ Nueva</a>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -341,7 +354,9 @@
             <strong style="font-size:14px; color:#1e293b;">PVD activo para módulos operacionales:</strong>
             {% if pvd_activo %}
                 <span class="badge badge-success" style="margin-left:8px;">{{ pvd_activo.nombre }}</span>
+                {% if puede_cambiar_pvd %}
                 <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm btn-secondary" style="margin-left:10px;">Cambiar</a>
+                {% endif %}
             {% else %}
                 <span class="badge badge-warning" style="margin-left:8px;">Sin PVD seleccionado — se muestran datos globales</span>
                 <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="btn btn--sm" style="margin-left:10px;">Seleccionar PVD</a>

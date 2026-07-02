@@ -188,18 +188,11 @@
                                         style="display:none;" onchange="setBarrioValor(this.value)">
                                     <option value="">— Seleccione barrio —</option>
                                 </select>
-
-                                {# Input que aparece solo cuando se elige "Otro barrio" #}
-                                <input type="text" id="txt_otro_barrio" class="form-control"
-                                       style="display:none; margin-top:10px;"
-                                       placeholder="Escribe el nombre del barrio…"
-                                       oninput="document.getElementById('id_barrio').value = this.value.trim()">
                             </div>
                         </div>
 
-                        {# Campos ocultos del modelo #}
+                        {# Campo oculto del modelo (barrio); el campo municipio ya se renderizó arriba #}
                         {{ field }}
-                        {% for hf in form %}{% if hf.name == 'municipio' %}{{ hf }}{% endif %}{% endfor %}
 
                         {% if field.errors %}
                             <span style="color:#991b1b; font-size:13px; display:block; margin-top:8px;">
@@ -404,48 +397,48 @@
         // DATOS: BARRIOS POR MUNICIPIO (Valle del Cauca)
         // ----------------------------------------------------
         const BARRIOS = {
-            'Bugalagrande': ['Ninguno / Área Rural','Centro','Obrero','Municipal','La Planta','Gualcoche','Los Mármoles','Paulus VI','Primero de Mayo','José Antonio Galán','La Esperanza','Cocicoinpa','Ricaurte','Brisas del Río','Cañaveral','El Edén','La María','La María II Etapa','El Jardín','Antonio Nariño','Ceilán','Chorreras','El Guayabo','El Overo','Galicia','Chicoral','El Placer','Uribe','Paila Arriba','Mestizal','Otro barrio'],
-            'Alcalá': ['Centro','La Playa','El Progreso','La Floresta','Villa del Río','El Prado','Nuevo Horizonte','Obrero','La Unión','El Porvenir','Otro barrio'],
-            'Andalucía': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Paraíso','La María','El Jardín','La Floresta','Otro barrio'],
-            'Ansermanuevo': ['Centro','El Carmelo','Obrero','La Frontera','Villa Esperanza','El Porvenir','La Esperanza','La Unión','Otro barrio'],
-            'Argelia': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
-            'Bolívar': ['Centro','San Fernando','El Progreso','La Esperanza','Obrero','Villa Nueva','El Jardín','La Inmaculada','Otro barrio'],
-            'Buenaventura': ['Centro (Isla Cascajal)','Isla Piangüita','Alfonso López','El Pílamo','Lleras','La Playita','El Cristal','La Inmaculada','Villa España','Miramar','El Progreso','Barrio Obrero','Ciudad Nueva','Viento Libre','Otro barrio'],
-            'Caicedonia': ['Centro','El Progreso','Obrero','La Esperanza','Villa Nueva','El Prado','La María','Ferrocarril','El Paraíso','La Floresta','El Porvenir','Otro barrio'],
-            'Calima (El Darién)': ['Centro','El Darién','El Progreso','La Esperanza','Obrero','Villa del Lago','La Florida','Otro barrio'],
-            'Candelaria': ['Centro','El Carmelo','La Carbonera','Juanchito','El Pinal','Villa del Rosario','San Joaquín','Paso de la Torre','El Recreo','Otro barrio'],
-            'Cartago': ['Centro','El Prado','Tejares','Guaduales','Versalles','El Palmar','Miraflores','El Dorado','Obrero','La Floresta','Nuevo Horizonte','Samaria','Panamericano','El Bosque','La Sultana','La Esperanza','Santa Teresita','El Jardín','Otro barrio'],
-            'Dagua': ['Centro','El Progreso','La Esperanza','La Florida','Obrero','El Pino','Villa Esperanza','Otro barrio'],
-            'El Águila': ['Centro','El Progreso','Obrero','La Esperanza','La Unión','Otro barrio'],
-            'El Cairo': ['Centro','El Progreso','Obrero','La Esperanza','La Unión','Otro barrio'],
-            'El Cerrito': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Merced','El Prado','La Marina','Otro barrio'],
-            'El Dovio': ['Centro','El Progreso','Obrero','La Esperanza','La Unión','Otro barrio'],
-            'Florida': ['Centro','La Unión','El Progreso','Obrero','La Esperanza','Villa Nueva','El Prado','La Aurora','El Jardín','La Floresta','Otro barrio'],
-            'Ginebra': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Floresta','Otro barrio'],
-            'Guacarí': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Inmaculada','San Isidro','Otro barrio'],
-            'Guadalajara de Buga': ['Centro','El Prado','La Independencia','Santa Rita','Obrero','La Inmaculada','San Vicente','El Dorado','Versalles','El Progreso','La Florida','El Jardín','El Restrepo','Otro barrio'],
-            'Jamundí': ['Centro','La Paz','El Progreso','La Esperanza','Obrero','Villa del Sur','El Prado','Nuevo Jamundí','La Ventura','El Vergel','Otro barrio'],
-            'La Cumbre': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
-            'La Unión': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Inmaculada','El Jardín','Otro barrio'],
-            'La Victoria': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Florida','Otro barrio'],
-            'Obando': ['Centro','El Progreso','La Esperanza','Obrero','La Florida','El Jardín','Otro barrio'],
-            'Palmira': ['Centro','El Prado','La Emilia','Chapinero','El Recreo','Versalles','Los Ángeles','La Esneda','El Paraíso','Obrero','La Esperanza','Villa del Sur','La Dolores','El Jardín','El Bosque','Villa Campestre','Brisas de los Álamos','Otro barrio'],
-            'Pradera': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Florida','El Jardín','Otro barrio'],
-            'Restrepo': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Floresta','Otro barrio'],
-            'Riofrío': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
-            'Roldanillo': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Floresta','El Jardín','Otro barrio'],
-            'San Pedro': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Florida','Otro barrio'],
-            'Santiago de Cali': ['Aguablanca','Alfonso López','Chapinero','Ciudad Jardín','El Peñón','El Poblado','El Porvenir','Granada','Guabal','La Flora','La Floresta','La Merced','Laureles','Limonar','Meléndez','Obrero','San Fernando','San Nicolás','Siloé','Terrón Colorado','Univalle','Valle del Lili','Villa del Lago','Comunas Norte (1–8)','Comunas Centro (9–12)','Comunas Sur (17–22)','Otro barrio'],
-            'Sevilla': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Floresta','El Carmelo','El Jardín','Otro barrio'],
-            'Toro': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Unión','Otro barrio'],
-            'Trujillo': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Floresta','Otro barrio'],
-            'Tuluá': ['Centro','El Bosque','El Prado','La Inmaculada','Chapinero','El Vergel','El Jardín','Obrero','La Esperanza','La Unión','Villa del Río','El Paraíso','San Carlos','La Floresta','La Colombia','María Auxiliadora','El Carmelo','El Troncal','La Paz','Otro barrio'],
-            'Ulloa': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
-            'Versalles': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
-            'Vijes': ['Centro','El Progreso','La Esperanza','Obrero','La Unión','Otro barrio'],
-            'Yotoco': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','La Florida','Otro barrio'],
-            'Yumbo': ['Centro','El Palo','La Paz','Villa del Prado','Bellavista','El Rodeo','Nueva Colonia','La Estación','Marco Fidel Suárez','El Paraíso','La Primavera','Villa Esperanza','Otro barrio'],
-            'Zarzal': ['Centro','El Progreso','La Esperanza','Obrero','Villa Nueva','El Prado','La Florida','La Merced','El Carmelo','El Jardín','Otro barrio'],
+            'Bugalagrande': ['Ninguno / Área Rural','Centro','Obrero','Municipal','La Planta','Gualcoche','Los Mármoles','Paulus VI','Primero de Mayo','José Antonio Galán','La Esperanza','Cocicoinpa','Ricaurte','Brisas del Río','Cañaveral','El Edén','La María','La María II Etapa','El Jardín','Antonio Nariño','Ceilán','Chorreras','El Guayabo','El Overo','Galicia','Chicoral','El Placer','Uribe','Paila Arriba','Mestizal','Mónaco','Orísol','Portales'],
+            'Alcalá': ['Centro','Bellavista','Bolívar','Delicias','El Gaitán','El Progreso','La Balsa I','La Balsa II','La Estación','Las Flores','Las Palmas','Samán I','Samán II','Villa Fernanda I','Villa Fernanda II','La Estrella','La Plazuela','Arcila'],
+            'Andalucía': ['Centro','Alianza','Altamira','El Estadio','El Peñón','El Retorno','La Floresta I','La Floresta II','La Estación','La Isabela','La Pradera','Ricaurte','San Vicente','El Centenario','La Colina','La Isla (Reubicación)','La Paz'],
+            'Ansermanuevo': ['Bolívar','El Prado','El Reposo','La Inmaculada','Los Almendros','Nuevo Horizonte','Plaza Vieja','Pueblo Nuevo','Salazar','Villa Colombia','Vivienda Obrera'],
+            'Argelia': ['Centro','La Floresta','Monserrate','Villa del Sol'],
+            'Bolívar': ['Centro','Ciudad Bolívar','España','La Esperanza','La Paz','Los Fundadores','San José','Villa del Sol'],
+            'Buenaventura': ['Centro','Pueblo Nuevo','La Playita','Muro Yusti','Bellavista','Alberto Lleras Camargo','Alfonso López Pumarejo','Miramar','Santa Cruz','Nayita','Centenario','Isla de la Paz','Barrio Naval','Cascajal','El Dorado','Antonio Nariño','Puerta del Mar','El Triunfo','Veinte de Julio','Nueva Granada','Las Palmas','Rafael Uribe Uribe','Jorge Eliécer Gaitán','El Progreso','San José','Las Américas','Miraflores','Brisas del Mar','El Firme','Nueva Colombia','El Carmen','San Luis'],
+            'Caicedonia': ['El Carmen','El Recreo','Fundadores','Gutiérrez y Arango','Kennedy','La Camelia','La Ciudadela','La Gerencia','Las Américas','Las Carmelitas','Lleras','María Inmaculada','Obrero','Valle del Cauca','Zúñiga','La Guyana','María Mercedes','El Rosal','La Isabella','El Progreso','El Cobipo','La Ceiba'],
+            'Calima (El Darién)': ['Almendros','Bellavista','Canadá','Cincuentenario','Ciudadela Germán Mejía','Guayacanes I','Guayacanes II','La Palma','La Virgen','Los Fundadores','Obrero','San Jorge','San Vicente','El Rosalito'],
+            'Candelaria': ['Armando Vásquez','Jarillón','Jorge Eliécer Gaitán','La Cruz','La Victoria','Auxiliadora','Municipal','Obrero','Panamericano','Samanes','San Cristóbal','Santa Ana','Brisas del Río','Caña Dulce','El Zurco','Caña Miel'],
+            'Cartago': ['El Centro','San Antonio','El Recreo','La Esmeralda','San Fernando','Santa Elena','El Prado','Las Américas','El Llano','Reservas del Samán','El Suizo','Las Colinas','El Guadual','Pueblito Paisa','El Jardín','Los Chorros','Villa del Sol','Juan XXIII','Santa Lucía','Monteverde','La Playa','San Francisco','Ortiz','Brisas del Río','Berlín','Bolívar','Caracolí','Agrario'],
+            'Dagua': ['Centro'],
+            'El Águila': ['San Vicente','Castañeda','Caja de Oro'],
+            'El Cairo': ['Alto del Castillo','Antonio Ricaurte','Bello Horizonte','Berlín','Central','El Bolito','El Cairo','El Jardín','Jorge Eliecer Gaitán','La Bodega','La Colina','La Esperanza','La Libertad','La Lorena','La Misericordia','Las Vegas','Los Comuneros','Manuel José Ramírez'],
+            'El Cerrito': ['Cincuentenario','Portal del Porvenir','Cooincer','Los Samanes','Villa del Carmen','Nuevo Milenio','Villa Lina','La Paz','Nuevo Amanecer','Villa Cariño','Buenos Aires','Santa Mónica','Los Parrales','El Rosario','La Estrella','El Centro','Brisas de la Merced','Ciudadela de la Merced','Chapinero','San Rafael','Sajonia','Los Robles','San Jerónimo','La Esperanza','Pueblito Valluno','El Ingenio','Las Orquídeas','Los Guayacanes','Santa Bárbara','La Cristalina','Entrerríos'],
+            'El Dovio': ['Cabecera Municipal','Calle Larga','La Aguadita'],
+            'Florida': ['El Cedro','La Esperanza','Los Cristales','San Jorge','El Pérez','Villa Nancy Etapa I','Villa Nancy Etapa II','Nuevo Horizonte','El Paraíso','La Hacienda','Bosques de la Hacienda','El Progreso','Moncaleano','Ciudadela Don Paco','San Antonio','Los Almendros','La Aurora','El Recreo','Los Pinos','La Esmeralda','Camino Real','San Luis','Absalón Fajardo','Pubenza','Río Frayle Etapa I','La Cabaña','Jorge Eliecer Gaitán'],
+            'Ginebra': ['Alfonso López','Altos de Ginebra','Bolívar','Centro','Cornelio Reyes','El Alcázar','El Jordán','El Molino','El Prado','El Refugio','La Mansión','Municipal','Prados del Norte','Promesa','Sagi','San José','San Juan Bosco','San Pedro'],
+            'Guacarí': ['Central','Las Ceibas','Las Ceibas Verdes'],
+            'Guadalajara de Buga': ['Santiago Vergara','Crespo','El Molino','Alto Bonito','La Revolución','La Esperanza','San Antonio','Santa Bárbara','Concordia','Paloblanco','San Juanito','Los Ángeles','Aures','Ricaurte','La Merced','José María Cabal','El Jardín','María Luisa de la Espada','La Ventura','Balboa','Jorge Eliecer Gaitán','Popular','Albergue','Carmelo','Estambul','Fuenmayor','La Julia','Sucre'],
+            'Jamundí': ['Alfaguara','Belalcázar','Bosquelago','Jalisco','El Piloto','La Pradera','Primero de Mayo','El Rosario','Libertadores','Ciudad de Dios','Ciudadela del Viento','El Rodeo','Océano Verde','La Aurora','Popular','Las Acacias','Camacho','Alférez','Portal del Jordán'],
+            'La Cumbre': ['Central','La Estación','La Margarita','Municipal','Pueblo Nuevo','Sector La Cancha','Sector Las Palmas','Sector Lejano Oriente','Sector Timbio','Urbanización Francisco Jaramillo','Villanueva'],
+            'La Unión': ['Belén','Bellavista','Ciudadela Grajales','El Carmen','El Jardín','El Prado','Fátima','Las Brisas','Las Lajas','Popular','San Pedro'],
+            'La Victoria': ['Central','Fátima','La Rivera','Los Almendros','Occidental','Santa Teresa'],
+            'Obando': ['El Acueducto','El Jardín','El Lago','El Llano','La Aurora','La Virgen','Siglo XXI','Villa Europa'],
+            'Palmira': ['Alfonso López','Berlín','Ciudadela Confaunión','Concordia','Coronado','El Prado','Fray Luis Amigo','Industrial','Jorge Eliécer Gaitán','La Benedicta','Las Acacias','Llano Grande','Loreto','Mirriñao','Bizerta','Campestre','El Bosque','El Jardín','La Libertad','Monteclaro','Obrero','Palmeras','Primero de Mayo','Providencia','San Carlos','San Cayetano','Central','Chapinero','El Trébol','El Triunfo','Fátima','Independencia','Las Américas','Las Delicias','Libertadores','Los Robles','Luis Carlos Galán','Olímpico','Perseverancia','Pueblo Nuevo','Zamorano','Las Mercedes','El Paraíso'],
+            'Pradera': ['Villamarina','La Lorena','Comuneros','Serrezuela','El Jardín','Antonio Ricaurte','Puerto Nuevo','Primero de Mayo','Bello Horizonte','Panchinita','San José','Central','El Bolito','Marsella','San Roque','La Esperanza','Jorge Eliécer Gaitán','La Misericordia','Oriente','Berlín','Manuel José Ramírez','Provivienda','El Cairo','Altos del Castillo','La Bodega','La Colina','Puertas del Sol','Las Vegas'],
+            'Restrepo': ['Agua Linda','Altos de Zabaleta','Bajo Zabaleta','Buen Vivir','Calimita','El Diamante','El Silencio','Italia','La Albania','La Belmira','Playa Rica','Potrerillo','Puente Tierra','El Aguacate','La Soledad'],
+            'Riofrío': ['Belén','El Castillo','Fundevir','La Paz','La Quincha','Laureano Caicedo','Pueblo Nuevo','Villanueva'],
+            'Roldanillo': ['Alcázar','Carlos Holguín Sardi','Doña Emma','El Prado','El Rey','Guerrero','Humberto González Narváez','Ipira','José Joaquín Jaramillo','José María Barbosa','La Asunción','La Ceiba','La Ermita','Llanitos','Los Arrayanes','Los Pinos','Nueva Ermita','Obrero','San José Obrero'],
+            'San Pedro': ['El Centro','El Espinal','El Porvenir','Jorge Herrera','Villa del Lago'],
+            'Santiago de Cali': ['Ciudad Jardín','Club Campestre','Normandía','Santa Rita','Altos de Santa Isabel','La Flora','Juanambú','Ciudad Capri','El Ingenio','Versalles','Santa Mónica','El Peñón','Granada','San Vicente','Valle del Lili','Ciudad 2000','Miraflores','Pasoancho','San Antonio','Salomia','El Guabal','La Base','Meléndez','Ciudad Córdoba','Alfonso López','Terrón Colorado','Petecuy','Floralia','La Gran Colombia','Marroquín','San Pedro Claver','Siloé','Mojica','Charco Azul','Potrero Grande','Brisas de Mayo','San Fernando','Champagnat','Tequendama','Manuela Beltrán','Los Naranjos','Alfonso Bonilla Aragón','Comuneros','Las Orquídeas','Pance','El Limonar','Chipichape','Menga','Vipasa','San Nicolás','Santa Rosa','El Calvario','La Merced','Guadalupe','Los Álamos','El Troncal','Bellavista','Cañaveralejo','El Vergel'],
+            'Sevilla': ['Alfonso López','Alfonso Ossa','Alpes (Parte Alta y Parte Baja)','Alto de la Cruz','Avas','Belén','Bonanza','Brasil','Cafetero','Cincuentenario','Concordia','El Carmen','El Pinar','Estadio','Fundadores','Gaitán','Bolivia','Quince Letras','Samaria','Monserrate'],
+            'Toro': ['Centro','El Chanco','El Hobo','El Vallano','La Troncada','Lázaro','Palermo','San José','Santa Elena'],
+            'Trujillo': ['Centro','La Cuchilla','El Planchón','San Jorge','La Plazuela','La Ermita','El Pedrero','Pueblo Nuevo','La María','El Jardín','Urbanización La Paz','Urbanización José Noé Giraldo','Urbanización La Gruta','La Inmaculada','Urbanización Club de Leones','La Cumbre','El Porvenir','El Mirador'],
+            'Tuluá': ['Centro','San Pedro Claver','Bolívar','Chiminangos','Municipal','La Graciela','La Inmaculada','El Jardín','La Trinidad','Alameda I','Alameda II','San Carlos','La Merced','El Príncipe','Avenida Cali','Sajonia','Salesianos','Popular','Estambul','El Bosque','Villanueva','Morales','San Antonio','La Independencia','Bello Horizonte','Santa Isabel','Jorge Eliécer Gaitán','Departamental','El Porvenir','La Quinta','Las Américas','Guayacanes','Villa del Río','Fátima','Miraflores','Ciudad Campestre','Panamericano','Riopaila'],
+            'Ulloa': ['Bolívar','Buenos Aires','El Brillante','El Hospital','El Progreso','El Progreso II','Jesús María Bedoya','La Gloria','La Virgen','Obelisco','Palermo','San Gil','Chapinero','Villa Montaña','Villa Sucre'],
+            'Versalles': ['Carlos Holguín','El Comercio','El Guayabito','El Oasis','La Pista','Las Olivas','Los Fundadores','Monserrate','Costa Rica','El Jordán','Guaimalito','La Balsera','Pueblo Hondo'],
+            'Vijes': ['Centro'],
+            'Yotoco': ['Centro'],
+            'Yumbo': ['Acopi','Belalcázar','Bella Vista','Bolívar','Cacique Jacinto','Campestre Real','Ciudadela Carlos Pizarro','Comfandi','Corvivalle','Chino','Dionisio','Finlandia','Flor de Montenegro','Floral','Golondrinas','Guacanda','Guadalupe','Jorge Eliécer Gaitán','Juan Pablo II','La Olga','La Paz','Las Américas','Las Ceibas','Las Cruces','Las Vegas','Lleras','Madrigal','Municipal','Nuevo Horizonte','Pasoancho','Portales de Comfandi','Portales de Yumbo','Puerto Isaacs','San Marcos','Uribe Uribe'],
+            'Zarzal': ['Bolívar','Ciudad Jardín','El Placer','El Quindío','Gonzalo Echeverry','Guamal','La Esperanza','La Inmaculada','La Valvanera','Las Mercedes','Libraida','Pama','Quinto Centenario','San Rafael','Sector Central','Urbanización Ana María','Urbanización Los Almendros','Brisas de Riopaila','Villa Valentina'],
         };
 
         // ----------------------------------------------------
@@ -459,23 +452,15 @@
             document.getElementById('id_municipio').value = municipio;
             document.getElementById('id_barrio').value    = '';
 
-            const txtOtro = document.getElementById('txt_otro_barrio');
-
             if (!municipio) {
                 hint.style.display      = 'block';
                 selBarrio.style.display = 'none';
                 selBarrio.innerHTML     = '<option value="">— Seleccione barrio —</option>';
-                txtOtro.style.display   = 'none';
-                txtOtro.value           = '';
                 return;
             }
 
-            // Ocultar input "otro barrio" al cambiar de municipio
-            txtOtro.style.display = 'none';
-            txtOtro.value         = '';
-
             // Poblar el select con los barrios del municipio seleccionado
-            const barrios = BARRIOS[municipio] || ['Centro','Otro barrio'];
+            const barrios = BARRIOS[municipio] || ['Centro'];
             let opciones  = '<option value="">— Seleccione barrio —</option>';
             barrios.forEach(b => {
                 opciones += `<option value="${b}">${b}</option>`;
@@ -486,17 +471,7 @@
         };
 
         window.setBarrioValor = function(valor) {
-            const txtOtro = document.getElementById('txt_otro_barrio');
-            if (valor === 'Otro barrio') {
-                txtOtro.style.display = 'block';
-                txtOtro.value = '';
-                document.getElementById('id_barrio').value = '';
-                txtOtro.focus();
-            } else {
-                txtOtro.style.display = 'none';
-                txtOtro.value = '';
-                document.getElementById('id_barrio').value = valor;
-            }
+            document.getElementById('id_barrio').value = valor;
         };
 
         // Restaurar selects al editar un ciudadano existente
@@ -516,15 +491,9 @@
 
             if (barrioGuardado) {
                 const selBarrio = document.getElementById('sel_barrio');
-                // Intentar seleccionar en el select; si no existe, mostrar input "otro"
+                // Si el barrio guardado no está en la lista actual, el select queda
+                // en blanco pero el valor original se conserva en el campo oculto.
                 selBarrio.value = barrioGuardado;
-                if (selBarrio.value !== barrioGuardado) {
-                    // El barrio guardado no está en la lista → mostrar como "otro"
-                    selBarrio.value = 'Otro barrio';
-                    const txtOtro = document.getElementById('txt_otro_barrio');
-                    txtOtro.style.display = 'block';
-                    txtOtro.value = barrioGuardado;
-                }
                 document.getElementById('id_barrio').value = barrioGuardado;
             }
         })();

@@ -14,6 +14,13 @@
         </p>
     </div>
 
+    {% if pvd_pendiente %}
+    <div class="alert alert-info" style="margin-bottom:16px;border-left:4px solid #3b82f6;">
+        <strong>Paso 2 de 2:</strong> el PVD "<strong>{{ pvd_pendiente.nombre }}</strong>" fue creado y necesita un
+        Administrador PVD asignado. Completa este formulario para terminar el registro del punto.
+    </div>
+    {% endif %}
+
     {% if messages %}
     {% for msg in messages %}
     <div class="alert {% if msg.tags == 'error' %}alert-error{% else %}alert-info{% endif %}" style="margin-bottom:16px;">
@@ -28,26 +35,27 @@
         {# ── Selector de rol ── #}
         <fieldset class="form-section" style="margin-bottom:20px;">
             <legend class="form-section__legend">Rol a asignar</legend>
-            <div style="display:flex;gap:24px;flex-wrap:wrap;padding:4px 0 8px;">
-                {% for value, label in form.rol.field.choices %}
-                <label class="rol-option {% if solo_pvd and value == 'admin_tic' %}rol-option--disabled{% endif %}"
-                       style="display:flex;align-items:center;gap:10px;cursor:{% if solo_pvd and value == 'admin_tic' %}not-allowed{% else %}pointer{% endif %};opacity:{% if solo_pvd and value == 'admin_tic' %}0.45{% else %}1{% endif %};">
-                    <input type="radio" name="rol" value="{{ value }}"
-                           {% if forloop.first %}checked{% endif %}
-                           {% if solo_pvd and value == 'admin_tic' %}disabled{% endif %}
-                           style="width:18px;height:18px;accent-color:#1d4ed8;flex-shrink:0;">
-                    <span>
-                        <strong style="font-size:14px;">{{ label }}</strong>
-                        {% if value == 'admin_pvd' %}
-                        <span style="display:block;font-size:12px;color:#64748b;">Gestiona un Punto Vive Digital</span>
-                        {% else %}
-                        <span style="display:block;font-size:12px;color:#64748b;">Gestión global del sistema</span>
-                        {% endif %}
-                    </span>
-                </label>
-                {% endfor %}
+            <div class="form-field" style="margin-bottom:0;">
+                <label for="{{ form.rol.id_for_label }}">Rol en el sistema <span class="req">*</span></label>
+                {{ form.rol }}
+                {% if form.rol.errors %}<span class="field-error">{{ form.rol.errors.0 }}</span>{% endif %}
+                <span id="rol-descripcion" style="display:block;font-size:12px;color:#64748b;margin-top:5px;"></span>
             </div>
-            {% if form.rol.errors %}<span class="field-error">{{ form.rol.errors.0 }}</span>{% endif %}
+        </fieldset>
+
+        {# ── PVD a cargo (solo Administrador PVD) ── #}
+        <fieldset class="form-section" id="fieldset-pvd-asignado" style="margin-bottom:20px;">
+            <legend class="form-section__legend">Punto Vive Digital a cargo</legend>
+            <div class="form-field" style="margin-bottom:0;">
+                <label for="{{ form.pvd_asignado.id_for_label }}">PVD <span class="req">*</span></label>
+                {{ form.pvd_asignado }}
+                {% if form.pvd_asignado.errors %}<span class="field-error">{{ form.pvd_asignado.errors.0 }}</span>{% endif %}
+                {% if pvd_pendiente %}
+                <span style="display:block;font-size:12px;color:#64748b;margin-top:5px;">
+                    Preseleccionado con el PVD recién creado. Puedes cambiarlo si necesitas asignar otro punto.
+                </span>
+                {% endif %}
+            </div>
         </fieldset>
 
         {# ── Información Personal ── #}
@@ -84,7 +92,7 @@
         <fieldset class="form-section" style="margin-bottom:20px;background:#f0fdf4;border-color:#bbf7d0;border-left:4px solid #22c55e;">
             <legend class="form-section__legend" style="color:#15803d;">Nombre de usuario</legend>
             <p style="font-size:13px;color:#166534;margin:0 0 12px 0;">
-                Se genera automáticamente tomando el primer nombre, el primer apellido y el segundo apellido.
+                Se genera automáticamente con la inicial del primer nombre + el primer apellido, seguido del rol (pvd/tic).
             </p>
             <div class="form-field" style="margin-bottom:0;">
                 <div style="display:flex;align-items:center;gap:10px;">
@@ -151,7 +159,9 @@
         </fieldset>
 
         <div class="actions" style="justify-content:flex-end;margin-top:8px;">
+            {% if not pvd_pendiente %}
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">← Cancelar</a>
+            {% endif %}
             <button type="submit" class="btn" id="btn-submit">Crear usuario</button>
         </div>
     </form>
@@ -223,31 +233,54 @@ document.addEventListener('DOMContentLoaded', function () {
             .slice(0, n);
     }
 
-    function getRolPrefijo() {
-        var radios = document.querySelectorAll('input[name="rol"]');
-        for (var i = 0; i < radios.length; i++) {
-            if (radios[i].checked) return radios[i].value === 'admin_tic' ? 'tic' : 'pvd';
-        }
+    var rolSelect = document.getElementById('id_rol');
+
+    function getRolSufijo() {
+        if (rolSelect && rolSelect.value === 'admin_tic') return 'tic';
         return 'pvd';
     }
+
+    // ── Mostrar/ocultar selector de PVD según el rol ───────────────────────
+    function actualizarVisibilidadPvd() {
+        var fieldset = document.getElementById('fieldset-pvd-asignado');
+        if (!fieldset) return;
+        fieldset.style.display = getRolSufijo() === 'pvd' ? '' : 'none';
+    }
+
+    // ── Descripción del rol seleccionado ───────────────────────────────────
+    function actualizarDescripcionRol() {
+        var descripcion = document.getElementById('rol-descripcion');
+        if (!descripcion) return;
+        descripcion.textContent = getRolSufijo() === 'pvd'
+            ? 'Gestiona un Punto Vive Digital'
+            : 'Gestión global del sistema';
+    }
+
+    if (rolSelect) {
+        rolSelect.addEventListener('change', function () {
+            actualizarVisibilidadPvd();
+            actualizarDescripcionRol();
+        });
+    }
+    actualizarVisibilidadPvd();
+    actualizarDescripcionRol();
 
     function actualizarUsername() {
         var n1 = document.getElementById('id_primer_nombre').value;
         var a1 = document.getElementById('id_primer_apellido').value;
-        var a2 = document.getElementById('id_segundo_apellido').value;
-        var prefijo = getRolPrefijo();
-        var u = prefijo + limpiarUsername(n1, 5) + limpiarUsername(a1, 4) + limpiarUsername(a2, 3);
+        var sufijo = getRolSufijo();
+        var inicial = limpiarUsername(n1, 1);
+        var apellido1 = limpiarUsername(a1, 99);
+        var u = inicial + apellido1 + sufijo;
         var preview = document.getElementById('username-preview');
-        if (preview) preview.value = u || '(completa los nombres)';
+        if (preview) preview.value = (inicial && apellido1) ? u : '(completa los nombres)';
     }
 
-    ['id_primer_nombre', 'id_primer_apellido', 'id_segundo_apellido'].forEach(function(id) {
+    ['id_primer_nombre', 'id_primer_apellido'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', actualizarUsername);
     });
-    document.querySelectorAll('input[name="rol"]').forEach(function(r) {
-        r.addEventListener('change', actualizarUsername);
-    });
+    if (rolSelect) rolSelect.addEventListener('change', actualizarUsername);
     actualizarUsername();
 
     // ── Toggle visibilidad contraseñas ─────────────────────────────────────

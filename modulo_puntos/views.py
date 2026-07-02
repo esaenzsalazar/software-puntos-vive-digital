@@ -29,7 +29,7 @@ from .models import (
 from .forms import (
     CiudadanoForm, AtencionForm, SatisfaccionForm, ServicioForm,
     PrestamoRecursoForm, RecursoForm, LoginForm, PerfilUsuarioForm,
-    CrearUsuarioForm, CrearUsuarioSistemaForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
+    CrearUsuarioForm, CrearUsuarioSistemaForm, EditarAdminPvdForm, PuntoViveDigitalForm, SalaForm, PermisoDefinicionForm,
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
     MantenimientoEquipoForm, EvidenciaForm,
 )
@@ -585,6 +585,10 @@ def registrar_usuario_ciudadano(request):
         if form.is_valid():
             ciudadano = form.save(commit=False)
             ciudadano.estado = 'P'
+            # Autorregistro público: no hay PVD activo en sesión (no requiere login),
+            # así que se asigna al primer PVD activo por defecto; el Admin PVD
+            # puede reasignarlo al aprobar el registro.
+            ciudadano.punto_vive_digital = PuntoViveDigital.objects.filter(estado='A').order_by('nombre').first()
             ciudadano.save()
             return redirect('modulo_puntos:registro_exitoso')
         messages.error(request, 'Revisa los datos ingresados.')
@@ -1620,9 +1624,10 @@ def editar_evidencia(request, evidencia_id):
 
     evidencia = get_object_or_404(Evidencia, pk=evidencia_id)
     pvd_id = request.session.get('pvd_activo_id')
-    if pvd_id and evidencia.punto_vive_digital_id != pvd_id:
-        messages.error(request, 'No tienes permisos para editar esta evidencia.')
-        return redirect('modulo_puntos:lista_evidencias')
+    if pvd_id and not request.user.is_superuser and not usuario_es_admin_tic(request.user):
+        if evidencia.punto_vive_digital_id != pvd_id:
+            messages.error(request, 'No tienes permisos para editar esta evidencia.')
+            return redirect('modulo_puntos:lista_evidencias')
 
     form = EvidenciaForm(request.POST or None, request.FILES or None, instance=evidencia)
 
@@ -2206,14 +2211,14 @@ def crear_evidencia(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para registrar evidencias.')
         return redirect('modulo_puntos:panel_control')
-    # Solo el Admin PVD puede subir evidencias
+    # Solo el Admin PVD y el Superusuario pueden subir evidencias
     _es_admin_pvd = (
         not request.user.is_superuser
         and not usuario_es_admin_tic(request.user)
         and request.user.groups.filter(name='Administrador PVD').exists()
     )
-    if not _es_admin_pvd:
-        messages.error(request, 'Solo el Administrador PVD puede registrar evidencias de trabajo.')
+    if not _es_admin_pvd and not request.user.is_superuser:
+        messages.error(request, 'Solo el Administrador PVD o el Superusuario pueden registrar evidencias de trabajo.')
         return redirect('modulo_puntos:lista_evidencias')
 
     pvd_id = request.session.get('pvd_activo_id')
@@ -2261,9 +2266,20 @@ def crear_usuario_sistema(request):
         messages.error(request, 'No tienes permisos para crear usuarios del sistema.')
         return redirect('modulo_puntos:panel_control')
 
-    solo_pvd = not usuario_es_superusuario(request.user)  # Admin TIC solo puede crear Admin PVD
+    pvd_pendiente = None
+    pvd_pendiente_id = request.session.get('pvd_pendiente_id')
+    if pvd_pendiente_id:
+        pvd_pendiente = PuntoViveDigital.objects.filter(pk=pvd_pendiente_id).first()
+        if not pvd_pendiente:
+            request.session.pop('pvd_pendiente_id', None)
+            request.session.pop('pvd_pendiente_nombre', None)
 
-    form = CrearUsuarioSistemaForm(request.POST or None, solo_pvd=solo_pvd)
+    # Admin TIC solo puede crear Admin PVD; si hay un PVD recién creado esperando
+    # administrador, se fuerza el rol Admin PVD también para el Superusuario.
+    solo_pvd = (not usuario_es_superusuario(request.user)) or pvd_pendiente is not None
+
+    initial = {'pvd_asignado': pvd_pendiente.pk} if pvd_pendiente else None
+    form = CrearUsuarioSistemaForm(request.POST or None, solo_pvd=solo_pvd, initial=initial)
     if request.method == 'POST':
         if form.is_valid():
             rol_elegido = form.cleaned_data['rol']
@@ -2276,19 +2292,39 @@ def crear_usuario_sistema(request):
             nombre_grupo = 'Administrador TIC' if rol_elegido == 'admin_tic' else 'Administrador PVD'
             grupo, _ = Group.objects.get_or_create(name=nombre_grupo)
             user.groups.add(grupo)
+
+            pvd_asignado = form.cleaned_data.get('pvd_asignado')
+            if rol_elegido == 'admin_pvd' and pvd_asignado:
+                UserProfile.objects.update_or_create(
+                    usuario=user,
+                    defaults={'rol': 'admin_pvd', 'punto_asignado': pvd_asignado},
+                )
+
             registrar_auditoria(request, 'CREATE', 'User', user.pk,
                                 f'{nombre_grupo} creado: {user.username} — {user.get_full_name()}')
-            messages.success(
-                request,
+
+            mensaje = (
                 f'{nombre_grupo} creado correctamente. '
                 f'Usuario generado: <strong>{user.username}</strong>'
             )
+            if pvd_asignado:
+                mensaje += f'. Asignado al PVD "{pvd_asignado.nombre}".'
+            messages.success(request, mensaje)
+
+            if pvd_pendiente:
+                request.session.pop('pvd_pendiente_id', None)
+                request.session.pop('pvd_pendiente_nombre', None)
+                if pvd_asignado and pvd_asignado.pk == pvd_pendiente.pk:
+                    messages.success(request, f'El PVD "{pvd_pendiente.nombre}" ya cuenta con su administrador.')
+                return redirect('modulo_puntos:lista_pvd')
+
             return redirect('modulo_puntos:accesos_temporales')
         messages.error(request, 'No se pudo crear el usuario. Revisa los datos ingresados.')
 
     return render(request, 'modulo_puntos/crear_usuario_sistema.html', {
         'form': form,
         'solo_pvd': solo_pvd,
+        'pvd_pendiente': pvd_pendiente,
     })
 
 
@@ -2300,6 +2336,65 @@ def crear_admin_tic(request):
 @login_required(login_url='/login/')
 def crear_admin_pvd(request):
     return redirect('modulo_puntos:crear_usuario_sistema')
+
+
+@login_required(login_url='/login/')
+def lista_admins_pvd(request):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para gestionar administradores PVD.')
+        return redirect('modulo_puntos:panel_control')
+
+    admins_pvd = (
+        User.objects
+        .filter(groups__name='Administrador PVD')
+        .select_related('pvd_profile__punto_asignado')
+        .distinct()
+        .order_by('last_name', 'first_name', 'username')
+    )
+
+    return render(request, 'modulo_puntos/lista_admins_pvd.html', {
+        'admins_pvd': admins_pvd,
+    })
+
+
+@login_required(login_url='/login/')
+def editar_admin_pvd(request, user_id):
+    if not usuario_es_admin_tic(request.user):
+        messages.error(request, 'No tienes permisos para editar administradores PVD.')
+        return redirect('modulo_puntos:panel_control')
+
+    admin_pvd = get_object_or_404(User, pk=user_id, groups__name='Administrador PVD')
+    profile, _ = UserProfile.objects.get_or_create(usuario=admin_pvd, defaults={'rol': 'admin_pvd'})
+
+    form = EditarAdminPvdForm(
+        request.POST or None,
+        instance=admin_pvd,
+        initial={'pvd_asignado': profile.punto_asignado_id},
+    )
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            profile.punto_asignado = form.cleaned_data['pvd_asignado']
+            profile.save(update_fields=['punto_asignado'])
+
+            nueva_pwd = form.cleaned_data.get('password1')
+            if nueva_pwd:
+                admin_pvd.set_password(nueva_pwd)
+                admin_pvd.save(update_fields=['password'])
+
+            registrar_auditoria(request, 'UPDATE', 'User', admin_pvd.pk,
+                                f'Administrador PVD editado: {admin_pvd.username}')
+            messages.success(
+                request,
+                f'Administrador "{admin_pvd.get_full_name() or admin_pvd.username}" actualizado correctamente.'
+            )
+            return redirect('modulo_puntos:lista_admins_pvd')
+        messages.error(request, 'Revisa los datos del formulario.')
+
+    return render(request, 'modulo_puntos/editar_admin_pvd.html', {
+        'form': form,
+        'admin_pvd': admin_pvd,
+    })
 
 
 # ── GESTIÓN DE ROLES Y PERMISOS ────────────────────────────────────────────────
@@ -2442,8 +2537,13 @@ def crear_pvd(request):
         if form.is_valid():
             pvd = form.save()
             registrar_auditoria(request, 'CREATE', 'PuntoViveDigital', pvd.pk, f'PVD creado: {pvd.nombre}')
-            messages.success(request, f'PVD "{pvd.nombre}" creado correctamente.')
-            return redirect('modulo_puntos:lista_pvd')
+            request.session['pvd_pendiente_id'] = pvd.pk
+            request.session['pvd_pendiente_nombre'] = pvd.nombre
+            messages.success(
+                request,
+                f'PVD "{pvd.nombre}" creado correctamente. Ahora crea el Administrador PVD que lo tendrá a cargo.'
+            )
+            return redirect('modulo_puntos:crear_usuario_sistema')
         messages.error(request, 'Revisa los datos del formulario.')
 
     return render(request, 'modulo_puntos/form_pvd.html', {
@@ -2554,11 +2654,7 @@ def crear_sala(request):
         return redirect('modulo_puntos:lista_salas')
 
     pvd_id = request.session.get('pvd_activo_id')
-    if not pvd_id:
-        messages.warning(request, 'Debes ingresar a un Punto Vive Digital antes de crear una sala.')
-        return redirect('modulo_puntos:seleccionar_pvd_view')
-
-    form = SalaForm(request.POST or None, initial={'punto_vive_digital': pvd_id})
+    form = SalaForm(request.POST or None, initial={'punto_vive_digital': pvd_id} if pvd_id else None)
     if request.method == 'POST':
         if form.is_valid():
             sala = form.save()
@@ -3489,14 +3585,14 @@ def crear_mantenimiento(request):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
-    # Solo el Admin PVD puede registrar mantenimientos
+    # Solo el Admin PVD y el Superusuario pueden registrar mantenimientos
     _es_admin_pvd = (
         not request.user.is_superuser
         and not usuario_es_admin_tic(request.user)
         and request.user.groups.filter(name='Administrador PVD').exists()
     )
-    if not _es_admin_pvd:
-        messages.error(request, 'Solo el Administrador PVD puede registrar mantenimientos de equipos.')
+    if not _es_admin_pvd and not request.user.is_superuser:
+        messages.error(request, 'Solo el Administrador PVD o el Superusuario pueden registrar mantenimientos de equipos.')
         return redirect('modulo_puntos:lista_mantenimientos')
     if not tiene_permiso(request.user, 'mantenimiento.crear'):
         messages.error(request, 'No tienes permiso para registrar mantenimientos.')

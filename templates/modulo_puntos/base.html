@@ -31,6 +31,7 @@
 
         {% if request.session.pvd_nombre %}
         <div class="sidebar-pvd">
+            {% if puede_cambiar_pvd %}
             <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="sidebar-pvd__btn" title="Cambiar de PVD">
                 <span class="dot" aria-hidden="true">
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="4"/></svg>
@@ -41,6 +42,17 @@
                 </span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
             </a>
+            {% else %}
+            <div class="sidebar-pvd__btn" title="PVD asignado" style="cursor:default;">
+                <span class="dot" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="4"/></svg>
+                </span>
+                <span class="sidebar-pvd__main">
+                    <span class="sidebar-pvd__name">{{ request.session.pvd_nombre }}</span>
+                    <span class="sidebar-pvd__hint">PVD asignado</span>
+                </span>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -55,12 +67,14 @@
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
                         <span class="sidebar-link__label">Panel de control</span>
                     </a>
-                    {# Seleccionar / Cambiar PVD — para todos los roles con acceso a PVD #}
+                    {# Seleccionar / Cambiar PVD — solo si aún no hay PVD activo, o si hay más de uno entre los que elegir #}
                     {% if nav_pvd %}
+                    {% if not request.session.pvd_nombre or puede_cambiar_pvd %}
                     <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" class="sidebar-link {% if current == 'seleccionar_pvd_view' %}is-active{% endif %}">
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
                         <span class="sidebar-link__label">{% if request.session.pvd_nombre %}Cambiar PVD{% else %}Seleccionar PVD{% endif %}</span>
                     </a>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -198,6 +212,10 @@
                         <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></span>
                         <span class="sidebar-link__label">Accesos temporales</span>
                     </a>
+                    <a href="{% url 'modulo_puntos:lista_admins_pvd' %}" class="sidebar-link {% if current == 'lista_admins_pvd' or current == 'editar_admin_pvd' %}is-active{% endif %}">
+                        <span class="sidebar-link__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></span>
+                        <span class="sidebar-link__label">Administradores PVD</span>
+                    </a>
                     {% endif %}
                     {% if nav_tic %}
                     <a href="{% url 'modulo_puntos:log_auditoria' %}" class="sidebar-link {% if current == 'log_auditoria' %}is-active{% endif %}">
@@ -256,11 +274,19 @@
         </nav>
 
         {% if pvd_activo %}
+        {% if puede_cambiar_pvd %}
         <a href="{% url 'modulo_puntos:seleccionar_pvd_view' %}" title="PVD activo — clic para cambiar"
            style="display:flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0;">
             <span style="width:7px;height:7px;background:#4ade80;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
             {{ pvd_activo.nombre }}
         </a>
+        {% else %}
+        <span title="PVD activo"
+           style="display:flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;opacity:.85;">
+            <span style="width:7px;height:7px;background:#4ade80;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+            {{ pvd_activo.nombre }}
+        </span>
+        {% endif %}
         {% endif %}
 
         <div class="topbar-search" role="search">

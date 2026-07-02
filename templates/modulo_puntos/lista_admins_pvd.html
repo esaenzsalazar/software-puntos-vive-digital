@@ -1,0 +1,63 @@
+{% extends 'modulo_puntos/base.html' %}
+
+{% block title %}Administradores PVD{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-hero">
+        <span class="eyebrow">Administración</span>
+        <h1 class="page-title">Administradores PVD</h1>
+        <p class="muted">Edita los datos, el PVD asignado, la contraseña y el estado de los Administradores PVD.</p>
+    </div>
+
+    {% if admins_pvd %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>PVD asignado</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for admin in admins_pvd %}
+                <tr>
+                    <td><strong>{{ admin.get_full_name|default:admin.username }}</strong></td>
+                    <td><span style="font-size:12px;color:#64748b;">@{{ admin.username }}</span></td>
+                    <td>{{ admin.email|default:"—" }}</td>
+                    <td>
+                        {% if admin.pvd_profile.punto_asignado %}
+                            {{ admin.pvd_profile.punto_asignado.nombre }}
+                        {% else %}
+                            <span style="font-size:12px;color:#f59e0b;font-weight:600;">⚠️ Sin PVD asignado</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if admin.is_active %}
+                            <span class="badge badge-success">Activo</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'modulo_puntos:editar_admin_pvd' admin.pk %}"
+                           class="btn btn--sm" title="Editar administrador">✏️ Editar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px 24px;">
+        <p style="font-size:48px;margin:0 0 16px 0;">👤</p>
+        <h3 style="margin:0 0 8px 0;">No hay Administradores PVD registrados</h3>
+        <p class="muted">Crea uno desde "Usuarios del sistema".</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

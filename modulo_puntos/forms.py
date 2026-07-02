@@ -19,23 +19,50 @@ def _limpiar_para_username(texto):
     return re.sub(r'[^a-z0-9]', '', texto.lower())
 
 
-def _generar_username(primer_nombre, primer_apellido, segundo_apellido='', prefijo=''):
+def _validar_password_fuerte(pwd):
+    """Devuelve la lista de reglas de fortaleza que la contraseña no cumple."""
+    errores = []
+    if len(pwd) < 8:
+        errores.append('Debe tener al menos 8 caracteres.')
+    if not re.search(r'[A-Z]', pwd):
+        errores.append('Debe incluir al menos una letra mayúscula.')
+    if not re.search(r'[a-z]', pwd):
+        errores.append('Debe incluir al menos una letra minúscula.')
+    if not re.search(r'\d', pwd):
+        errores.append('Debe incluir al menos un número.')
+    if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>/?]', pwd):
+        errores.append('Debe incluir al menos un carácter especial (!@#$%...).')
+    return errores
+
+
+def _generar_username(primer_nombre, primer_apellido, segundo_apellido='', segundo_nombre='', sufijo=''):
     """
-    Genera un username único: prefijo + primer nombre (5) + primer apellido (4) + segundo apellido (3).
-    Añade sufijo numérico si ya existe.
+    Genera un username estilo 'jperez': inicial del primer nombre + primer apellido
+    completo, con el sufijo de rol (pvd/tic) siempre al final. Si la combinación ya
+    existe, prueba con el segundo apellido y, en un caso excepcional, con el segundo
+    nombre, antes de recurrir a un sufijo numérico.
     """
-    base = (
-        prefijo
-        + _limpiar_para_username(primer_nombre)[:5]
-        + _limpiar_para_username(primer_apellido)[:4]
-        + (_limpiar_para_username(segundo_apellido)[:3] if segundo_apellido else '')
-    )
-    if not User.objects.filter(username=base).exists():
-        return base
+    inicial_nombre = _limpiar_para_username(primer_nombre)[:1]
+    inicial_segundo_nombre = _limpiar_para_username(segundo_nombre)[:1] if segundo_nombre else ''
+    apellido1 = _limpiar_para_username(primer_apellido)
+    apellido2 = _limpiar_para_username(segundo_apellido) if segundo_apellido else ''
+
+    candidatos = [inicial_nombre + apellido1]
+    if apellido2:
+        candidatos.append(inicial_nombre + apellido2)
+    if inicial_segundo_nombre:
+        candidatos.append(inicial_segundo_nombre + apellido1)
+
+    for base in candidatos:
+        username = base + sufijo
+        if not User.objects.filter(username=username).exists():
+            return username
+
+    base = candidatos[0]
     i = 1
-    while User.objects.filter(username=f'{base}{i}').exists():
+    while User.objects.filter(username=f'{base}{i}{sufijo}').exists():
         i += 1
-    return f'{base}{i}'
+    return f'{base}{i}{sufijo}'
 from .models import (
     Ciudadano, Atencion, Satisfaccion, Servicio, PrestamoRecurso, Recurso,
     PuntoViveDigital, Sala, PermisoDefinicion, HabilitacionSala,
@@ -854,7 +881,13 @@ class CrearUsuarioSistemaForm(UserCreationForm):
     rol = forms.ChoiceField(
         choices=ROL_CHOICES,
         label='Rol en el sistema',
-        widget=forms.RadioSelect(attrs={'class': 'radio-rol'}),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    pvd_asignado = forms.ModelChoiceField(
+        queryset=PuntoViveDigital.objects.filter(estado='A').order_by('nombre'),
+        label='Punto Vive Digital a cargo',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
     )
     primer_nombre = forms.CharField(
         label='Primer Nombre',
@@ -923,19 +956,15 @@ class CrearUsuarioSistemaForm(UserCreationForm):
             raise ValidationError('Solo se permiten letras.')
         return val
 
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('rol') == 'admin_pvd' and not cleaned_data.get('pvd_asignado'):
+            self.add_error('pvd_asignado', 'Selecciona el Punto Vive Digital a cargo de este administrador.')
+        return cleaned_data
+
     def clean_password1(self):
         pwd = self.cleaned_data.get('password1', '')
-        errores = []
-        if len(pwd) < 8:
-            errores.append('Debe tener al menos 8 caracteres.')
-        if not re.search(r'[A-Z]', pwd):
-            errores.append('Debe incluir al menos una letra mayúscula.')
-        if not re.search(r'[a-z]', pwd):
-            errores.append('Debe incluir al menos una letra minúscula.')
-        if not re.search(r'\d', pwd):
-            errores.append('Debe incluir al menos un número.')
-        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>/?]', pwd):
-            errores.append('Debe incluir al menos un carácter especial (!@#$%...).')
+        errores = _validar_password_fuerte(pwd)
         if errores:
             raise ValidationError(errores)
         return pwd
@@ -948,13 +977,86 @@ class CrearUsuarioSistemaForm(UserCreationForm):
         segundo_apellido = self.cleaned_data.get('segundo_apellido', '')
 
         rol      = self.cleaned_data.get('rol', 'admin_pvd')
-        prefijo  = 'pvd' if rol == 'admin_pvd' else 'tic'
-        user.username   = _generar_username(primer_nombre, primer_apellido, segundo_apellido, prefijo=prefijo)
+        sufijo   = 'pvd' if rol == 'admin_pvd' else 'tic'
+        user.username   = _generar_username(
+            primer_nombre, primer_apellido, segundo_apellido, segundo_nombre, sufijo=sufijo
+        )
         user.first_name = f'{primer_nombre} {segundo_nombre}'.strip()
         user.last_name  = f'{primer_apellido} {segundo_apellido}'.strip()
         if commit:
             user.save()
         return user
+
+
+class EditarAdminPvdForm(forms.ModelForm):
+    """
+    Formulario para editar un Administrador PVD existente: datos personales,
+    PVD asignado, estado de la cuenta y cambio opcional de contraseña.
+    El username no se modifica aquí.
+    """
+    pvd_asignado = forms.ModelChoiceField(
+        queryset=PuntoViveDigital.objects.filter(estado='A').order_by('nombre'),
+        label='Punto Vive Digital a cargo',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    password1 = forms.CharField(
+        label='Nueva contraseña',
+        required=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Dejar en blanco para no cambiarla',
+            'autocomplete': 'new-password',
+        }),
+    )
+    password2 = forms.CharField(
+        label='Confirmar nueva contraseña',
+        required=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Repite la nueva contraseña',
+            'autocomplete': 'new-password',
+        }),
+    )
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'is_active']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Juan Carlos'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Pérez Gómez'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'first_name': 'Nombres',
+            'last_name': 'Apellidos',
+            'email': 'Correo electrónico',
+            'is_active': 'Cuenta activa (permite iniciar sesión)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['first_name'].required = True
+        self.fields['last_name'].required = True
+        self.fields['email'].required = False
+
+    def clean_password1(self):
+        pwd = self.cleaned_data.get('password1', '')
+        if pwd:
+            errores = _validar_password_fuerte(pwd)
+            if errores:
+                raise ValidationError(errores)
+        return pwd
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 and p1 != p2:
+            self.add_error('password2', 'Las contraseñas no coinciden.')
+        elif p2 and not p1:
+            self.add_error('password1', 'Ingresa la nueva contraseña.')
+        return cleaned_data
 
 
 class PuntoViveDigitalForm(forms.ModelForm):

@@ -33,6 +33,15 @@
                 {{ field }}
                 {% if field.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:-15px;margin-bottom:10px;">{{ field.errors.0 }}</span>{% endif %}
             </div>
+            {% elif field.name == 'sala' %}
+            {# El campo sala se renderiza manualmente para controlar visibilidad #}
+            <div id="fila-sala" style="display:none;">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                </label>
+                {{ field }}
+                {% if field.errors %}<span style="color:#991b1b;font-size:13px;display:block;margin-top:-15px;margin-bottom:10px;">{{ field.errors.0 }}</span>{% endif %}
+            </div>
             {% else %}
             <div {% if field.name == 'atencion' or field.name == 'descripcion' or field.name == 'nombre' %}class="span-full"{% endif %}>
                 <label for="{{ field.id_for_label }}">
@@ -72,6 +81,21 @@ document.addEventListener('DOMContentLoaded', function () {
     if (requiereSelect) {
         requiereSelect.addEventListener('change', toggleRecurso);
         toggleRecurso(); // estado inicial
+    }
+
+    const requiereSalaSelect = document.getElementById('id_requiere_sala');
+    const filaSala            = document.getElementById('fila-sala');
+    const salaSelect          = document.getElementById('id_sala');
+
+    function toggleSala() {
+        const mostrar = requiereSalaSelect && requiereSalaSelect.value === 'S';
+        if (filaSala) filaSala.style.display = mostrar ? '' : 'none';
+        if (salaSelect) salaSelect.required = mostrar;
+    }
+
+    if (requiereSalaSelect) {
+        requiereSalaSelect.addEventListener('change', toggleSala);
+        toggleSala(); // estado inicial
     }
 
     // Validaciones existentes

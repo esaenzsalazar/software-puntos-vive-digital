@@ -1475,11 +1475,13 @@ def registrar_servicio(request, atencion_id=None):
     pvd_id = request.session.get('pvd_activo_id')
     if pvd_id:
         recursos_pvd = Recurso.objects.filter(punto_vive_digital_id=pvd_id, estado='A').order_by('tipo', 'codigo')
+        salas_pvd = Sala.objects.filter(punto_vive_digital_id=pvd_id, estado='A').order_by('nombre')
     else:
         recursos_pvd = Recurso.objects.filter(estado='A').order_by('tipo', 'codigo')
+        salas_pvd = Sala.objects.filter(estado='A').order_by('nombre')
 
     initial = {'atencion': atencion} if atencion else {}
-    form = ServicioForm(request.POST or None, initial=initial, recursos_pvd=recursos_pvd)
+    form = ServicioForm(request.POST or None, initial=initial, recursos_pvd=recursos_pvd, salas_pvd=salas_pvd)
 
     if atencion:
         form.fields['atencion'].widget.attrs['disabled'] = True
@@ -1493,6 +1495,11 @@ def registrar_servicio(request, atencion_id=None):
                     servicio.atencion = atencion
                 servicio.save()
                 messages.success(request, 'Servicio registrado correctamente.')
+                if servicio.requiere_sala == 'S' and servicio.sala_id:
+                    url = reverse('modulo_puntos:crear_habilitacion') + f'?sala_id={servicio.sala_id}'
+                    if atencion:
+                        url += f'&atencion_id={atencion.pk}'
+                    return redirect(url)
                 if atencion:
                     return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion.pk)
                 return redirect('modulo_puntos:panel_control')
@@ -1521,10 +1528,12 @@ def editar_servicio(request, servicio_id):
     pvd_id = request.session.get('pvd_activo_id')
     if pvd_id:
         recursos_pvd = Recurso.objects.filter(punto_vive_digital_id=pvd_id, estado='A').order_by('tipo', 'codigo')
+        salas_pvd = Sala.objects.filter(punto_vive_digital_id=pvd_id, estado='A').order_by('nombre')
     else:
         recursos_pvd = Recurso.objects.filter(estado='A').order_by('tipo', 'codigo')
+        salas_pvd = Sala.objects.filter(estado='A').order_by('nombre')
 
-    form = ServicioForm(request.POST or None, instance=servicio, recursos_pvd=recursos_pvd)
+    form = ServicioForm(request.POST or None, instance=servicio, recursos_pvd=recursos_pvd, salas_pvd=salas_pvd)
     form.fields['atencion'].widget.attrs['disabled'] = True
     form.fields['atencion'].required = False
 
@@ -3019,6 +3028,8 @@ def crear_habilitacion(request):
 
     sala_inicial = request.GET.get('sala_id')
     fecha_inicial = request.GET.get('fecha')
+    atencion_id = request.GET.get('atencion_id') or request.POST.get('atencion_id')
+    atencion_origen = Atencion.objects.filter(pk=atencion_id).first() if atencion_id else None
 
     initial = {}
     if sala_inicial:
@@ -3042,6 +3053,8 @@ def crear_habilitacion(request):
                 f'Habilitación creada: {hab.sala.nombre} – {hab.fecha}'
             )
             messages.success(request, f'Habilitación para "{hab.sala.nombre}" el {hab.fecha} registrada correctamente.')
+            if atencion_id:
+                return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
             return redirect('modulo_puntos:lista_habilitaciones')
         messages.error(request, 'Revisa los datos del formulario.')
 
@@ -3049,6 +3062,8 @@ def crear_habilitacion(request):
         'form': form,
         'titulo': 'Nueva Habilitación de Sala',
         'accion': 'crear',
+        'atencion_id': atencion_id,
+        'atencion_origen': atencion_origen,
     })
 
 

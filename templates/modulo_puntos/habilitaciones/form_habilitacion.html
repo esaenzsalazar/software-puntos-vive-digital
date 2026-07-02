@@ -10,6 +10,9 @@
         {% if accion == 'editar' and hab %}
             <p class="muted">{{ hab.sala.nombre }} — {{ hab.fecha|date:"d/m/Y" }}</p>
         {% endif %}
+        {% if atencion_origen %}
+            <p class="muted">Sala solicitada desde el servicio de la <strong>Atención #{{ atencion_origen.pk }}</strong>{% if atencion_origen.ciudadano %} — {{ atencion_origen.ciudadano.get_nombre_completo }}{% endif %}. Al guardar, volverás a esa atención.</p>
+        {% endif %}
     </div>
 
     {% if form.non_field_errors %}
@@ -22,6 +25,7 @@
 
     <form method="POST" novalidate>
         {% csrf_token %}
+        {% if atencion_id %}<input type="hidden" name="atencion_id" value="{{ atencion_id }}">{% endif %}
 
         <fieldset style="margin-bottom:20px;">
             <legend style="font-size:15px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--p-border);">
@@ -113,7 +117,11 @@
             <button type="submit" class="btn">
                 {% if accion == 'crear' %}➕ Registrar Habilitación{% else %}💾 Guardar Cambios{% endif %}
             </button>
+            {% if atencion_id %}
+            <a href="{% url 'modulo_puntos:detalle_atencion' atencion_id %}" class="btn btn-secondary">Cancelar</a>
+            {% else %}
             <a href="{% url 'modulo_puntos:lista_habilitaciones' %}" class="btn btn-secondary">Cancelar</a>
+            {% endif %}
         </div>
     </form>
 </div>

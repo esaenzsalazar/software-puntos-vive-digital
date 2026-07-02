@@ -25,6 +25,38 @@
         {% csrf_token %}
         <div class="grid form-grid-2">
             {% for field in form %}
+
+                {% if field.name == 'atencion' and not atencion %}
+                {# ── Campo atención con buscador sobre el select (mismo patrón que registrar_atencion.html) ── #}
+                <div class="span-full">
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }} <span style="color:red;">*</span>
+                    </label>
+
+                    {# Input de búsqueda (filtra las opciones del select) #}
+                    <div style="position:relative; margin-bottom:6px;">
+                        <input type="text"
+                               id="inp_buscar_atencion"
+                               class="form-control"
+                               placeholder="🔍  Buscar por nombre o número de documento…"
+                               autocomplete="off"
+                               style="padding-left:14px;">
+                        <span id="buscar_atencion_contador"
+                              style="position:absolute; right:12px; top:50%; transform:translateY(-50%);
+                                     font-size:12px; color:#94a3b8; pointer-events:none;"></span>
+                    </div>
+
+                    {# Select original de Django — siempre visible y funcional #}
+                    {{ field }}
+
+                    {% if field.errors %}
+                        <span style="color:#991b1b; font-size:13px; display:block; margin-top:4px;">
+                            {{ field.errors.0 }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% else %}
                 <div {% if field.name == 'atencion' or field.name == 'comentario' %}class="span-full"{% endif %}>
                     <label for="{{ field.id_for_label }}">
                         {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
@@ -32,6 +64,8 @@
                     {{ field }}
                     {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                 </div>
+                {% endif %}
+
             {% endfor %}
         </div>
 
@@ -64,6 +98,78 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     [califInput, fechaInput, comentInput].forEach(wrap);
+
+    const inpAtencion = document.getElementById('inp_buscar_atencion');
+    const selAtencion = document.getElementById('id_atencion');
+    const contadorAtencion = document.getElementById('buscar_atencion_contador');
+
+    if (inpAtencion && selAtencion) {
+        // Guardar todas las opciones al cargar
+        const todasOpcionesAtencion = Array.from(selAtencion.options).map(o => ({
+            value: o.value,
+            text:  o.text,
+            lower: o.text.toLowerCase(),
+        }));
+
+        function filtrarAtencion() {
+            const q          = inpAtencion.value.trim().toLowerCase();
+            const valorPrevio = selAtencion.value;
+
+            // Reconstruir opciones que coincidan
+            selAtencion.innerHTML = '';
+            const coinciden = todasOpcionesAtencion.filter(o =>
+                !o.value || o.lower.includes(q)
+            );
+
+            coinciden.forEach(o => {
+                const opt    = document.createElement('option');
+                opt.value    = o.value;
+                opt.text     = o.text;
+                opt.selected = (o.value === valorPrevio);
+                selAtencion.appendChild(opt);
+            });
+
+            // Contador de resultados (no cuenta la opción vacía)
+            const n = coinciden.filter(o => o.value).length;
+            contadorAtencion.textContent = q ? `${n} resultado${n !== 1 ? 's' : ''}` : '';
+
+            // Resaltar borde si hay texto pero sin selección válida
+            inpAtencion.style.borderColor = (q && !selAtencion.value) ? '#f59e0b' : '';
+        }
+
+        inpAtencion.addEventListener('input', filtrarAtencion);
+
+        // Al seleccionar del select, limpiar el buscador
+        selAtencion.addEventListener('change', function () {
+            if (this.value) inpAtencion.value = '';
+            contadorAtencion.textContent = '';
+            inpAtencion.style.borderColor = '';
+            filtrarAtencion();
+        });
+
+        // Si hay atención pre-seleccionada, mostrar su texto en el buscador
+        if (selAtencion.value) {
+            const selOpt = todasOpcionesAtencion.find(o => o.value === selAtencion.value);
+            if (selOpt) inpAtencion.value = selOpt.text;
+        }
+
+        // Ajustar altura del select para que sea cómodo de usar
+        selAtencion.style.minHeight = '42px';
+        selAtencion.setAttribute('size', Math.min(todasOpcionesAtencion.length, 8));
+
+        // Reducir size a 1 al hacer clic fuera
+        document.addEventListener('click', function (e) {
+            if (!selAtencion.contains(e.target) && !inpAtencion.contains(e.target)) {
+                selAtencion.setAttribute('size', 1);
+            }
+        });
+        inpAtencion.addEventListener('focus', function () {
+            selAtencion.setAttribute('size', Math.min(todasOpcionesAtencion.length, 8));
+        });
+        selAtencion.addEventListener('focus', function () {
+            selAtencion.setAttribute('size', Math.min(todasOpcionesAtencion.length, 8));
+        });
+    }
 
     function validarCalificacion(valor) {
         if (!valor || valor.trim() === '') return { valido: false, mensaje: 'La calificación es requerida' };

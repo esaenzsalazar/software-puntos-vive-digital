@@ -218,6 +218,10 @@ class Servicio(models.Model):
         ('S', 'Sí'),
         ('N', 'No'),
     ]
+    REQUIERE_SALA_CHOICES = [
+        ('S', 'Sí'),
+        ('N', 'No'),
+    ]
 
     atencion = models.ForeignKey(
         'Atencion', models.PROTECT,
@@ -227,10 +231,15 @@ class Servicio(models.Model):
         'Recurso', models.SET_NULL,
         null=True, blank=True, verbose_name='Recurso utilizado'
     )
+    sala = models.ForeignKey(
+        'Sala', models.SET_NULL,
+        null=True, blank=True, verbose_name='Sala solicitada'
+    )
     nombre = models.CharField(max_length=128, verbose_name='Nombre del Servicio')
     descripcion = models.CharField(max_length=512, null=True, blank=True, verbose_name='Descripción')
     tipo = models.CharField(max_length=64, verbose_name='Tipo de Servicio')
     requiere_equipo = models.CharField(max_length=1, default='N', choices=REQUIERE_EQUIPO_CHOICES, verbose_name='¿Requiere Equipo?')
+    requiere_sala = models.CharField(max_length=1, default='N', choices=REQUIERE_SALA_CHOICES, verbose_name='¿Requiere Sala?')
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
 
     class Meta:

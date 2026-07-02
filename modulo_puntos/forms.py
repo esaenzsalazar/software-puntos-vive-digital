@@ -179,18 +179,21 @@ OCUPACION_CHOICES = [
 NOMBRE_SERVICIO_CHOICES = [
     ('', '--- Seleccione un servicio ---'),
     ('Acceso a internet', 'Acceso a internet'),
-    ('Acceso a sala de capacitaciones y cómputo', 'Acceso a sala de capacitaciones y cómputo'),
+    ('Acceso a sala', 'Acceso a sala'),
     ('Impresiones', 'Impresiones'),
     ('Cursos de aprendizaje', 'Cursos de aprendizaje'),
-    ('Trámites en Línea / Gobierno Digital', 'Trámites en Línea / Gobierno Digital'),
+    ('Trámites / Gobierno Digital', 'Trámites / Gobierno Digital'),
+    ('Préstamo de equipo', 'Préstamo de equipo'),
 ]
 
 TIPO_SERVICIO_CHOICES = [
     ('', '--- Seleccione una categoría ---'),
     ('Acceso a internet', 'Acceso a internet'),
-    ('Capacitación / Cómputo', 'Capacitación / Cómputo'),
+    ('Capacitación', 'Capacitación'),
+    ('Cómputo', 'Cómputo'),
     ('Impresión', 'Impresión'),
     ('Formación', 'Formación'),
+    ('Sala/Cómputo', 'Sala/Cómputo'),
 ]
 
 TIPO_RECURSO_CHOICES = [
@@ -563,7 +566,8 @@ class ServicioForm(forms.ModelForm):
         model = Servicio
         fields = [
             'atencion', 'nombre', 'descripcion',
-            'tipo', 'requiere_equipo', 'recurso', 'estado'
+            'tipo', 'requiere_equipo', 'recurso',
+            'requiere_sala', 'sala', 'estado'
         ]
         labels = {
             'atencion': 'Atención Vinculada',
@@ -572,6 +576,8 @@ class ServicioForm(forms.ModelForm):
             'tipo': 'Categoría',
             'requiere_equipo': '¿Requiere equipo?',
             'recurso': 'Recurso utilizado',
+            'requiere_sala': '¿Requiere sala?',
+            'sala': 'Sala solicitada',
             'estado': 'Estado',
         }
         widgets = {
@@ -590,13 +596,18 @@ class ServicioForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'id': 'id_requiere_equipo'}
             ),
             'recurso': forms.Select(attrs={'class': 'form-control', 'id': 'id_recurso'}),
+            'requiere_sala': forms.Select(
+                choices=[('S', 'Sí'), ('N', 'No')],
+                attrs={'class': 'form-control', 'id': 'id_requiere_sala'}
+            ),
+            'sala': forms.Select(attrs={'class': 'form-control', 'id': 'id_sala'}),
             'estado': forms.Select(
                 choices=[('A', 'Activo'), ('I', 'Inactivo')],
                 attrs={'class': 'form-control'}
             ),
         }
 
-    def __init__(self, *args, recursos_pvd=None, **kwargs):
+    def __init__(self, *args, recursos_pvd=None, salas_pvd=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['atencion'].required = False
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
@@ -608,6 +619,13 @@ class ServicioForm(forms.ModelForm):
             self.fields['recurso'].queryset = recursos_pvd
         else:
             self.fields['recurso'].queryset = Recurso.objects.none()
+        self.fields['requiere_sala'].initial = 'N'
+        self.fields['sala'].required = False
+        self.fields['sala'].empty_label = '--- Selecciona una sala ---'
+        if salas_pvd is not None:
+            self.fields['sala'].queryset = salas_pvd
+        else:
+            self.fields['sala'].queryset = Sala.objects.none()
 
 
 

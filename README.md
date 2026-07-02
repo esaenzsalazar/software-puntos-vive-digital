@@ -1,5 +1,5 @@
 # Sistema de Gestión — Puntos Vive Digital
-### Alcaldía de Bugalagrande · Contrato CD-224-2026
+### Alcaldía de Bugalagrande · 
 
 Sistema web para la administración integral de los Puntos Vive Digital (PVD) del municipio de Bugalagrande, Valle del Cauca. Gestiona atenciones a ciudadanos, recursos, préstamos, cursos, salas, mantenimientos, evidencias y control de acceso por roles.
 

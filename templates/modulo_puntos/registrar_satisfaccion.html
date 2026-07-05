@@ -25,7 +25,6 @@
         {% csrf_token %}
         <div class="grid form-grid-2">
             {% for field in form %}
-
                 {% if field.name == 'atencion' and not atencion %}
                 {# ── Campo atención con buscador sobre el select (mismo patrón que registrar_atencion.html) ── #}
                 <div class="span-full">
@@ -56,16 +55,41 @@
                     {% endif %}
                 </div>
 
-                {% else %}
-                <div {% if field.name == 'atencion' or field.name == 'comentario' %}class="span-full"{% endif %}>
+                {% elif field.name == 'atencion' or field.name == 'comentario' %}
+                <div class="span-full">
                     <label for="{{ field.id_for_label }}">
                         {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
                     </label>
                     {{ field }}
                     {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                 </div>
-                {% endif %}
 
+                {% elif field.name == 'fecha' %}
+                <div>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -15px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
+                </div>
+
+                {% else %}
+                {# ── Preguntas de la encuesta (Excelente / Bueno / Por mejorar) ── #}
+                <div class="span-full encuesta-pregunta">
+                    <p class="encuesta-pregunta-label">
+                        {{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}
+                    </p>
+                    <div class="encuesta-pregunta-opciones">
+                        {% for radio in field %}
+                            <label class="encuesta-opcion">
+                                {{ radio.tag }}
+                                <span>{{ radio.choice_label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: 4px;">{{ field.errors.0 }}</span>{% endif %}
+                </div>
+                {% endif %}
             {% endfor %}
         </div>
 
@@ -75,16 +99,43 @@
             {% else %}
             <a href="{% url 'modulo_puntos:panel_control' %}" class="btn btn-secondary">Cancelar</a>
             {% endif %}
-            <button type="submit" class="btn">Guardar Calificación</button>
+            <button type="submit" class="btn">Guardar Encuesta</button>
         </div>
     </form>
 </div>
+
+<style>
+.encuesta-pregunta {
+    padding: 14px 0;
+    border-top: 1px dashed var(--p-border-strong);
+}
+.encuesta-pregunta:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+.encuesta-pregunta-label {
+    font-weight: 600;
+    margin: 0 0 10px;
+    color: var(--p-text);
+}
+.encuesta-pregunta-opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.encuesta-opcion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+    cursor: pointer;
+}
+</style>
 
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form[method="POST"]');
-    const califInput = document.getElementById('id_calificacion');
     const fechaInput = document.getElementById('id_fecha');
     const comentInput = document.getElementById('id_comentario');
 
@@ -97,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
             div.appendChild(input);
         }
     }
-    [califInput, fechaInput, comentInput].forEach(wrap);
+    [fechaInput, comentInput].forEach(wrap);
 
     const inpAtencion = document.getElementById('inp_buscar_atencion');
     const selAtencion = document.getElementById('id_atencion');
@@ -171,22 +222,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function validarCalificacion(valor) {
-        if (!valor || valor.trim() === '') return { valido: false, mensaje: 'La calificación es requerida' };
-        const num = parseInt(valor);
-        if (isNaN(num) || num < 1 || num > 5) return { valido: false, mensaje: 'La calificación debe ser un número entre 1 y 5' };
-        return { valido: true, mensaje: '' };
-    }
-
-    if (califInput) {
-        califInput.addEventListener('input', function () {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            ValidacionPVD.validarYMostrar(this, validarCalificacion, 'Calificación');
-        });
-        califInput.addEventListener('blur', function () {
-            ValidacionPVD.validarYMostrar(this, validarCalificacion, 'Calificación');
-        });
-    }
     if (fechaInput) {
         fechaInput.addEventListener('blur', function () {
             ValidacionPVD.validarYMostrar(this, ValidacionPVD.validarRequerido, 'Fecha');
@@ -201,7 +236,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (form) {
         form.addEventListener('submit', function (e) {
             let ok = true;
-            if (califInput && !ValidacionPVD.validarYMostrar(califInput, validarCalificacion, 'Calificación').valido) ok = false;
             if (fechaInput && !ValidacionPVD.validarYMostrar(fechaInput, ValidacionPVD.validarRequerido, 'Fecha').valido) ok = false;
             if (!ok) e.preventDefault();
         });

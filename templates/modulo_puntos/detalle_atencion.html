@@ -206,16 +206,23 @@
     <div class="callout">
         <div class="info-grid-2">
             <div>
-                <p><strong>Calificación:</strong>
+                <p><strong>Puntaje promedio:</strong>
                     {% for i in "12345" %}
-                        {% if forloop.counter <= satisfaccion.calificacion %}
+                        {% if forloop.counter <= satisfaccion.puntaje_estrellas %}
                             <span style="color:#f59e0b; font-size:18px;">★</span>
                         {% else %}
                             <span style="color:#d1d5db; font-size:18px;">★</span>
                         {% endif %}
                     {% endfor %}
-                    <span class="muted" style="font-size:13px;">{{ satisfaccion.calificacion }}/5</span>
+                    <span class="muted" style="font-size:13px;">{{ satisfaccion.puntaje_promedio|floatformat:1 }}/5</span>
                 </p>
+                <ul style="margin:0 0 10px; padding-left:18px; font-size:13px;">
+                    <li>¿Tiempo de espera para ser atendido? — {{ satisfaccion.get_tiempo_espera_display }}</li>
+                    <li>¿Atención brindada por el servidor público? — {{ satisfaccion.get_atencion_servidor_display }}</li>
+                    <li>¿Quedó satisfecho con la prestación del servicio? — {{ satisfaccion.get_satisfaccion_servicio_display }}</li>
+                    <li>¿La información recibida fue? — {{ satisfaccion.get_informacion_recibida_display }}</li>
+                    <li>¿Comodidad y limpieza de las instalaciones? — {{ satisfaccion.get_comodidad_instalaciones_display }}</li>
+                </ul>
                 <p><strong>Fecha:</strong> {{ satisfaccion.fecha|date:"d/m/Y H:i" }}</p>
             </div>
             <div>

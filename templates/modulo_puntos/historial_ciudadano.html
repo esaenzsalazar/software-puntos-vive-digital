@@ -85,7 +85,7 @@
                     <td>
                         {% for sat in atencion.satisfacciones_rel %}
                             {% for i in "12345" %}
-                                <span style="color:{% if forloop.counter <= sat.calificacion %}#f59e0b{% else %}#d1d5db{% endif %}; font-size:14px;">★</span>
+                                <span style="color:{% if forloop.counter <= sat.puntaje_estrellas %}#f59e0b{% else %}#d1d5db{% endif %}; font-size:14px;">★</span>
                             {% endfor %}
                         {% empty %}
                             <span class="muted">—</span>

@@ -234,10 +234,14 @@ if atencion:
 
     # Satisfacción
     r = c_pvd.post(f'/atenciones/{atencion.pk}/satisfaccion/', {
-        'atencion':     atencion.pk,
-        'calificacion': 5,
-        'comentario':   'Excelente atención de prueba',
-        'fecha':        date.today().isoformat() + 'T10:00',
+        'atencion':                  atencion.pk,
+        'tiempo_espera':             'E',
+        'atencion_servidor':         'E',
+        'satisfaccion_servicio':     'E',
+        'informacion_recibida':      'E',
+        'comodidad_instalaciones':   'E',
+        'comentario':                'Excelente atención de prueba',
+        'fecha':                     date.today().isoformat() + 'T10:00',
     })
     check("Registrar satisfacción", r, (302,))
 

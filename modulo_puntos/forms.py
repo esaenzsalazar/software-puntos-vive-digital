@@ -508,7 +508,7 @@ class AtencionForm(forms.ModelForm):
 class SatisfaccionForm(forms.ModelForm):
     """
     Formulario para registrar encuestas de satisfacción.
-    Incluye validación de calificación (1-5).
+    Cada pregunta se responde con Excelente / Bueno / Por mejorar.
     """
     fecha = forms.DateTimeField(
         label='Fecha y Hora del Reporte',
@@ -520,17 +520,23 @@ class SatisfaccionForm(forms.ModelForm):
 
     class Meta:
         model = Satisfaccion
-        fields = ['atencion', 'calificacion', 'comentario', 'fecha']
+        fields = [
+            'atencion',
+            'tiempo_espera', 'atencion_servidor', 'satisfaccion_servicio',
+            'informacion_recibida', 'comodidad_instalaciones',
+            'comentario', 'fecha',
+        ]
         labels = {
             'atencion': 'Atención Evaluada',
-            'calificacion': 'Calificación (1 a 5)',
             'comentario': 'Comentarios del Ciudadano',
         }
         widgets = {
             'atencion': forms.Select(attrs={'class': 'form-control'}),
-            'calificacion': forms.NumberInput(
-                attrs={'class': 'form-control', 'min': '1', 'max': '5'}
-            ),
+            'tiempo_espera': forms.RadioSelect,
+            'atencion_servidor': forms.RadioSelect,
+            'satisfaccion_servicio': forms.RadioSelect,
+            'informacion_recibida': forms.RadioSelect,
+            'comodidad_instalaciones': forms.RadioSelect,
             'comentario': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 3}
             ),
@@ -540,6 +546,8 @@ class SatisfaccionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['atencion'].required = True
         self.fields['atencion'].empty_label = '--- Seleccione una atención ---'
+        for campo in Satisfaccion.PREGUNTAS:
+            self.fields[campo].required = True
         # Filtrar atenciones por PVD activo y solo las que tengan ciudadano asignado
         qs = Atencion.objects.filter(ciudadano__isnull=False).select_related('ciudadano').order_by('-fecha', '-pk')
         if pvd_id:
@@ -553,12 +561,6 @@ class SatisfaccionForm(forms.ModelForm):
         if not atencion.ciudadano_id:
             raise ValidationError('La atención seleccionada no tiene un ciudadano asociado.')
         return atencion
-
-    def clean_calificacion(self):
-        calif = self.cleaned_data.get('calificacion')
-        if calif is not None and (calif < 1 or calif > 5):
-            raise ValidationError('La calificación debe estar entre 1 y 5 estrellas.')
-        return calif
 
 
 class ServicioForm(forms.ModelForm):

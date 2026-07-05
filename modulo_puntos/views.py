@@ -668,8 +668,8 @@ def reportes(request):
     total_prestamos = prestamo_qs.count()
     prestamos_activos = prestamo_qs.filter(fecha_devolucion__isnull=True).count()
 
-    satisfaccion_promedio = satisfaccion_qs.aggregate(
-        promedio=Avg('calificacion')
+    satisfaccion_promedio = Satisfaccion.con_puntaje(satisfaccion_qs).aggregate(
+        promedio=Avg('puntaje')
     )['promedio']
 
     servicios_por_tipo = servicio_qs.values('tipo').annotate(
@@ -770,10 +770,10 @@ def reportes(request):
     )
 
     satisfaccion_por_admin = list(
-        satisfaccion_qs
+        Satisfaccion.con_puntaje(satisfaccion_qs)
         .filter(atencion__operador__isnull=False)
         .values('atencion__operador__first_name', 'atencion__operador__last_name', 'atencion__operador__username')
-        .annotate(promedio=Avg('calificacion'), total=Count('id'))
+        .annotate(promedio=Avg('puntaje'), total=Count('id'))
         .order_by('-promedio')
     )
 
@@ -1941,7 +1941,10 @@ def exportar_satisfaccion_csv(request):
     headers = [
         'ID', 'Punto Vive Digital', 'ID Atención', 'Fecha Atención', 'Estado Atención',
         'Documento Ciudadano', 'Nombre Ciudadano',
-        'Calificación (1-5)', 'Comentario', 'Fecha de Registro',
+        '¿Tiempo de espera para ser atendido?', '¿Atención brindada por el servidor público?',
+        '¿Quedó satisfecho con la prestación del servicio?', '¿La información recibida fue?',
+        '¿Comodidad y limpieza de las instalaciones?', 'Puntaje promedio (1-5)',
+        'Comentario', 'Fecha de Registro',
     ]
     estado_atn = dict(Atencion.ESTADO_CHOICES)
     qs = Satisfaccion.objects.select_related('atencion', 'atencion__ciudadano', 'atencion__punto_vive_digital').order_by('-pk')
@@ -1958,13 +1961,19 @@ def exportar_satisfaccion_csv(request):
             if atn.ciudadano:
                 doc = atn.ciudadano.numero_documento or ''
                 nom = f"{atn.ciudadano.primer_nombre or ''} {atn.ciudadano.primer_apellido or ''}".strip()
+        promedio = sat.puntaje_promedio
         filas.append([
             sat.pk,
             pvd_nombre,
             atn.pk if atn else '',
             fecha_atn, est_atn,
             doc, nom,
-            sat.calificacion,
+            sat.get_tiempo_espera_display(),
+            sat.get_atencion_servidor_display(),
+            sat.get_satisfaccion_servicio_display(),
+            sat.get_informacion_recibida_display(),
+            sat.get_comodidad_instalaciones_display(),
+            round(promedio, 1) if promedio is not None else '',
             sat.comentario or '',
             str(sat.fecha),
         ])

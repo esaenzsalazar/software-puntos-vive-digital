@@ -191,8 +191,8 @@ class PrestamoRecursoAdmin(admin.ModelAdmin):
 
 @admin.register(Satisfaccion)
 class SatisfaccionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'ciudadano_atencion', 'calificacion', 'fecha', 'comentario_corto')
-    list_filter = ('calificacion', 'fecha')
+    list_display = ('id', 'ciudadano_atencion', 'puntaje_promedio_display', 'fecha', 'comentario_corto')
+    list_filter = ('tiempo_espera', 'atencion_servidor', 'satisfaccion_servicio', 'fecha')
     search_fields = ('comentario',)
     ordering = ('-fecha',)
     list_select_related = ('atencion', 'atencion__ciudadano')
@@ -202,6 +202,11 @@ class SatisfaccionAdmin(admin.ModelAdmin):
         if obj.atencion and obj.atencion.ciudadano:
             return obj.atencion.ciudadano.get_nombre_completo()
         return '—'
+
+    @admin.display(description='Puntaje')
+    def puntaje_promedio_display(self, obj):
+        promedio = obj.puntaje_promedio
+        return f'{promedio:.1f}/5' if promedio is not None else '—'
 
     @admin.display(description='Comentario')
     def comentario_corto(self, obj):

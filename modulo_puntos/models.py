@@ -257,11 +257,45 @@ class Servicio(models.Model):
 
 
 class Satisfaccion(models.Model):
+    OPCION_EXCELENTE = 'E'
+    OPCION_BUENO = 'B'
+    OPCION_POR_MEJORAR = 'M'
+    OPCIONES_RESPUESTA = [
+        (OPCION_EXCELENTE, 'Excelente'),
+        (OPCION_BUENO, 'Bueno'),
+        (OPCION_POR_MEJORAR, 'Por mejorar'),
+    ]
+    PUNTAJE_POR_OPCION = {OPCION_EXCELENTE: 5, OPCION_BUENO: 3, OPCION_POR_MEJORAR: 1}
+
+    PREGUNTAS = [
+        'tiempo_espera', 'atencion_servidor', 'satisfaccion_servicio',
+        'informacion_recibida', 'comodidad_instalaciones',
+    ]
+
     atencion = models.ForeignKey(
         'Atencion', models.PROTECT,
         null=True, blank=True, verbose_name='Atención'
     )
-    calificacion = models.IntegerField(verbose_name='Calificación (1-5)')
+    tiempo_espera = models.CharField(
+        max_length=1, choices=OPCIONES_RESPUESTA,
+        verbose_name='¿Tiempo de espera para ser atendido?'
+    )
+    atencion_servidor = models.CharField(
+        max_length=1, choices=OPCIONES_RESPUESTA,
+        verbose_name='¿Atención brindada por el servidor público?'
+    )
+    satisfaccion_servicio = models.CharField(
+        max_length=1, choices=OPCIONES_RESPUESTA,
+        verbose_name='¿Quedó satisfecho con la prestación del servicio?'
+    )
+    informacion_recibida = models.CharField(
+        max_length=1, choices=OPCIONES_RESPUESTA,
+        verbose_name='¿La información recibida fue?'
+    )
+    comodidad_instalaciones = models.CharField(
+        max_length=1, choices=OPCIONES_RESPUESTA,
+        verbose_name='¿Comodidad y limpieza de las instalaciones?'
+    )
     comentario = models.CharField(max_length=512, null=True, blank=True, verbose_name='Comentario')
     fecha = models.DateTimeField(verbose_name='Fecha de Encuesta')
 
@@ -273,15 +307,43 @@ class Satisfaccion(models.Model):
         indexes = [
             models.Index(fields=['atencion'], name='idx_sat_atencion'),
         ]
-        constraints = [
-            models.CheckConstraint(
-                condition=models.Q(calificacion__gte=1) & models.Q(calificacion__lte=5),
-                name='chk_sat_calificacion',
-            ),
+
+    @property
+    def puntaje_promedio(self):
+        valores = [
+            self.PUNTAJE_POR_OPCION[getattr(self, campo)]
+            for campo in self.PREGUNTAS
+            if getattr(self, campo) in self.PUNTAJE_POR_OPCION
         ]
+        return sum(valores) / len(valores) if valores else None
+
+    @property
+    def puntaje_estrellas(self):
+        promedio = self.puntaje_promedio
+        return round(promedio) if promedio is not None else None
+
+    @classmethod
+    def con_puntaje(cls, queryset):
+        """Anota `puntaje` (promedio 1-5) sobre un queryset de Satisfaccion, mapeando
+        Excelente=5, Bueno=3, Por mejorar=1 sobre las 5 preguntas de la encuesta."""
+        from django.db.models import Case, When, Value, FloatField
+
+        def expr(campo):
+            return Case(
+                When(**{campo: cls.OPCION_EXCELENTE}, then=Value(5.0)),
+                When(**{campo: cls.OPCION_BUENO}, then=Value(3.0)),
+                When(**{campo: cls.OPCION_POR_MEJORAR}, then=Value(1.0)),
+                default=Value(None),
+                output_field=FloatField(),
+            )
+
+        suma = expr(cls.PREGUNTAS[0])
+        for campo in cls.PREGUNTAS[1:]:
+            suma = suma + expr(campo)
+        return queryset.annotate(puntaje=suma / float(len(cls.PREGUNTAS)))
 
     def __str__(self):
-        return f"Calificación: {self.calificacion}"
+        return f"Encuesta #{self.pk}"
 
 
 class AuditoriaAccion(models.Model):

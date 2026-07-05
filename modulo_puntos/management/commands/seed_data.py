@@ -238,12 +238,26 @@ class Command(BaseCommand):
             'Todo estuvo perfecto, muchas gracias.',
         ]
         satisfacciones = []
-        calificaciones = [5, 4, 3, 4, 5, 3, 4, 5]
+        respuestas_encuesta = [
+            ('E', 'E', 'E', 'E', 'E'),
+            ('E', 'B', 'E', 'B', 'E'),
+            ('B', 'B', 'B', 'B', 'M'),
+            ('E', 'B', 'E', 'B', 'E'),
+            ('E', 'E', 'E', 'E', 'E'),
+            ('B', 'B', 'B', 'B', 'M'),
+            ('E', 'B', 'E', 'B', 'E'),
+            ('E', 'E', 'E', 'E', 'E'),
+        ]
         for i, at in enumerate(atenciones[:8]):
             if at.estado == 'F':
+                r = respuestas_encuesta[i % len(respuestas_encuesta)]
                 s = Satisfaccion.objects.create(
                     atencion=at,
-                    calificacion=calificaciones[i % len(calificaciones)],
+                    tiempo_espera=r[0],
+                    atencion_servidor=r[1],
+                    satisfaccion_servicio=r[2],
+                    informacion_recibida=r[3],
+                    comodidad_instalaciones=r[4],
                     comentario=comentarios[i % len(comentarios)],
                     fecha=timezone.now() - timedelta(days=i),
                 )

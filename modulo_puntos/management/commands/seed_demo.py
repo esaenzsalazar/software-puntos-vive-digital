@@ -654,6 +654,11 @@ class Command(BaseCommand):
     def _crear_satisfaccion(self, atenciones):
         self._titulo('Encuestas de satisfacción')
         calificaciones = [5, 5, 4, 5, 5, 4, 3, 5, 5, 4, 5, 5, 4, 5, 3, 5, 4, 5, 5, 4]
+        respuestas_por_calificacion = {
+            5: ('E', 'E', 'E', 'E', 'E'),
+            4: ('E', 'B', 'E', 'B', 'E'),
+            3: ('B', 'B', 'B', 'B', 'M'),
+        }
         comentarios = [
             'Excelente atención, muy amable el personal.',
             'Me ayudaron a resolver mi trámite rápidamente.',
@@ -669,9 +674,14 @@ class Command(BaseCommand):
         finalizadas = [a for a in atenciones if a.estado == 'F']
         count = 0
         for i, a in enumerate(finalizadas):
+            r = respuestas_por_calificacion[calificaciones[i % len(calificaciones)]]
             Satisfaccion.objects.create(
                 atencion=a,
-                calificacion=calificaciones[i % len(calificaciones)],
+                tiempo_espera=r[0],
+                atencion_servidor=r[1],
+                satisfaccion_servicio=r[2],
+                informacion_recibida=r[3],
+                comodidad_instalaciones=r[4],
                 comentario=comentarios[i % len(comentarios)],
                 fecha=timezone.make_aware(
                     datetime.combine(a.fecha, time(17, 0))

@@ -383,14 +383,19 @@ class Command(BaseCommand):
         self._titulo('Encuestas de satisfacción')
         finalizadas = [a for a in atenciones if a.estado == 'F']
         count = 0
+        opciones_encuesta = ['E', 'B', 'M']
+        pesos_encuesta = [60, 30, 10]
         for a in finalizadas:
             # ~85% de las finalizadas tienen encuesta
             if RNG.random() > 0.85:
                 continue
-            cal = RNG.choices([3, 4, 5], weights=[10, 30, 60])[0]
             Satisfaccion.objects.create(
                 atencion=a,
-                calificacion=cal,
+                tiempo_espera=RNG.choices(opciones_encuesta, weights=pesos_encuesta)[0],
+                atencion_servidor=RNG.choices(opciones_encuesta, weights=pesos_encuesta)[0],
+                satisfaccion_servicio=RNG.choices(opciones_encuesta, weights=pesos_encuesta)[0],
+                informacion_recibida=RNG.choices(opciones_encuesta, weights=pesos_encuesta)[0],
+                comodidad_instalaciones=RNG.choices(opciones_encuesta, weights=pesos_encuesta)[0],
                 comentario=RNG.choice(COMENTARIOS_SAT),
                 fecha=timezone.make_aware(datetime.combine(a.fecha, time(17, 0))),
             )

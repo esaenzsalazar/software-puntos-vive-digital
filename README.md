@@ -147,6 +147,7 @@ La carpeta `docs/` contiene:
 - `DOCUMENTACION_BASE_DE_DATOS.md` — esquema y relaciones de la BD
 - `ESTRUCTURA_BASE_DE_DATOS.md` — detalle de cada tabla
 - `RESPALDOS.md` — estrategia de respaldo y restauración de la base de datos
+- `SOLICITUD_SERVIDOR.md` — requisitos técnicos a entregar al área de Sistemas/TIC para levantar el servidor de producción
 
 ---
 

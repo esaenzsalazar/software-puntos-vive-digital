@@ -77,6 +77,41 @@ def obtener_rol_usuario(user):
     return ', '.join(grupos) if grupos else 'Sin rol asignado'
 
 
+def obtener_pvd_activo_id(request):
+    """PVD activo guardado en sesión (int) o None si no hay ninguno."""
+    pvd_id = request.session.get('pvd_activo_id')
+    try:
+        return int(pvd_id) if pvd_id else None
+    except (TypeError, ValueError):
+        return None
+
+
+def pvd_permitido(request, punto_vive_digital_id):
+    """
+    Verifica si el usuario puede ver/editar/eliminar un objeto que pertenece a
+    `punto_vive_digital_id` (puede ser None si el objeto no tiene PVD asignado).
+
+    - Superusuario y Administrador TIC: siempre True (ven todos los PVD).
+    - Administrador PVD: sólo True si coincide con su PVD activo en sesión.
+    """
+    if not usuario_necesita_seleccionar_pvd(request.user):
+        return True
+    pvd_activo_id = obtener_pvd_activo_id(request)
+    return pvd_activo_id is not None and punto_vive_digital_id == pvd_activo_id
+
+
+def exigir_pvd_activo_para_admin_pvd(request):
+    """
+    Para reportes/exportaciones: si el usuario es Admin PVD y no tiene un PVD
+    activo válido en sesión, retorna None (sin permitir "ver todo" por defecto).
+    Retorna el pvd_id (int) a filtrar, o False si el usuario no está restringido
+    (Superusuario/Admin TIC → sin filtro, ven todos los PVD).
+    """
+    if not usuario_necesita_seleccionar_pvd(request.user):
+        return False
+    return obtener_pvd_activo_id(request)
+
+
 # ── AUTENTICACIÓN ──────────────────────────────────────────────────────────────
 
 def inicio(request):
@@ -354,15 +389,17 @@ def consultar_ciudadanos(request):
     pvd_filtro = request.GET.get('pvd', '').strip()
     estado_filtro = request.GET.get('estado', 'A').strip()  # Por defecto solo activos
 
-    # Ciudadanos globales — todos los roles ven todos los ciudadanos
     ciudadanos = Ciudadano.objects.select_related('punto_vive_digital').order_by('-pk')
+
+    if es_admin_pvd_solo:
+        # Admin PVD sólo ve ciudadanos de su PVD activo
+        ciudadanos = ciudadanos.filter(punto_vive_digital_id=obtener_pvd_activo_id(request))
+    elif pvd_filtro:
+        ciudadanos = ciudadanos.filter(punto_vive_digital_id=pvd_filtro)
 
     if estado_filtro in ('A', 'I'):
         ciudadanos = ciudadanos.filter(estado=estado_filtro)
     # '' → todos (activos + inactivos)
-
-    if pvd_filtro:
-        ciudadanos = ciudadanos.filter(punto_vive_digital_id=pvd_filtro)
 
     if busqueda:
         ciudadanos = ciudadanos.filter(
@@ -453,11 +490,9 @@ def editar_ciudadano(request, ciu_cdgo):
         return redirect('modulo_puntos:panel_control')
 
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
-    pvd_id = request.session.get('pvd_activo_id')
-    if pvd_id and not request.user.is_superuser and not usuario_es_admin_tic(request.user):
-        if ciudadano.punto_vive_digital_id != pvd_id:
-            messages.error(request, 'No tienes permiso para editar ciudadanos de otro PVD.')
-            return redirect('modulo_puntos:consultar_ciudadanos')
+    if not pvd_permitido(request, ciudadano.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para editar ciudadanos de otro PVD.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
 
     form = CiudadanoForm(request.POST or None, instance=ciudadano)
     if request.method == 'POST':
@@ -486,6 +521,9 @@ def desactivar_ciudadano(request, ciu_cdgo):
     if request.method != 'POST':
         return redirect('modulo_puntos:consultar_ciudadanos')
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
+    if not pvd_permitido(request, ciudadano.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para modificar ciudadanos de otro PVD.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
     nuevo_estado = 'I' if ciudadano.estado == 'A' else 'A'
     ciudadano.estado = nuevo_estado
     ciudadano.save(update_fields=['estado'])
@@ -503,6 +541,9 @@ def historial_ciudadano(request, ciu_cdgo):
         return redirect('modulo_puntos:panel_control')
 
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
+    if not pvd_permitido(request, ciudadano.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para ver el historial de ciudadanos de otro PVD.')
+        return redirect('modulo_puntos:consultar_ciudadanos')
 
     atenciones = list(
         Atencion.objects.filter(ciudadano=ciudadano)
@@ -620,12 +661,14 @@ def reportes(request):
         pass
 
     # Filtrar por PVD activo cuando corresponde
-    es_admin_pvd_rpt = (
-        not request.user.is_superuser
-        and not usuario_es_admin_tic(request.user)
-        and request.user.groups.filter(name='Administrador PVD').exists()
-    )
-    pvd_id_rpt = request.session.get('pvd_activo_id')
+    es_admin_pvd_rpt = usuario_necesita_seleccionar_pvd(request.user)
+    pvd_id_rpt = obtener_pvd_activo_id(request)
+    if es_admin_pvd_rpt and not pvd_id_rpt:
+        # Fail-closed: sin PVD activo en sesión, un Admin PVD no puede ver reportes
+        # (antes esto dejaba los querysets sin filtrar y exponía todos los PVD).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de ver los reportes.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
+
     pvd_nombre_rpt = None
     if pvd_id_rpt:
         pvd_obj = PuntoViveDigital.objects.filter(pk=pvd_id_rpt).first()
@@ -637,14 +680,8 @@ def reportes(request):
     prestamo_qs  = PrestamoRecurso.objects.all()
     satisfaccion_qs = Satisfaccion.objects.all()
 
-    if es_admin_pvd_rpt and pvd_id_rpt:
-        atencion_qs  = atencion_qs.filter(punto_vive_digital_id=pvd_id_rpt)
-        servicio_qs  = servicio_qs.filter(atencion__punto_vive_digital_id=pvd_id_rpt)
-        ciudadano_qs = ciudadano_qs.filter(punto_vive_digital_id=pvd_id_rpt)
-        prestamo_qs  = prestamo_qs.filter(recurso__punto_vive_digital_id=pvd_id_rpt)
-        satisfaccion_qs = satisfaccion_qs.filter(atencion__punto_vive_digital_id=pvd_id_rpt)
-    elif pvd_id_rpt and not es_admin_pvd_rpt:
-        # Super / TIC con PVD activo: mostrar datos de ese PVD
+    if pvd_id_rpt:
+        # Admin PVD siempre filtrado; Super/TIC filtrados sólo si eligieron un PVD activo.
         atencion_qs  = atencion_qs.filter(punto_vive_digital_id=pvd_id_rpt)
         servicio_qs  = servicio_qs.filter(atencion__punto_vive_digital_id=pvd_id_rpt)
         ciudadano_qs = ciudadano_qs.filter(punto_vive_digital_id=pvd_id_rpt)
@@ -731,9 +768,7 @@ def reportes(request):
 
     # Reporte de salas
     habilitacion_qs = HabilitacionSala.objects.all()
-    if es_admin_pvd_rpt and pvd_id_rpt:
-        habilitacion_qs = habilitacion_qs.filter(sala__punto_vive_digital_id=pvd_id_rpt)
-    elif pvd_id_rpt and not es_admin_pvd_rpt:
+    if pvd_id_rpt:
         habilitacion_qs = habilitacion_qs.filter(sala__punto_vive_digital_id=pvd_id_rpt)
     if fecha_desde:
         habilitacion_qs = habilitacion_qs.filter(fecha__gte=fecha_desde)
@@ -1009,6 +1044,9 @@ def detalle_atencion(request, atencion_id):
         Atencion.objects.select_related('ciudadano', 'punto_vive_digital', 'operador'),
         pk=atencion_id
     )
+    if not pvd_permitido(request, atencion.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para ver atenciones de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
     servicios = Servicio.objects.filter(atencion=atencion).order_by('pk')
     satisfaccion = Satisfaccion.objects.filter(atencion=atencion).first()
 
@@ -1029,6 +1067,9 @@ def cambiar_estado_atencion(request, atencion_id):
         return redirect('modulo_puntos:lista_atenciones')
 
     atencion = get_object_or_404(Atencion, pk=atencion_id)
+    if not pvd_permitido(request, atencion.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para modificar atenciones de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
     nuevo_estado = request.POST.get('estado', '').strip()
     estados_validos = {'P', 'F', 'C'}
 
@@ -1057,7 +1098,12 @@ def finalizar_servicio(request, atencion_id, servicio_id):
     if request.method != 'POST':
         return redirect('modulo_puntos:detalle_atencion', atencion_id=atencion_id)
 
-    servicio = get_object_or_404(Servicio, pk=servicio_id, atencion_id=atencion_id)
+    servicio = get_object_or_404(
+        Servicio.objects.select_related('atencion'), pk=servicio_id, atencion_id=atencion_id
+    )
+    if not pvd_permitido(request, servicio.atencion.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para modificar servicios de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
 
     if servicio.estado == 'A':
         servicio.estado = 'F'
@@ -1118,7 +1164,11 @@ def editar_prestamo(request, prestamo_id):
         return redirect('modulo_puntos:registrar_recurso')
 
     pvd_id = request.session.get('pvd_activo_id')
-    prestamo = get_object_or_404(PrestamoRecurso, pk=prestamo_id)
+    prestamo = get_object_or_404(PrestamoRecurso.objects.select_related('recurso'), pk=prestamo_id)
+    recurso_pvd_id = prestamo.recurso.punto_vive_digital_id if prestamo.recurso else None
+    if not pvd_permitido(request, recurso_pvd_id):
+        messages.error(request, 'No tienes permiso para editar préstamos de otro PVD.')
+        return redirect('modulo_puntos:registrar_recurso')
     form = PrestamoRecursoForm(request.POST or None, instance=prestamo, pvd_id=pvd_id)
 
     if request.method == 'POST':
@@ -1148,7 +1198,11 @@ def devolver_prestamo(request, prestamo_id):
         return redirect('modulo_puntos:registrar_recurso')
 
     from django.utils import timezone
-    prestamo = get_object_or_404(PrestamoRecurso, pk=prestamo_id)
+    prestamo = get_object_or_404(PrestamoRecurso.objects.select_related('recurso'), pk=prestamo_id)
+    recurso_pvd_id = prestamo.recurso.punto_vive_digital_id if prestamo.recurso else None
+    if not pvd_permitido(request, recurso_pvd_id):
+        messages.error(request, 'No tienes permiso para modificar préstamos de otro PVD.')
+        return redirect('modulo_puntos:registrar_recurso')
     now = timezone.now()
 
     # Solo actuar si aún está en préstamo
@@ -1186,6 +1240,12 @@ def lista_prestamos_global(request):
     pvd_filter = request.GET.get('pvd_id', '').strip()
     estado     = request.GET.get('estado', '').strip()
 
+    if usuario_necesita_seleccionar_pvd(request.user):
+        # Admin PVD sólo ve préstamos de recursos de su PVD activo
+        prestamos = prestamos.filter(recurso__punto_vive_digital_id=obtener_pvd_activo_id(request))
+    elif pvd_filter:
+        prestamos = prestamos.filter(recurso__punto_vive_digital_id=pvd_filter)
+
     if q:
         prestamos = prestamos.filter(
             Q(ciudadano__primer_nombre__icontains=q)
@@ -1194,8 +1254,6 @@ def lista_prestamos_global(request):
             | Q(recurso__tipo__icontains=q)
             | Q(recurso__codigo__icontains=q)
         )
-    if pvd_filter:
-        prestamos = prestamos.filter(recurso__punto_vive_digital_id=pvd_filter)
     if estado == 'activo':
         prestamos = prestamos.filter(Q(fecha_devolucion__isnull=True) | Q(fecha_devolucion__gt=now))
     elif estado == 'devuelto':
@@ -1471,6 +1529,9 @@ def registrar_servicio(request, atencion_id=None):
         return redirect('modulo_puntos:panel_control')
 
     atencion = get_object_or_404(Atencion, pk=atencion_id) if atencion_id else None
+    if atencion and not pvd_permitido(request, atencion.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para registrar servicios en atenciones de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
 
     pvd_id = request.session.get('pvd_activo_id')
     if pvd_id:
@@ -1522,8 +1583,11 @@ def editar_servicio(request, servicio_id):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    servicio = get_object_or_404(Servicio, pk=servicio_id)
+    servicio = get_object_or_404(Servicio.objects.select_related('atencion'), pk=servicio_id)
     atencion = servicio.atencion
+    if not pvd_permitido(request, atencion.punto_vive_digital_id if atencion else None):
+        messages.error(request, 'No tienes permiso para editar servicios de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
 
     pvd_id = request.session.get('pvd_activo_id')
     if pvd_id:
@@ -1563,8 +1627,11 @@ def eliminar_servicio(request, servicio_id):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    servicio = get_object_or_404(Servicio, pk=servicio_id)
+    servicio = get_object_or_404(Servicio.objects.select_related('atencion'), pk=servicio_id)
     atencion_id = servicio.atencion_id
+    if not pvd_permitido(request, servicio.atencion.punto_vive_digital_id if servicio.atencion else None):
+        messages.error(request, 'No tienes permiso para eliminar servicios de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
 
     if request.method == 'POST':
         registrar_auditoria(request, 'DELETE', 'Servicio', servicio.pk,
@@ -1583,8 +1650,11 @@ def editar_satisfaccion(request, satisfaccion_id):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    satisfaccion = get_object_or_404(Satisfaccion, pk=satisfaccion_id)
+    satisfaccion = get_object_or_404(Satisfaccion.objects.select_related('atencion'), pk=satisfaccion_id)
     atencion = satisfaccion.atencion
+    if not pvd_permitido(request, atencion.punto_vive_digital_id if atencion else None):
+        messages.error(request, 'No tienes permiso para editar encuestas de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
 
     form = SatisfaccionForm(request.POST or None, instance=satisfaccion)
     form.fields['atencion'].widget = forms.HiddenInput()
@@ -1612,8 +1682,11 @@ def eliminar_satisfaccion(request, satisfaccion_id):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
 
-    satisfaccion = get_object_or_404(Satisfaccion, pk=satisfaccion_id)
+    satisfaccion = get_object_or_404(Satisfaccion.objects.select_related('atencion'), pk=satisfaccion_id)
     atencion_id = satisfaccion.atencion_id
+    if not pvd_permitido(request, satisfaccion.atencion.punto_vive_digital_id if satisfaccion.atencion else None):
+        messages.error(request, 'No tienes permiso para eliminar encuestas de otro PVD.')
+        return redirect('modulo_puntos:lista_atenciones')
 
     if request.method == 'POST':
         registrar_auditoria(request, 'DELETE', 'Satisfaccion', satisfaccion.pk, f'Satisfacción eliminada — Atención #{atencion_id}')
@@ -1665,6 +1738,9 @@ def editar_recurso(request, recurso_id):
         return redirect('modulo_puntos:panel_control')
 
     recurso = get_object_or_404(Recurso, pk=recurso_id)
+    if not pvd_permitido(request, recurso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para editar recursos de otro PVD.')
+        return redirect('modulo_puntos:registrar_recurso')
     form = RecursoForm(request.POST or None, instance=recurso)
 
     if request.method == 'POST':
@@ -1691,6 +1767,9 @@ def eliminar_recurso(request, recurso_id):
         return redirect('modulo_puntos:panel_control')
 
     recurso = get_object_or_404(Recurso, pk=recurso_id)
+    if not pvd_permitido(request, recurso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para eliminar recursos de otro PVD.')
+        return redirect('modulo_puntos:registrar_recurso')
 
     if request.method == 'POST':
         prestamos_activos = PrestamoRecurso.objects.filter(recurso=recurso, fecha_devolucion=None).count()
@@ -1772,8 +1851,12 @@ def exportar_atenciones_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     fecha_desde = request.GET.get('fecha_desde', '').strip()
     fecha_hasta = request.GET.get('fecha_hasta', '').strip()
@@ -1832,8 +1915,12 @@ def exportar_ciudadanos_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     headers = [
         'ID', 'Punto Vive Digital', 'Tipo Documento', 'Número Documento',
@@ -1882,8 +1969,12 @@ def exportar_servicios_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     fecha_desde = request.GET.get('fecha_desde', '').strip()
     fecha_hasta = request.GET.get('fecha_hasta', '').strip()
@@ -1935,8 +2026,12 @@ def exportar_satisfaccion_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     headers = [
         'ID', 'Punto Vive Digital', 'ID Atención', 'Fecha Atención', 'Estado Atención',
@@ -1988,8 +2083,12 @@ def exportar_prestamos_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     fecha_desde = request.GET.get('fecha_desde', '').strip()
     fecha_hasta = request.GET.get('fecha_hasta', '').strip()
@@ -2032,8 +2131,12 @@ def exportar_cursos_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     fecha_desde = request.GET.get('fecha_desde', '').strip()
     fecha_hasta = request.GET.get('fecha_hasta', '').strip()
@@ -2144,8 +2247,12 @@ def exportar_mantenimientos_csv(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    is_admin_pvd = request.user.groups.filter(name='Administrador PVD').exists()
-    pvd_id = request.session.get('pvd_activo_id') if is_admin_pvd else None
+    pvd_id = obtener_pvd_activo_id(request)
+    if usuario_necesita_seleccionar_pvd(request.user) and not pvd_id:
+        # Fail-closed: sin PVD activo, un Admin PVD no puede exportar
+        # (antes esto exportaba los datos de todos los PVD sin filtrar).
+        messages.warning(request, 'Selecciona un Punto Vive Digital antes de exportar.')
+        return redirect('modulo_puntos:seleccionar_pvd_view')
 
     fecha_desde_m = request.GET.get('fecha_desde', '').strip()
     fecha_hasta_m = request.GET.get('fecha_hasta', '').strip()
@@ -2323,7 +2430,7 @@ def crear_usuario_sistema(request):
 
             mensaje = (
                 f'{nombre_grupo} creado correctamente. '
-                f'Usuario generado: <strong>{user.username}</strong>'
+                f'Usuario generado: "{user.username}"'
             )
             if pvd_asignado:
                 mensaje += f'. Asignado al PVD "{pvd_asignado.nombre}".'
@@ -2698,6 +2805,9 @@ def editar_sala(request, sala_cdgo):
         return redirect('modulo_puntos:lista_salas')
 
     sala = get_object_or_404(Sala, pk=sala_cdgo)
+    if not pvd_permitido(request, sala.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para editar salas de otro PVD.')
+        return redirect('modulo_puntos:lista_salas')
     form = SalaForm(request.POST or None, instance=sala)
     if request.method == 'POST':
         if form.is_valid():
@@ -2727,6 +2837,9 @@ def activar_sala(request, sala_cdgo):
     if request.method != 'POST':
         return redirect('modulo_puntos:lista_salas')
     sala = get_object_or_404(Sala, pk=sala_cdgo)
+    if not pvd_permitido(request, sala.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para cambiar el estado de salas de otro PVD.')
+        return redirect('modulo_puntos:lista_salas')
     sala.estado = 'I' if sala.estado == 'A' else 'A'
     sala.save()
     estado_str = 'activada' if sala.estado == 'A' else 'desactivada'
@@ -3085,7 +3198,10 @@ def editar_habilitacion(request, hab_id):
         messages.error(request, 'No tienes permiso para editar habilitaciones.')
         return redirect('modulo_puntos:lista_habilitaciones')
 
-    hab = get_object_or_404(HabilitacionSala, pk=hab_id)
+    hab = get_object_or_404(HabilitacionSala.objects.select_related('sala'), pk=hab_id)
+    if not pvd_permitido(request, hab.sala.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para editar habilitaciones de otro PVD.')
+        return redirect('modulo_puntos:lista_habilitaciones')
 
     pvd_id = request.session.get('pvd_activo_id')
     form = HabilitacionSalaForm(request.POST or None, instance=hab, pvd_id=pvd_id)
@@ -3119,9 +3235,12 @@ def cancelar_habilitacion(request, hab_id):
         return redirect('modulo_puntos:lista_habilitaciones')
 
     try:
-        hab = HabilitacionSala.objects.get(pk=hab_id)
+        hab = HabilitacionSala.objects.select_related('sala').get(pk=hab_id)
     except HabilitacionSala.DoesNotExist:
         messages.warning(request, 'La habilitación ya no existe.')
+        return redirect('modulo_puntos:lista_habilitaciones')
+    if not pvd_permitido(request, hab.sala.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para cancelar habilitaciones de otro PVD.')
         return redirect('modulo_puntos:lista_habilitaciones')
 
     if request.method != 'POST':
@@ -3154,9 +3273,12 @@ def eliminar_habilitacion(request, hab_id):
         return redirect('modulo_puntos:lista_habilitaciones')
 
     try:
-        hab = HabilitacionSala.objects.get(pk=hab_id)
+        hab = HabilitacionSala.objects.select_related('sala').get(pk=hab_id)
     except HabilitacionSala.DoesNotExist:
         messages.warning(request, 'La habilitación ya no existe.')
+        return redirect('modulo_puntos:lista_habilitaciones')
+    if not pvd_permitido(request, hab.sala.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para eliminar habilitaciones de otro PVD.')
         return redirect('modulo_puntos:lista_habilitaciones')
     nombre_sala = hab.sala.nombre
     fecha = hab.fecha
@@ -3177,6 +3299,9 @@ def agenda_sala(request, sala_id):
         return redirect('modulo_puntos:panel_control')
 
     sala = get_object_or_404(Sala, pk=sala_id)
+    if not pvd_permitido(request, sala.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para ver la agenda de salas de otro PVD.')
+        return redirect('modulo_puntos:lista_salas')
 
     from datetime import date as dt_date, timedelta
     fecha_str = request.GET.get('fecha', '')
@@ -3315,6 +3440,9 @@ def editar_curso(request, curso_id):
         return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
+    if not pvd_permitido(request, curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para editar cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     form = CursoForm(request.POST or None, instance=curso)
 
     if request.method == 'POST':
@@ -3343,6 +3471,9 @@ def detalle_curso(request, curso_id):
         return redirect('modulo_puntos:panel_control')
 
     curso = get_object_or_404(Curso.objects.select_related('punto_vive_digital', 'registrado_por'), pk=curso_id)
+    if not pvd_permitido(request, curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para ver cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     sesiones = curso.sesiones.order_by('numero_sesion')
     inscripciones = curso.inscripciones.select_related('ciudadano').order_by('fecha_inscripcion')
 
@@ -3363,6 +3494,9 @@ def crear_sesion_curso(request, curso_id):
         return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
+    if not pvd_permitido(request, curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para gestionar sesiones de cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     ultimo_num = curso.sesiones.aggregate(max_n=Max('numero_sesion'))['max_n'] or 0
     form = SesionCursoForm(request.POST or None, initial={'numero_sesion': ultimo_num + 1})
 
@@ -3394,6 +3528,9 @@ def inscribir_ciudadano(request, curso_id):
         return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
+    if not pvd_permitido(request, curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para inscribir ciudadanos en cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     inscritos_ids = InscripcionCurso.objects.filter(curso=curso).values_list('ciudadano_id', flat=True)
     ciudadanos_disponibles = Ciudadano.objects.filter(estado='A').exclude(pk__in=inscritos_ids)
 
@@ -3429,6 +3566,9 @@ def marcar_asistencia(request, sesion_id):
         return redirect('modulo_puntos:lista_cursos')
 
     sesion = get_object_or_404(SesionCurso.objects.select_related('curso'), pk=sesion_id)
+    if not pvd_permitido(request, sesion.curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para registrar asistencia en cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     inscritos = InscripcionCurso.objects.filter(
         curso=sesion.curso, estado__in=['I', 'C']
     ).select_related('ciudadano')
@@ -3482,6 +3622,9 @@ def cambiar_estado_curso(request, curso_id):
         return redirect('modulo_puntos:lista_cursos')
 
     curso = get_object_or_404(Curso, pk=curso_id)
+    if not pvd_permitido(request, curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para cambiar el estado de cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     nuevo_estado = (request.POST.get('nuevo_estado') or request.POST.get('estado', '')).strip()
     estados_validos = {'PL', 'AC', 'FI', 'CA'}
     if nuevo_estado not in estados_validos:
@@ -3504,6 +3647,9 @@ def eliminar_curso(request, curso_id):
         messages.error(request, 'No tienes permiso para eliminar cursos.')
         return redirect('modulo_puntos:lista_cursos')
     curso = get_object_or_404(Curso, pk=curso_id)
+    if not pvd_permitido(request, curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para eliminar cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     if request.method == 'POST':
         nombre = curso.nombre
         registrar_auditoria(request, 'DELETE', 'Curso', curso.pk, f'Curso eliminado: {nombre}')
@@ -3521,8 +3667,11 @@ def eliminar_sesion_curso(request, sesion_id):
     if not tiene_permiso(request.user, 'cursos.sesiones'):
         messages.error(request, 'No tienes permiso para gestionar sesiones.')
         return redirect('modulo_puntos:lista_cursos')
-    sesion = get_object_or_404(SesionCurso, pk=sesion_id)
+    sesion = get_object_or_404(SesionCurso.objects.select_related('curso'), pk=sesion_id)
     curso_id = sesion.curso_id
+    if not pvd_permitido(request, sesion.curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para eliminar sesiones de cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     if request.method == 'POST':
         registrar_auditoria(request, 'DELETE', 'SesionCurso', sesion.pk,
                             f'Sesión {sesion.numero_sesion} eliminada del curso #{curso_id}')
@@ -3536,8 +3685,11 @@ def eliminar_inscripcion(request, inscripcion_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
-    inscripcion = get_object_or_404(InscripcionCurso, pk=inscripcion_id)
+    inscripcion = get_object_or_404(InscripcionCurso.objects.select_related('curso'), pk=inscripcion_id)
     curso_id = inscripcion.curso_id
+    if not pvd_permitido(request, inscripcion.curso.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para eliminar inscripciones de cursos de otro PVD.')
+        return redirect('modulo_puntos:lista_cursos')
     if request.method == 'POST':
         nombre = inscripcion.ciudadano.get_nombre_completo() if inscripcion.ciudadano else '—'
         registrar_auditoria(request, 'DELETE', 'InscripcionCurso', inscripcion.pk,
@@ -3659,11 +3811,9 @@ def editar_mantenimiento(request, mant_id):
         return redirect('modulo_puntos:lista_mantenimientos')
 
     mant = get_object_or_404(MantenimientoEquipo, pk=mant_id)
-    pvd_id = request.session.get('pvd_activo_id')
-    if pvd_id and not request.user.is_superuser and not usuario_es_admin_tic(request.user):
-        if mant.punto_vive_digital_id != pvd_id:
-            messages.error(request, 'No tienes permiso para editar mantenimientos de otro PVD.')
-            return redirect('modulo_puntos:lista_mantenimientos')
+    if not pvd_permitido(request, mant.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para editar mantenimientos de otro PVD.')
+        return redirect('modulo_puntos:lista_mantenimientos')
 
     form = MantenimientoEquipoForm(request.POST or None, instance=mant)
 
@@ -3694,6 +3844,9 @@ def eliminar_mantenimiento(request, mant_id):
         return redirect('modulo_puntos:lista_mantenimientos')
 
     mant = get_object_or_404(MantenimientoEquipo, pk=mant_id)
+    if not pvd_permitido(request, mant.punto_vive_digital_id):
+        messages.error(request, 'No tienes permiso para eliminar mantenimientos de otro PVD.')
+        return redirect('modulo_puntos:lista_mantenimientos')
 
     if request.method == 'POST':
         registrar_auditoria(request, 'DELETE', 'MantenimientoEquipo', mant.pk,

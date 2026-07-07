@@ -9,7 +9,8 @@ Limpia todos los datos y recarga con datos realistas para los dos PVDs:
 import io
 import os
 from datetime import date, time, timedelta, datetime
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User, Group
 from django.db import connection
 from django.utils import timezone
@@ -45,7 +46,33 @@ class Command(BaseCommand):
     def _titulo(self, msg):
         self.stdout.write(self.style.HTTP_INFO(f'\n>>> {msg}'))
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--yes', action='store_true',
+            help='Omite la confirmación interactiva (para uso en scripts).'
+        )
+
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError(
+                'Este comando borra y reemplaza datos reales (ciudadanos, atenciones, '
+                'usuarios de demo con contraseñas conocidas). Sólo puede ejecutarse con '
+                'DJANGO_DEBUG=True. Abortado.'
+            )
+
+        db_name = connection.settings_dict.get('NAME')
+        db_host = connection.settings_dict.get('HOST')
+        if not options['yes']:
+            self.stdout.write(self.style.WARNING(
+                f'\nEste comando BORRARÁ los datos existentes de ciudadanos, atenciones, '
+                f'recursos, cursos, etc. en la base de datos "{db_name}" ({db_host}) y '
+                f'los reemplazará con datos de demostración (incluye usuarios con '
+                f'contraseñas conocidas de prueba).\n'
+            ))
+            respuesta = input(f'Escribe el nombre de la base de datos ("{db_name}") para confirmar: ').strip()
+            if respuesta != db_name:
+                raise CommandError('Confirmación no coincide. Abortado.')
+
         self.stdout.write(self.style.WARNING(
             '\n==========================================\n'
             '  SEED DEMO - Puntos Vive Digital\n'

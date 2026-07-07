@@ -45,21 +45,23 @@ def registrar_auditoria(request, accion, modelo_afectado=None, objeto_id=None, d
 
 def get_client_ip(request):
     """
-    Obtiene la IP real del cliente.
-    
-    Primero intenta obtener la IP de los encabezados X-Forwarded-For
-    (útil cuando hay proxies/load balancers), y si no, usa REMOTE_ADDR.
-    
+    Obtiene la IP real del cliente para fines de auditoría.
+
+    X-Forwarded-For puede traer varias IPs separadas por comas
+    (cliente, proxy1, proxy2, ...). El cliente puede escribir libremente
+    cualquier valor al principio de esa cabecera, así que sólo el último
+    segmento -el que agrega nuestro propio proxy inverso- es confiable.
+    Si no hay proxy delante (desarrollo local), se usa REMOTE_ADDR.
+
     Args:
         request: HttpRequest object
-        
+
     Returns:
         str: Dirección IP del cliente
     """
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
-        # X-Forwarded-For puede tener múltiples IPs separadas por comas
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(',')[-1].strip()
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip

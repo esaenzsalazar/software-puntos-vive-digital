@@ -5,6 +5,7 @@ Contract CD-224-2026 - Alcaldía de Bugalagrande
 """
 import re
 import unicodedata
+from PIL import Image
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -234,7 +235,8 @@ class CiudadanoForm(forms.ModelForm):
             'fecha_nacimiento', 'correo', 'telefono', 'genero',
             'direccion', 'municipio', 'barrio', 'zona_rural',
             'etnia', 'nivel_educativo', 'ocupacion', 'estrato',
-            'tiene_discapacidad', 'descripcion_discapacidad', 'estado'
+            'tiene_discapacidad', 'descripcion_discapacidad', 'estado',
+            'autorizacion_datos',
         ]
         labels = {
             'tipo_documento': 'Tipo de Documento',
@@ -258,6 +260,13 @@ class CiudadanoForm(forms.ModelForm):
             'tiene_discapacidad': '¿Tiene alguna discapacidad?',
             'descripcion_discapacidad': '¿Cuál discapacidad? (Descríbala)',
             'estado': 'Estado en el Sistema',
+            'autorizacion_datos': (
+                'Autorizo a la Alcaldía de Bugalagrande el tratamiento de mis datos '
+                'personales (incluyendo datos sensibles como discapacidad o pertenencia '
+                'étnica, cuando aplique) conforme a la Ley 1581 de 2012 y el Decreto '
+                '1377 de 2013, con el fin de gestionar mi atención y los servicios del '
+                'Punto Vive Digital.'
+            ),
         }
         widgets = {
             'tipo_documento': forms.Select(
@@ -331,6 +340,9 @@ class CiudadanoForm(forms.ModelForm):
             'tiene_discapacidad': forms.CheckboxInput(
                 attrs={'class': 'form-check-input', 'id': 'id_check_discapacidad'}
             ),
+            'autorizacion_datos': forms.CheckboxInput(
+                attrs={'class': 'form-check-input', 'id': 'id_autorizacion_datos'}
+            ),
             'descripcion_discapacidad': forms.TextInput(
                 attrs={
                     'class': 'form-control',
@@ -358,6 +370,9 @@ class CiudadanoForm(forms.ModelForm):
         self.fields['telefono'].required = False
         self.fields['tiene_discapacidad'].required = False
         self.fields['descripcion_discapacidad'].required = False
+        # La autorización de datos es obligatoria salvo al editar un registro ya existente
+        # (el ciudadano ya autorizó en su momento; no se le vuelve a exigir al modificar sus datos).
+        self.fields['autorizacion_datos'].required = not self.instance.pk
 
     def clean_numero_documento(self):
         """Valida que el número de documento no esté duplicado."""
@@ -1532,9 +1547,16 @@ class EvidenciaForm(forms.ModelForm):
         # Tamaño máximo: 5 MB
         if imagen.size > 5 * 1024 * 1024:
             raise forms.ValidationError('La imagen no puede superar los 5 MB.')
-        # Tipos permitidos
-        tipos_permitidos = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
-        if hasattr(imagen, 'content_type') and imagen.content_type not in tipos_permitidos:
+        # Formato real del archivo (no el content-type declarado por el
+        # navegador, que cualquier cliente puede falsificar).
+        formatos_permitidos = {'JPEG', 'PNG', 'WEBP', 'GIF'}
+        try:
+            imagen.seek(0)
+            formato = Image.open(imagen).format
+            imagen.seek(0)
+        except Exception:
+            raise forms.ValidationError('El archivo no es una imagen válida.')
+        if formato not in formatos_permitidos:
             raise forms.ValidationError('Formato no permitido. Usa JPG, PNG, WEBP o GIF.')
         return imagen
 

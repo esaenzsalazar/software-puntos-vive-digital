@@ -221,6 +221,22 @@
                         {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: -10px; margin-bottom: 10px;">{{ field.errors.0 }}</span>{% endif %}
                     </div>
 
+                {% elif field.name == 'autorizacion_datos' %}
+                    <div class="span-full" style="background: #f8fafc; padding: 16px 18px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 6px;">
+                        <p style="font-size: 13px; color: #475569; margin: 0 0 10px;">
+                            <strong>Tratamiento de datos personales (Ley 1581 de 2012):</strong>
+                            confirma que el ciudadano fue informado de que la Alcaldía de Bugalagrande
+                            usará sus datos, incluidos los sensibles (discapacidad, pertenencia étnica)
+                            cuando apliquen, únicamente para gestionar su atención y los servicios del
+                            Punto Vive Digital.
+                        </p>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; margin: 0;">
+                            {{ field }}
+                            <span>{{ field.label }}</span>
+                        </label>
+                        {% if field.errors %}<span style="color: #991b1b; font-size: 13px; display: block; margin-top: 6px;">{{ field.errors.0 }}</span>{% endif %}
+                    </div>
+
                 {% else %}
                     <div>
                         <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:red;">*</span>{% endif %}</label>

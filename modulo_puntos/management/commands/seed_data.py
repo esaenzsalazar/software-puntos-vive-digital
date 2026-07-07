@@ -3,7 +3,8 @@ Comando: python manage.py seed_data
 Crea datos de prueba completos para todas las funciones del sistema PVD.
 """
 from datetime import date, time, timedelta, datetime
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
 
@@ -22,6 +23,13 @@ class Command(BaseCommand):
     help = 'Crea datos de prueba para todas las funciones del sistema'
 
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError(
+                'Este comando crea usuarios con contraseñas de prueba conocidas '
+                '(admin/admin, Tic2026!, Pvd2026!). Sólo puede ejecutarse con '
+                'DJANGO_DEBUG=True. Abortado.'
+            )
+
         self.stdout.write('\n================================================')
         self.stdout.write(  '         SEMILLA DE DATOS DE PRUEBA             ')
         self.stdout.write(  '================================================\n')

@@ -146,6 +146,7 @@ La carpeta `docs/` contiene:
 - `MANUAL_USUARIO.md` — manual de uso por rol
 - `DOCUMENTACION_BASE_DE_DATOS.md` — esquema y relaciones de la BD
 - `ESTRUCTURA_BASE_DE_DATOS.md` — detalle de cada tabla
+- `RESPALDOS.md` — estrategia de respaldo y restauración de la base de datos
 
 ---
 

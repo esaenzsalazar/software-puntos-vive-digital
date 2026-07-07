@@ -96,11 +96,14 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
+        # Sin defaults reales: en desarrollo se definen en tu .env local;
+        # en producción, si faltan, es preferible que falle a que conecte
+        # silenciosamente al host equivocado.
         'NAME': os.getenv('DB_NAME', 'modeladobd'),
-        'USER': os.getenv('DB_USER', 'avnadmin'),
+        'USER': os.getenv('DB_USER', 'root'),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', 'mysql-3bb67bf0-alcaldiaesteban-d1bc.k.aivencloud.com'),
-        'PORT': os.getenv('DB_PORT', '27827'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         # Aiven activa ANSI_QUOTES + ONLY_FULL_GROUP_BY a nivel de servidor;
         # init_command los sobreescribe por sesión con un modo compatible con Django.
         'OPTIONS': {

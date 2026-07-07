@@ -78,6 +78,11 @@ class Ciudadano(models.Model):
     correo = models.CharField(max_length=128, default='', blank=True, verbose_name='Correo Electrónico')
     telefono = models.CharField(max_length=32, null=True, blank=True, verbose_name='Teléfono')
     fecha_registro = models.DateTimeField(auto_now_add=True, null=True, verbose_name='Fecha de Registro')
+    autorizacion_datos = models.BooleanField(
+        default=False,
+        verbose_name='Autorización de tratamiento de datos personales',
+        help_text='Autorización conforme a la Ley 1581 de 2012 (Habeas Data).',
+    )
 
     class Meta:
         app_label = 'modulo_puntos_app'

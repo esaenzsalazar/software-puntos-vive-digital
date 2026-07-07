@@ -13,8 +13,9 @@ Uso:
     python manage.py seed_pvd_inicial
 """
 
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 
 from modulo_puntos.models import (
@@ -67,7 +68,30 @@ class Command(BaseCommand):
         self.stdout.write(self.style.HTTP_INFO(f'\n>>> {msg}'))
 
     # ── entry point ─────────────────────────────────────────────────────────
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--yes', action='store_true',
+            help='Omite la confirmación interactiva (para uso en scripts).'
+        )
+
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError(
+                'Este comando borra todas las tablas de la app (ciudadanos, atenciones, '
+                'recursos, etc.). Sólo puede ejecutarse con DJANGO_DEBUG=True. Abortado.'
+            )
+
+        db_name = connection.settings_dict.get('NAME')
+        db_host = connection.settings_dict.get('HOST')
+        if not options['yes']:
+            self.stdout.write(self.style.WARNING(
+                f'\nEste comando BORRARÁ TODOS los datos de la aplicación en la base '
+                f'de datos "{db_name}" ({db_host}) (conserva superusuarios y tablas auth).\n'
+            ))
+            respuesta = input(f'Escribe el nombre de la base de datos ("{db_name}") para confirmar: ').strip()
+            if respuesta != db_name:
+                raise CommandError('Confirmación no coincide. Abortado.')
+
         self.stdout.write(self.style.WARNING(
             '\n================================================\n'
             '  SEED PVD INICIAL – Puntos Vive Digital\n'

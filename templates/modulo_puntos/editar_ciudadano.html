@@ -282,6 +282,24 @@
             </div>
         </fieldset>
 
+        <fieldset style="margin-bottom: 20px;">
+            <legend style="font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--p-border);">
+                Tratamiento de datos personales
+            </legend>
+            <div style="background: #f8fafc; padding: 16px 18px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <p style="font-size: 13px; color: #475569; margin: 0 0 10px;">
+                    Conforme a la Ley 1581 de 2012 (Habeas Data). Si el ciudadano fue registrado
+                    antes de este control o aún no ha autorizado el tratamiento de sus datos,
+                    confírmalo aquí una vez lo informe verbalmente.
+                </p>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; margin: 0;">
+                    {{ form.autorizacion_datos }}
+                    <span>{{ form.autorizacion_datos.label }}</span>
+                </label>
+                {% if form.autorizacion_datos.errors %}<div class="form-error">{{ form.autorizacion_datos.errors }}</div>{% endif %}
+            </div>
+        </fieldset>
+
         <div class="actions">
             <button type="submit" class="btn">Guardar cambios</button>
         </div>

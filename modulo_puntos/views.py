@@ -1,8 +1,10 @@
 import logging
+import mimetypes
 from io import BytesIO
 from django import forms
 from datetime import datetime, date as date_type, time as time_type
-from django.http import HttpResponse, JsonResponse
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -113,11 +115,6 @@ def exigir_pvd_activo_para_admin_pvd(request):
 
 
 # ── AUTENTICACIÓN ──────────────────────────────────────────────────────────────
-
-def inicio(request):
-    if request.user.is_authenticated:
-        return redirect('modulo_puntos:panel_control')
-    return redirect('modulo_puntos:login')
 
 
 _LOGIN_MAX_INTENTOS = 5
@@ -369,21 +366,6 @@ def seleccionar_pvd(request, pvd_cdgo):
     request.session['pvd_nombre'] = pvd.nombre
     messages.success(request, f'Trabajando en: {pvd.nombre}')
     return redirect('modulo_puntos:panel_control')
-
-
-@login_required(login_url='/login/')
-def inicio_pvd(request):
-    pvd_id = request.session.get('pvd_activo_id')
-    pvd = None
-    context = {}
-    if pvd_id:
-        pvd = PuntoViveDigital.objects.filter(pk=pvd_id, estado='A').first()
-    if pvd:
-        context['total_ciudadanos'] = Ciudadano.objects.filter(punto_vive_digital=pvd).count()
-        context['total_atenciones'] = Atencion.objects.filter(punto_vive_digital=pvd).count()
-        context['total_salas'] = Sala.objects.filter(punto_vive_digital=pvd).count()
-    context['pvd'] = pvd
-    return render(request, 'modulo_puntos/inicio_pvd.html', context)
 
 
 # ── GESTIÓN DE CIUDADANOS ──────────────────────────────────────────────────────
@@ -1280,6 +1262,7 @@ def lista_recursos(request):
 
     from django.db.models import Prefetch
     from django.utils import timezone
+    from itertools import groupby
 
     now = timezone.now()
 
@@ -1289,18 +1272,29 @@ def lista_recursos(request):
         and request.user.groups.filter(name='Administrador PVD').exists()
     )
 
+    # Admin PVD solo ve su propio punto; Superusuario/Admin TIC ven todos los
+    # PVD a la vez, así que para ellos se muestra a qué PVD pertenece cada recurso.
+    mostrar_pvd_por_recurso = not es_admin_pvd_solo
+
     recursos_qs = Recurso.objects.all()
     if es_admin_pvd_solo:
         recursos_qs = recursos_qs.filter(punto_vive_digital_id=pvd_id) if pvd_id else recursos_qs.none()
 
     tipo_filter = request.GET.get('tipo', '').strip()
     q_filter = request.GET.get('q', '').strip()
+    pvd_filter = request.GET.get('pvd_id', '').strip() if mostrar_pvd_por_recurso else ''
 
     tipos_disponibles = sorted(recursos_qs.values_list('tipo', flat=True).distinct())
+    pvds_disponibles = (
+        PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+        if mostrar_pvd_por_recurso else []
+    )
 
     display_qs = recursos_qs
     if tipo_filter:
         display_qs = display_qs.filter(tipo=tipo_filter)
+    if pvd_filter:
+        display_qs = display_qs.filter(punto_vive_digital_id=pvd_filter)
     if q_filter:
         display_qs = display_qs.filter(
             Q(tipo__icontains=q_filter) | Q(codigo__icontains=q_filter)
@@ -1308,13 +1302,14 @@ def lista_recursos(request):
 
     recursos = list(
         display_qs
+          .select_related('punto_vive_digital')
           .annotate(total_prestamos=Count('prestamorecurso'))
           .prefetch_related(
               Prefetch('prestamorecurso_set',
                        queryset=PrestamoRecurso.objects.order_by('-fecha_entrega'),
                        to_attr='todos_los_prestamos')
           )
-          .order_by('tipo')
+          .order_by('tipo', 'punto_vive_digital__nombre', 'codigo')
     )
 
     for recurso in recursos:
@@ -1327,19 +1322,37 @@ def lista_recursos(request):
     disponibles_count = len(recursos) - prestados_count
 
     total_filtrados = len(recursos)
-    paginator = Paginator(recursos, 20)
+    # Página grande: cada tarjeta ahora es compacta y se agrupan por tipo,
+    # así un mismo tipo (ej. "Portátil") no queda partido entre dos páginas.
+    paginator = Paginator(recursos, 200)
     page = request.GET.get('page')
     recursos_page = paginator.get_page(page)
 
+    grupos = []
+    for tipo, items in groupby(recursos_page, key=lambda r: r.tipo):
+        items = list(items)
+        grupos.append({
+            'tipo': tipo,
+            'items': items,
+            'total': len(items),
+            'disponibles': sum(1 for r in items if not r.prestado_ahora),
+            'prestados': sum(1 for r in items if r.prestado_ahora),
+        })
+
     return render(request, 'modulo_puntos/lista_recursos.html', {
         'recursos': recursos_page,
+        'grupos': grupos,
         'pvd': pvd,
+        'mostrar_pvd_por_recurso': mostrar_pvd_por_recurso,
         'total_recursos': total_filtrados,
         'prestados_count': prestados_count,
         'disponibles_count': disponibles_count,
         'tipos_disponibles': tipos_disponibles,
         'tipo_filter': tipo_filter,
         'q_filter': q_filter,
+        'pvds_disponibles': pvds_disponibles,
+        'pvd_filter': pvd_filter,
+        'puede_eliminar_recursos': tiene_permiso(request.user, 'inventario.eliminar_recurso'),
     })
 
 
@@ -1755,6 +1768,9 @@ def eliminar_recurso(request, recurso_id):
     if not usuario_puede_usar_modulos_pvd(request.user):
         messages.error(request, 'No tienes permisos.')
         return redirect('modulo_puntos:panel_control')
+    if not tiene_permiso(request.user, 'inventario.eliminar_recurso'):
+        messages.error(request, 'No tienes permiso para eliminar recursos del inventario.')
+        return redirect('modulo_puntos:registrar_recurso')
 
     recurso = get_object_or_404(Recurso, pk=recurso_id)
     if not pvd_permitido(request, recurso.punto_vive_digital_id):
@@ -2362,6 +2378,32 @@ def crear_evidencia(request):
 def eliminar_evidencia(request, evidencia_id):
     messages.error(request, 'Las evidencias no pueden ser eliminadas. Contacta al Administrador TIC si necesitas gestionar esta evidencia.')
     return redirect('modulo_puntos:lista_evidencias')
+
+
+@login_required(login_url='/login/')
+def servir_evidencia(request, evidencia_id):
+    """
+    Sirve la imagen de una Evidencia solo a usuarios con sesión iniciada
+    (y con permiso sobre el PVD dueño de la evidencia). El archivo en sí
+    vive fuera del alcance público: en producción Nginx no expone /media/
+    directamente, así que este es el único camino para verlo.
+    """
+    if not usuario_puede_usar_modulos_pvd(request.user):
+        raise Http404
+    evidencia = get_object_or_404(Evidencia, pk=evidencia_id)
+    if not pvd_permitido(request, evidencia.punto_vive_digital_id):
+        raise Http404
+    if not evidencia.imagen:
+        raise Http404
+
+    content_type = mimetypes.guess_type(evidencia.imagen.name)[0] or 'application/octet-stream'
+
+    if settings.DEBUG:
+        return FileResponse(evidencia.imagen.open('rb'), content_type=content_type)
+
+    response = HttpResponse(content_type=content_type)
+    response['X-Accel-Redirect'] = f'/protected-media/{evidencia.imagen.name}'
+    return response
 
 
 # ── AYUDA ──────────────────────────────────────────────────────────────────────
@@ -3151,6 +3193,8 @@ def crear_habilitacion(request):
         initial['sala'] = sala_inicial
     if fecha_inicial:
         initial['fecha'] = fecha_inicial
+    if atencion_origen and atencion_origen.ciudadano_id:
+        initial['solicitante'] = atencion_origen.ciudadano_id
 
     form = HabilitacionSalaForm(
         request.POST or None,
@@ -3163,6 +3207,7 @@ def crear_habilitacion(request):
             hab = form.save(commit=False)
             hab.registrado_por = request.user
             hab.save()
+            form.save_m2m()
             registrar_auditoria(
                 request, 'CREATE', 'HabilitacionSala', hab.pk,
                 f'Habilitación creada: {hab.sala.nombre} – {hab.fecha}'

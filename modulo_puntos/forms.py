@@ -202,8 +202,7 @@ TIPO_RECURSO_CHOICES = [
     ('Portátil', 'Portátil'),
     ('Video Beam', 'Video Beam'),
     ('Televisor', 'Televisor'),
-    ('Impresora Láser', 'Impresora Láser'),
-    ('Impresora de Inyección', 'Impresora de Inyección'),
+    ('Impresora', 'Impresora'),
     ('Computador de Mesa', 'Computador de Mesa'),
     ('__otro__', 'Otro...'),
 ]
@@ -751,8 +750,7 @@ class RecursoForm(forms.ModelForm):
         self.fields['estado'].initial = 'A'
 
         # Tipos base siempre presentes
-        base = ['Portátil', 'Video Beam', 'Televisor', 'Impresora Láser',
-                'Impresora de Inyección', 'Computador de Mesa']
+        base = ['Portátil', 'Video Beam', 'Televisor', 'Impresora', 'Computador de Mesa']
         # Tipos guardados en BD (incluye los creados con "Otro")
         from .models import Recurso as RecursoModel
         db_tipos = list(RecursoModel.objects.values_list('tipo', flat=True).distinct())
@@ -1335,7 +1333,7 @@ class HabilitacionSalaForm(forms.ModelForm):
             'sala', 'tipo_uso', 'fecha',
             'hora_inicio', 'hora_fin',
             'solicitante', 'proposito',
-            'capacidad_requerida', 'estado', 'observaciones',
+            'capacidad_requerida', 'asistentes', 'estado', 'observaciones',
         ]
         labels = {
             'sala': 'Sala',
@@ -1346,6 +1344,7 @@ class HabilitacionSalaForm(forms.ModelForm):
             'solicitante': 'Solicitante / Grupo',
             'proposito': 'Propósito / Descripción',
             'capacidad_requerida': 'Personas Esperadas',
+            'asistentes': 'Personas que ingresarán',
             'estado': 'Estado',
             'observaciones': 'Observaciones',
         }
@@ -1364,15 +1363,14 @@ class HabilitacionSalaForm(forms.ModelForm):
                 format='%H:%M',
                 attrs={'class': 'form-control', 'type': 'time'}
             ),
-            'solicitante': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Ej: Grupo comunitario, Empresa XYZ, Ciudadano'}
-            ),
+            'solicitante': forms.Select(attrs={'class': 'form-control'}),
             'proposito': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe el propósito de uso de la sala...'}
             ),
             'capacidad_requerida': forms.NumberInput(
                 attrs={'class': 'form-control', 'min': '1', 'placeholder': 'N.º de personas'}
             ),
+            'asistentes': forms.SelectMultiple(attrs={'class': 'form-control'}),
             'estado': forms.Select(
                 choices=[('P', 'Pendiente'), ('C', 'Confirmada'), ('E', 'En curso'), ('F', 'Finalizada'), ('X', 'Cancelada')],
                 attrs={'class': 'form-control'}
@@ -1386,6 +1384,7 @@ class HabilitacionSalaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['proposito'].required = False
         self.fields['capacidad_requerida'].required = False
+        self.fields['asistentes'].required = False
         self.fields['observaciones'].required = False
         self.fields['sala'].empty_label = '--- Seleccione una sala ---'
         if pvd_id:
@@ -1396,6 +1395,13 @@ class HabilitacionSalaForm(forms.ModelForm):
             self.fields['sala'].queryset = Sala.objects.filter(estado='A').order_by(
                 'punto_vive_digital__nombre', 'nombre'
             )
+        # Los ciudadanos son una población compartida entre PVDs (ver registro
+        # de atenciones): cualquier ciudadano activo puede solicitar o asistir
+        # a una sala en cualquier PVD.
+        ciudadanos_activos = Ciudadano.objects.filter(estado='A').order_by('primer_apellido', 'primer_nombre')
+        self.fields['solicitante'].queryset = ciudadanos_activos
+        self.fields['solicitante'].empty_label = '--- Seleccione un ciudadano ---'
+        self.fields['asistentes'].queryset = ciudadanos_activos
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1429,6 +1435,18 @@ class HabilitacionSalaForm(forms.ModelForm):
                     f'{c.hora_inicio.strftime("%H:%M")} a {c.hora_fin.strftime("%H:%M")} '
                     f'en esa fecha ({c.get_tipo_uso_display()} — {c.solicitante}).'
                 )
+
+        capacidad = cleaned_data.get('capacidad_requerida')
+        asistentes = cleaned_data.get('asistentes')
+        if capacidad:
+            n = asistentes.count() if asistentes is not None else 0
+            if n != capacidad:
+                self.add_error(
+                    'asistentes',
+                    f'Se esperan {capacidad} persona(s) — llevas {n} registrada(s). '
+                    f'Debes registrar exactamente las {capacidad} personas que ingresarán.'
+                )
+        return cleaned_data
 
 
 # ==============================================================================

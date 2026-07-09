@@ -1189,6 +1189,55 @@ input[type="radio"] {
 
 a.badge:hover { filter: brightness(0.96); }
 
+.badge--neutral { background: var(--p-surface-muted); color: var(--p-text-secondary); border: 1px solid var(--p-border); }
+
+/* ============================================================
+   INVENTARIO DE RECURSOS (agrupado por tipo)
+   ============================================================ */
+.recursos-grupo {
+    margin-bottom: 28px;
+}
+
+.recursos-grupo--last {
+    margin-bottom: 0;
+}
+
+.recursos-grupo__header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--p-border);
+}
+
+.recursos-grupo__header h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--p-text);
+    letter-spacing: -0.01em;
+}
+
+.recursos-grupo__resumen {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.recursos-grupo__codigo {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--p-text);
+}
+
+.recursos-grupo .table tbody tr.is-inactivo {
+    opacity: 0.6;
+}
+
 /* ============================================================
    BÚSQUEDA / TOOLBAR
    ============================================================ */

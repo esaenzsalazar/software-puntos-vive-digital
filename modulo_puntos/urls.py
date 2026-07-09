@@ -168,6 +168,7 @@ urlpatterns = [
     path('evidencias/nueva/', views.crear_evidencia, name='crear_evidencia'),
     path('evidencias/<int:evidencia_id>/editar/', views.editar_evidencia, name='editar_evidencia'),
     path('evidencias/<int:evidencia_id>/eliminar/', views.eliminar_evidencia, name='eliminar_evidencia'),
+    path('evidencias/<int:evidencia_id>/imagen/', views.servir_evidencia, name='servir_evidencia'),
 
     # ==========================================================================
     # ==========================================================================

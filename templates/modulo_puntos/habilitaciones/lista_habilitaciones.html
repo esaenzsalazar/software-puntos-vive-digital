@@ -92,7 +92,7 @@
                         <br><small class="muted">{{ hab.duracion_horas }}h</small>
                     </td>
                     <td>
-                        {{ hab.solicitante }}
+                        {{ hab.solicitante.get_nombre_completo }}
                         {% if hab.proposito %}
                             <br><small class="muted">{{ hab.proposito|truncatechars:40 }}</small>
                         {% endif %}

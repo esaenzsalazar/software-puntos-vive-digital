@@ -556,9 +556,17 @@ class HabilitacionSala(models.Model):
     fecha = models.DateField(verbose_name='Fecha')
     hora_inicio = models.TimeField(verbose_name='Hora de Inicio')
     hora_fin = models.TimeField(verbose_name='Hora de Fin')
-    solicitante = models.CharField(max_length=128, verbose_name='Solicitante / Grupo')
+    solicitante = models.ForeignKey(
+        'Ciudadano', on_delete=models.PROTECT,
+        related_name='habilitaciones_solicitadas', verbose_name='Solicitante / Grupo',
+        help_text='Ciudadano responsable de la reserva.',
+    )
     proposito = models.TextField(blank=True, null=True, verbose_name='Propósito / Descripción')
     capacidad_requerida = models.IntegerField(null=True, blank=True, verbose_name='Personas Esperadas')
+    asistentes = models.ManyToManyField(
+        'Ciudadano', blank=True,
+        related_name='habilitaciones_asistidas', verbose_name='Personas que ingresarán',
+    )
     estado = models.CharField(max_length=1, default='P', choices=ESTADO_CHOICES, verbose_name='Estado')
     registrado_por = models.ForeignKey(
         'auth.User', on_delete=models.SET_NULL, null=True, blank=True,

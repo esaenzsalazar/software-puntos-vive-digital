@@ -52,93 +52,88 @@
             {% endfor %}
         </select>
     </div>
+    {% if mostrar_pvd_por_recurso %}
+    <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Punto Vive Digital</label>
+        <select name="pvd_id" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:200px;background:white;">
+            <option value="">Todos los PVD</option>
+            {% for punto in pvds_disponibles %}
+                <option value="{{ punto.id }}" {% if pvd_filter == punto.id|stringformat:"s" %}selected{% endif %}>{{ punto.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
     <button type="submit" class="btn btn--sm">Filtrar</button>
-    {% if q_filter or tipo_filter %}
+    {% if q_filter or tipo_filter or pvd_filter %}
     <a href="{% url 'modulo_puntos:registrar_recurso' %}" class="btn btn-secondary btn--sm">✕ Limpiar</a>
     {% endif %}
 </form>
 
-{# ── Bloques por recurso ── #}
-{% for recurso in recursos %}
-<div class="card recurso-card" data-tipo="{{ recurso.tipo }}" style="margin-bottom:20px;">
-
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <div>
-            <h3 style="margin:0; font-size:17px; font-weight:700; color:#1e293b;">
-                {{ recurso.tipo }}
-                {% if recurso.codigo %}
-                    <span style="font-size:13px;font-weight:500;color:#64748b;margin-left:6px;">[{{ recurso.codigo }}]</span>
-                {% endif %}
-            </h3>
-            <span style="font-size:12px; color:#64748b;">
-                {{ recurso.total_prestamos }} préstamo{{ recurso.total_prestamos|pluralize:"s" }} en total
-            </span>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <a href="{% url 'modulo_puntos:editar_recurso' recurso.pk %}" class="btn btn-secondary btn--sm">✏️ Editar</a>
-            <form method="POST" action="{% url 'modulo_puntos:eliminar_recurso' recurso.pk %}" style="margin:0;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
-                        data-confirm="¿Eliminar el recurso «{{ recurso.tipo }}»? Solo es posible si no tiene préstamos activos.">🗑️ Eliminar</button>
-            </form>
-            {% if recurso.estado == 'A' %}
-                <span class="badge badge--success">Activo</span>
-            {% else %}
-                <span class="badge" style="background:#f1f5f9;color:#475569;">Inactivo</span>
-            {% endif %}
-            {% if recurso.prestado_ahora %}
-                <span class="badge" style="background:#fef9c3;color:#854d0e;border:1px solid #fde047;">Prestado ahora</span>
-            {% else %}
-                <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">Disponible</span>
-            {% endif %}
+{# ── Recursos agrupados por tipo (ej. todos los "Portátil" juntos) ── #}
+<div class="card">
+{% for grupo in grupos %}
+<div class="recursos-grupo{% if forloop.last %} recursos-grupo--last{% endif %}">
+    <div class="recursos-grupo__header">
+        <h2>{{ grupo.tipo }}</h2>
+        <span class="badge badge--neutral">{{ grupo.total }} equipo{{ grupo.total|pluralize:"s" }}</span>
+        <div class="recursos-grupo__resumen">
+            {% if grupo.disponibles %}<span class="badge badge--success">{{ grupo.disponibles }} disponible{{ grupo.disponibles|pluralize:"s" }}</span>{% endif %}
+            {% if grupo.prestados %}<span class="badge badge--warning">{{ grupo.prestados }} prestado{{ grupo.prestados|pluralize:"s" }}</span>{% endif %}
         </div>
     </div>
 
-    {% if recurso.todos_los_prestamos %}
     <div class="table-responsive">
         <table class="table table-striped" style="margin:0;">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Fecha de entrega</th>
-                    <th>Devolución programada</th>
-                    <th>Estado</th>
-                    <th>Observaciones</th>
-                    <th class="text-center">Acciones</th>
+                    <th style="width:1%;">Código</th>
+                    {% if mostrar_pvd_por_recurso %}<th>Punto Vive Digital</th>{% endif %}
+                    <th style="width:1%;">Estado</th>
+                    <th style="width:1%;">Préstamos</th>
+                    <th class="text-center" style="width:1%;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                {% for prestamo in recurso.todos_los_prestamos %}
-                <tr>
-                    <td style="color:#94a3b8;font-size:12px;">{{ forloop.revcounter }}</td>
-                    <td>{{ prestamo.fecha_entrega|date:"d/m/Y H:i" }}</td>
+                {% for recurso in grupo.items %}
+                <tr class="{% if recurso.estado != 'A' %}is-inactivo{% endif %}">
+                    <td class="recursos-grupo__codigo">
+                        {% if recurso.codigo %}{{ recurso.codigo }}{% else %}<span class="muted">Sin código</span>{% endif %}
+                    </td>
+                    {% if mostrar_pvd_por_recurso %}
                     <td>
-                        {% if prestamo.fecha_devolucion %}
-                            {{ prestamo.fecha_devolucion|date:"d/m/Y H:i" }}
+                        {% if recurso.punto_vive_digital %}{{ recurso.punto_vive_digital.nombre }}{% else %}<span class="muted">Sin PVD asignado</span>{% endif %}
+                    </td>
+                    {% endif %}
+                    <td>
+                        {% if recurso.estado == 'A' %}
+                            {% if recurso.prestado_ahora %}
+                                <span class="badge badge--warning">Prestado</span>
+                            {% else %}
+                                <span class="badge badge--success">Disponible</span>
+                            {% endif %}
                         {% else %}
-                            <span class="muted">No registrada</span>
+                            <span class="badge badge--neutral">Inactivo</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if prestamo.ya_devuelto %}
-                            <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">Devuelto</span>
+                        {% if recurso.total_prestamos %}
+                            {% if recurso.codigo %}
+                                <a href="{% url 'modulo_puntos:lista_prestamos_global' %}?q={{ recurso.codigo }}">{{ recurso.total_prestamos }}</a>
+                            {% else %}
+                                {{ recurso.total_prestamos }}
+                            {% endif %}
                         {% else %}
-                            <span class="badge" style="background:#fef9c3;color:#854d0e;border:1px solid #fde047;">En préstamo</span>
+                            <span class="muted">—</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        {% if prestamo.observaciones %}{{ prestamo.observaciones }}{% else %}<span class="muted">—</span>{% endif %}
                     </td>
                     <td class="text-center">
                         <div class="cell-actions">
-                            <a href="{% url 'modulo_puntos:editar_prestamo' prestamo.id %}" class="btn btn-secondary btn--sm">Editar</a>
-                            {% if not prestamo.ya_devuelto %}
-                            <form method="POST" action="{% url 'modulo_puntos:devolver_prestamo' prestamo.id %}" style="display:inline;">
+                            <a href="{% url 'modulo_puntos:editar_recurso' recurso.pk %}" class="btn btn-secondary btn--sm">Editar</a>
+                            {% if puede_eliminar_recursos %}
+                            <form method="POST" action="{% url 'modulo_puntos:eliminar_recurso' recurso.pk %}" style="display:inline;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn--sm"
-                                        data-confirm="¿Confirmar devolución del préstamo?">
-                                    Devuelto
-                                </button>
+                                <button type="submit" class="btn btn-secondary btn--sm" style="color:#dc2626;"
+                                        data-confirm="¿Eliminar el recurso «{{ recurso.tipo }}{% if recurso.codigo %} {{ recurso.codigo }}{% endif %}»? Solo es posible si no tiene préstamos activos.">Eliminar</button>
                             </form>
                             {% endif %}
                         </div>
@@ -148,12 +143,9 @@
             </tbody>
         </table>
     </div>
-    {% else %}
-    <p class="muted" style="margin:0;font-size:13px;">Sin préstamos registrados.</p>
-    {% endif %}
-
 </div>
 {% endfor %}
+</div>
 
 {% else %}
 <div class="card card--hint" style="text-align:center;padding:48px 24px;">
@@ -165,11 +157,11 @@
 {% if recursos.has_other_pages %}
 <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0;">
     {% if recursos.has_previous %}
-    <a href="?tipo={{ tipo_filter }}&page={{ recursos.previous_page_number }}" class="btn btn-secondary btn--sm">← Anterior</a>
+    <a href="?tipo={{ tipo_filter }}&q={{ q_filter }}&pvd_id={{ pvd_filter }}&page={{ recursos.previous_page_number }}" class="btn btn-secondary btn--sm">← Anterior</a>
     {% endif %}
     <span class="muted">Página {{ recursos.number }} de {{ recursos.paginator.num_pages }}</span>
     {% if recursos.has_next %}
-    <a href="?tipo={{ tipo_filter }}&page={{ recursos.next_page_number }}" class="btn btn-secondary btn--sm">Siguiente →</a>
+    <a href="?tipo={{ tipo_filter }}&q={{ q_filter }}&pvd_id={{ pvd_filter }}&page={{ recursos.next_page_number }}" class="btn btn-secondary btn--sm">Siguiente →</a>
     {% endif %}
 </div>
 {% endif %}

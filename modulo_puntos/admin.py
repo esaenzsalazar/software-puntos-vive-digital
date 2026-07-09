@@ -43,10 +43,10 @@ class SalaAdmin(admin.ModelAdmin):
 class HabilitacionSalaAdmin(admin.ModelAdmin):
     list_display = ('sala', 'tipo_uso_legible', 'fecha', 'hora_inicio', 'hora_fin', 'solicitante', 'capacidad_requerida', 'estado_legible', 'registrado_por')
     list_filter = ('tipo_uso', 'estado', 'sala__punto_vive_digital', 'fecha')
-    search_fields = ('solicitante', 'proposito', 'sala__nombre')
+    search_fields = ('solicitante__primer_nombre', 'solicitante__primer_apellido', 'solicitante__numero_documento', 'proposito', 'sala__nombre')
     ordering = ('-fecha', 'hora_inicio')
     readonly_fields = ('fecha_registro',)
-    list_select_related = ('sala', 'sala__punto_vive_digital', 'registrado_por')
+    list_select_related = ('sala', 'sala__punto_vive_digital', 'registrado_por', 'solicitante')
 
     @admin.display(description='Tipo de Uso')
     def tipo_uso_legible(self, obj):

@@ -56,7 +56,7 @@
                         <th>Nombre del Ciudadano</th>
                         <th>Contacto</th>
                         <th>Ubicación</th>
-                        {% if not es_admin_pvd_solo %}<th>PVD</th>{% endif %}
+                        <th>PVD</th>
                         <th>Estado</th>
                         <th style="text-align:right;">Acciones</th>
                     </tr>
@@ -83,7 +83,6 @@
                                 <strong>{{ ciudadano.barrio|default:"No registrado" }}</strong><br>
                                 <span style="font-size:12px;color:#64748b;">{{ ciudadano.direccion|default:"" }}</span>
                             </td>
-                            {% if not es_admin_pvd_solo %}
                             <td style="font-size:12px;white-space:nowrap;">
                                 {% if ciudadano.punto_vive_digital %}
                                 <span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:20px;font-weight:600;">{{ ciudadano.punto_vive_digital.nombre }}</span>
@@ -91,7 +90,6 @@
                                 <span style="color:#94a3b8;">—</span>
                                 {% endif %}
                             </td>
-                            {% endif %}
                             <td>
                                 {% if ciudadano.estado == 'A' %}
                                     <span class="badge badge-success">Activo</span>

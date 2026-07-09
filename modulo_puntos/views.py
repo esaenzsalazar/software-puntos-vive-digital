@@ -33,7 +33,7 @@ from .forms import (
     HabilitacionSalaForm, CursoForm, SesionCursoForm, InscripcionCursoForm,
     MantenimientoEquipoForm, EvidenciaForm,
 )
-from .utils import registrar_auditoria, tiene_permiso
+from .utils import registrar_auditoria, tiene_permiso, sincronizar_admin_a_cargo
 
 logger = logging.getLogger('modulo_puntos')
 
@@ -304,15 +304,26 @@ def panel_control(request):
 @login_required(login_url='/login/')
 def seleccionar_pvd_view(request):
     sin_asignacion = False
+    permanente_id = None
+    temporal_id = None
+
+    conteos = dict(
+        total_ciudadanos=Count('ciudadano', filter=Q(ciudadano__estado='A'), distinct=True),
+        total_atenciones=Count('atencion', distinct=True),
+        total_recursos=Count('recurso', filter=Q(recurso__estado='A'), distinct=True),
+        total_salas=Count('sala', filter=Q(sala__estado='A'), distinct=True),
+    )
 
     if usuario_necesita_seleccionar_pvd(request.user):
         try:
             profile = request.user.pvd_profile
             if profile.punto_asignado_id:
+                permanente_id = profile.punto_asignado_id
                 pvd_ids = [profile.punto_asignado_id]
                 if profile.pvd_temporal_id:
+                    temporal_id = profile.pvd_temporal_id
                     pvd_ids.append(profile.pvd_temporal_id)
-                pvds = PuntoViveDigital.objects.filter(pk__in=pvd_ids, estado='A').order_by('nombre')
+                pvds = PuntoViveDigital.objects.filter(pk__in=pvd_ids, estado='A').annotate(**conteos).order_by('nombre')
             else:
                 # Admin PVD sin PVD asignado: bloquear, no mostrar lista
                 pvds = PuntoViveDigital.objects.none()
@@ -321,7 +332,12 @@ def seleccionar_pvd_view(request):
             pvds = PuntoViveDigital.objects.none()
             sin_asignacion = True
     else:
-        pvds = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
+        pvds = PuntoViveDigital.objects.filter(estado='A').annotate(**conteos).order_by('nombre')
+
+    pvds = list(pvds)
+    for pvd in pvds:
+        pvd.es_permanente = (pvd.pk == permanente_id)
+        pvd.es_temporal = (pvd.pk == temporal_id)
 
     return render(request, 'modulo_puntos/seleccionar_pvd.html', {
         'pvds': pvds,
@@ -378,23 +394,15 @@ def consultar_ciudadanos(request):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
-    user = request.user
-    es_admin_pvd_solo = (
-        not user.is_superuser
-        and not usuario_es_admin_tic(user)
-        and user.groups.filter(name='Administrador PVD').exists()
-    )
-
     busqueda   = request.GET.get('q', '').strip()
     pvd_filtro = request.GET.get('pvd', '').strip()
     estado_filtro = request.GET.get('estado', 'A').strip()  # Por defecto solo activos
 
+    # Los ciudadanos son una población compartida: cualquier PVD puede consultar,
+    # atender y editar a un ciudadano sin importar en qué PVD fue registrado.
     ciudadanos = Ciudadano.objects.select_related('punto_vive_digital').order_by('-pk')
 
-    if es_admin_pvd_solo:
-        # Admin PVD sólo ve ciudadanos de su PVD activo
-        ciudadanos = ciudadanos.filter(punto_vive_digital_id=obtener_pvd_activo_id(request))
-    elif pvd_filtro:
+    if pvd_filtro:
         ciudadanos = ciudadanos.filter(punto_vive_digital_id=pvd_filtro)
 
     if estado_filtro in ('A', 'I'):
@@ -416,11 +424,7 @@ def consultar_ciudadanos(request):
     paginator = Paginator(ciudadanos, 25)
     page_obj  = paginator.get_page(request.GET.get('page'))
 
-    # Lista de PVDs para el filtro (solo para Admin TIC / Super)
-    pvds_para_filtro = (
-        PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
-        if not es_admin_pvd_solo else []
-    )
+    pvds_para_filtro = PuntoViveDigital.objects.filter(estado='A').order_by('nombre')
 
     return render(request, 'modulo_puntos/consultar_ciudadanos.html', {
         'ciudadanos': page_obj,
@@ -430,7 +434,6 @@ def consultar_ciudadanos(request):
         'estado_filtro': estado_filtro,
         'pvds_para_filtro': pvds_para_filtro,
         'total_resultados': total_resultados,
-        'es_admin_pvd_solo': es_admin_pvd_solo,
     })
 
 
@@ -489,10 +492,9 @@ def editar_ciudadano(request, ciu_cdgo):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
+    # Los ciudadanos son una población compartida entre PVDs: cualquier Admin PVD
+    # puede editar los datos de un ciudadano, sin importar dónde fue registrado.
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
-    if not pvd_permitido(request, ciudadano.punto_vive_digital_id):
-        messages.error(request, 'No tienes permiso para editar ciudadanos de otro PVD.')
-        return redirect('modulo_puntos:consultar_ciudadanos')
 
     form = CiudadanoForm(request.POST or None, instance=ciudadano)
     if request.method == 'POST':
@@ -520,10 +522,8 @@ def desactivar_ciudadano(request, ciu_cdgo):
         return redirect('modulo_puntos:panel_control')
     if request.method != 'POST':
         return redirect('modulo_puntos:consultar_ciudadanos')
+    # Los ciudadanos son una población compartida entre PVDs.
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
-    if not pvd_permitido(request, ciudadano.punto_vive_digital_id):
-        messages.error(request, 'No tienes permiso para modificar ciudadanos de otro PVD.')
-        return redirect('modulo_puntos:consultar_ciudadanos')
     nuevo_estado = 'I' if ciudadano.estado == 'A' else 'A'
     ciudadano.estado = nuevo_estado
     ciudadano.save(update_fields=['estado'])
@@ -540,10 +540,10 @@ def historial_ciudadano(request, ciu_cdgo):
         messages.error(request, 'No tienes permisos para acceder a este módulo.')
         return redirect('modulo_puntos:panel_control')
 
+    # Los ciudadanos son una población compartida entre PVDs: cualquier Admin PVD
+    # puede consultar el historial completo de un ciudadano (incluye atenciones
+    # prestadas en cualquier PVD), sin importar dónde fue registrado.
     ciudadano = get_object_or_404(Ciudadano, pk=ciu_cdgo)
-    if not pvd_permitido(request, ciudadano.punto_vive_digital_id):
-        messages.error(request, 'No tienes permiso para ver el historial de ciudadanos de otro PVD.')
-        return redirect('modulo_puntos:consultar_ciudadanos')
 
     atenciones = list(
         Atencion.objects.filter(ciudadano=ciudadano)
@@ -855,19 +855,9 @@ def buscar_ciudadanos_json(request):
     if len(q) < 2:
         return JsonResponse({'results': []})
 
-    user = request.user
-    es_pvd_solo = (
-        not user.is_superuser
-        and not usuario_es_admin_tic(user)
-        and user.groups.filter(name='Administrador PVD').exists()
-    )
-
-    qs = Ciudadano.objects.filter(estado='A')
-    if es_pvd_solo:
-        pvd_id = request.session.get('pvd_activo_id')
-        qs = qs.filter(punto_vive_digital_id=pvd_id) if pvd_id else qs.none()
-
-    qs = qs.filter(
+    # Los ciudadanos son una población compartida: se pueden buscar y atender
+    # desde cualquier PVD, sin importar en cuál fueron registrados originalmente.
+    qs = Ciudadano.objects.filter(estado='A').filter(
         Q(primer_nombre__icontains=q)
         | Q(segundo_nombre__icontains=q)
         | Q(primer_apellido__icontains=q)
@@ -1370,7 +1360,7 @@ def crear_recurso(request):
         messages.warning(request, 'El Punto Vive Digital de tu sesión ya no está disponible. Selecciona otro.')
         return redirect('modulo_puntos:seleccionar_pvd_view')
 
-    form = RecursoForm(request.POST or None)
+    form = RecursoForm(request.POST or None, pvd_id=pvd.pk)
     if request.method == 'POST':
         if form.is_valid():
             recurso = form.save(commit=False)
@@ -2424,6 +2414,7 @@ def crear_usuario_sistema(request):
                     usuario=user,
                     defaults={'rol': 'admin_pvd', 'punto_asignado': pvd_asignado},
                 )
+                sincronizar_admin_a_cargo(user, pvd_nuevo=pvd_asignado)
 
             registrar_auditoria(request, 'CREATE', 'User', user.pk,
                                 f'{nombre_grupo} creado: {user.username} — {user.get_full_name()}')
@@ -2499,8 +2490,10 @@ def editar_admin_pvd(request, user_id):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
+            pvd_anterior = profile.punto_asignado
             profile.punto_asignado = form.cleaned_data['pvd_asignado']
             profile.save(update_fields=['punto_asignado'])
+            sincronizar_admin_a_cargo(admin_pvd, pvd_anterior=pvd_anterior, pvd_nuevo=profile.punto_asignado)
 
             nueva_pwd = form.cleaned_data.get('password1')
             if nueva_pwd:
@@ -3884,17 +3877,20 @@ def accesos_temporales(request):
         nombre_usuario = usuario_objetivo.get_full_name() or usuario_objetivo.username
 
         if campo == 'punto_asignado':
+            pvd_anterior = profile.punto_asignado
             if pvd_id:
                 try:
                     pvd = PuntoViveDigital.objects.get(pk=pvd_id)
                     profile.punto_asignado = pvd
                     profile.save(update_fields=['punto_asignado'])
+                    sincronizar_admin_a_cargo(usuario_objetivo, pvd_anterior=pvd_anterior, pvd_nuevo=pvd)
                     messages.success(request, f'PVD asignado a {nombre_usuario}: {pvd.nombre}')
                 except PuntoViveDigital.DoesNotExist:
                     messages.error(request, 'PVD no encontrado.')
             else:
                 profile.punto_asignado = None
                 profile.save(update_fields=['punto_asignado'])
+                sincronizar_admin_a_cargo(usuario_objetivo, pvd_anterior=pvd_anterior, pvd_nuevo=None)
                 messages.success(request, f'PVD permanente de {nombre_usuario} eliminado.')
         else:
             if pvd_id:

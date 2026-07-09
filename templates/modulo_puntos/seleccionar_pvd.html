@@ -12,7 +12,7 @@
         <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
             <a href="{% url 'modulo_puntos:logout' %}" class="btn-back">← Cambiar usuario</a>
             {% if request.user.is_superuser %}
-            <a href="/pvd/crear/" class="btn-back" style="background: #10b981;">➕ Crear PVD</a>
+            <a href="{% url 'modulo_puntos:crear_pvd' %}" class="btn-back" style="background: #10b981;">➕ Crear PVD</a>
             {% endif %}
         </div>
     </div>
@@ -67,6 +67,8 @@
                         <span>🎯 {{ pvd.total_atenciones|default:0 }} atenciones</span>
                         <span>•</span>
                         <span>📦 {{ pvd.total_recursos|default:0 }} recursos</span>
+                        <span>•</span>
+                        <span>🏠 {{ pvd.total_salas|default:0 }} salas</span>
                     </div>
                 </div>
                 <div class="pvd-item__action">

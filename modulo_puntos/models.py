@@ -116,9 +116,9 @@ class Recurso(models.Model):
     )
     tipo = models.CharField(max_length=64, verbose_name='Tipo de Recurso')
     codigo = models.CharField(
-        max_length=64, null=True, blank=True, unique=True,
+        max_length=64, null=True, blank=True,
         verbose_name='Código del recurso',
-        help_text='Identificador único del equipo (ej: LAP-001). Opcional.'
+        help_text='Identificador único del equipo dentro de su PVD (ej: LAP-001). Opcional.'
     )
     estado = models.CharField(max_length=1, choices=ESTADO_CHOICES, verbose_name='Estado')
 
@@ -129,6 +129,12 @@ class Recurso(models.Model):
         verbose_name_plural = 'Recursos'
         indexes = [
             models.Index(fields=['punto_vive_digital', 'estado'], name='idx_rec_pvd_estdo'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['punto_vive_digital', 'codigo'],
+                name='uniq_recurso_pvd_codigo',
+            ),
         ]
 
     def __str__(self):

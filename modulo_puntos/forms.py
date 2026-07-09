@@ -680,16 +680,20 @@ class PrestamoRecursoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['recurso'].required = False
         self.fields['recurso'].empty_label = '--- Seleccione un recurso ---'
+        # Los recursos sí son propiedad exclusiva de un PVD: solo se puede prestar
+        # equipo que físicamente está en el PVD activo.
+        if pvd_id:
+            recursos_pvd = Recurso.objects.filter(punto_vive_digital_id=pvd_id, estado='A')
+            if self.instance.pk and self.instance.recurso_id:
+                recursos_pvd = recursos_pvd | Recurso.objects.filter(pk=self.instance.recurso_id)
+            self.fields['recurso'].queryset = recursos_pvd.order_by('tipo', 'codigo')
         self.fields['ciudadano'].required = False
         self.fields['ciudadano'].empty_label = '--- Ciudadano (opcional) ---'
-        if pvd_id:
-            self.fields['ciudadano'].queryset = Ciudadano.objects.filter(
-                punto_vive_digital_id=pvd_id, estado='A'
-            ).order_by('primer_apellido', 'primer_nombre')
-        else:
-            self.fields['ciudadano'].queryset = Ciudadano.objects.filter(
-                estado='A'
-            ).order_by('primer_apellido', 'primer_nombre')
+        # Los ciudadanos son una población compartida: cualquiera puede recibir un
+        # préstamo en cualquier PVD, sin importar en cuál fue registrado.
+        self.fields['ciudadano'].queryset = Ciudadano.objects.filter(
+            estado='A'
+        ).order_by('primer_apellido', 'primer_nombre')
 
     def clean(self):
         from django.db.models import Q
@@ -742,6 +746,7 @@ class RecursoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.pvd_id = kwargs.pop('pvd_id', None)
         super().__init__(*args, **kwargs)
         self.fields['estado'].initial = 'A'
 
@@ -766,6 +771,22 @@ class RecursoForm(forms.ModelForm):
             else:
                 cleaned['tipo'] = nombre
         return cleaned
+
+    def clean_codigo(self):
+        codigo = self.cleaned_data.get('codigo', '')
+        codigo = codigo.strip() if codigo else codigo
+        if not codigo:
+            return codigo
+        pvd_id = self.pvd_id or getattr(self.instance, 'punto_vive_digital_id', None)
+        if pvd_id:
+            qs = Recurso.objects.filter(punto_vive_digital_id=pvd_id, codigo=codigo)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(
+                    'Ya existe un recurso con este código en este Punto Vive Digital.'
+                )
+        return codigo
 
 
 # ==============================================================================

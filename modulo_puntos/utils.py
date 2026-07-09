@@ -307,6 +307,26 @@ def generar_password_admin_pvd(primer_nombre=None):
     return generar_password(longitud=12)
 
 
+def sincronizar_admin_a_cargo(usuario, pvd_anterior=None, pvd_nuevo=None):
+    """
+    Mantiene PuntoViveDigital.admin_a_cargo (campo de referencia) alineado con
+    la asignación real en UserProfile.punto_asignado. Se llama cada vez que
+    cambia el PVD asignado a un Admin PVD.
+    """
+    from .models import PuntoViveDigital, UserProfile
+
+    if pvd_anterior and pvd_anterior != pvd_nuevo and pvd_anterior.admin_a_cargo_id == usuario.pk:
+        reemplazo = UserProfile.objects.filter(
+            punto_asignado=pvd_anterior, rol='admin_pvd'
+        ).exclude(usuario=usuario).select_related('usuario').first()
+        pvd_anterior.admin_a_cargo = reemplazo.usuario if reemplazo else None
+        pvd_anterior.save(update_fields=['admin_a_cargo'])
+
+    if pvd_nuevo:
+        pvd_nuevo.admin_a_cargo = usuario
+        pvd_nuevo.save(update_fields=['admin_a_cargo'])
+
+
 def validar_formato_email(email):
     """
     Valida el formato de un correo electrónico.

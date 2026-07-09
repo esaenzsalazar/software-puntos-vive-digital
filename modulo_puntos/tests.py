@@ -83,19 +83,22 @@ class AislamientoPvdTestCase(TestCase):
 class ObjetosDeOtroPvdTests(AislamientoPvdTestCase):
     """Un Admin PVD del punto A no puede ver/editar/eliminar objetos del punto B."""
 
-    def test_desactivar_ciudadano_de_otro_pvd_es_rechazado(self):
+    def test_desactivar_ciudadano_de_otro_pvd_si_se_permite(self):
+        # Los ciudadanos son una población compartida entre PVDs: cualquier
+        # Admin PVD puede modificar el estado de un ciudadano de otro PVD.
         self._login_admin_a_con_pvd_activo()
         url = reverse('modulo_puntos:desactivar_ciudadano', args=[self.ciudadano_b.pk])
         resp = self.client.post(url)
-        self._assert_redirige_y_no_toca_datos(resp)
+        self.assertEqual(resp.status_code, 302)
         self.ciudadano_b.refresh_from_db()
-        self.assertEqual(self.ciudadano_b.estado, 'A')  # no se tocó
+        self.assertEqual(self.ciudadano_b.estado, 'I')
 
-    def test_historial_ciudadano_de_otro_pvd_es_rechazado(self):
+    def test_historial_ciudadano_de_otro_pvd_si_se_permite(self):
+        # Idem: el historial de un ciudadano es visible desde cualquier PVD.
         self._login_admin_a_con_pvd_activo()
         url = reverse('modulo_puntos:historial_ciudadano', args=[self.ciudadano_b.pk])
         resp = self.client.get(url)
-        self._assert_redirige_y_no_toca_datos(resp)
+        self.assertEqual(resp.status_code, 200)
 
     def test_cambiar_estado_atencion_de_otro_pvd_es_rechazado(self):
         self._login_admin_a_con_pvd_activo()
@@ -134,7 +137,9 @@ class ObjetosDeOtroPvdTests(AislamientoPvdTestCase):
 class ListadosConAlcancePorPvdTests(AislamientoPvdTestCase):
     """Los listados "globales" quedan acotados al PVD activo para Admin PVD."""
 
-    def test_consultar_ciudadanos_no_muestra_ciudadanos_de_otro_pvd(self):
+    def test_consultar_ciudadanos_si_muestra_ciudadanos_de_otro_pvd(self):
+        # Los ciudadanos son una población compartida: cualquier PVD puede
+        # consultar (y luego atender) a un ciudadano registrado en otro PVD.
         ciudadano_a = Ciudadano.objects.create(
             punto_vive_digital=self.pvd_a, tipo_documento='CC', numero_documento='1110001',
             primer_nombre='Local', primer_apellido='DeA', estado='A',
@@ -143,7 +148,7 @@ class ListadosConAlcancePorPvdTests(AislamientoPvdTestCase):
         resp = self.client.get(reverse('modulo_puntos:consultar_ciudadanos'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, '1110001')
-        self.assertNotContains(resp, '9990001')
+        self.assertContains(resp, '9990001')
 
     def test_lista_prestamos_global_no_muestra_prestamos_de_otro_pvd(self):
         self._login_admin_a_con_pvd_activo()

@@ -30,8 +30,8 @@ software-puntos-vive-digital/
 │   ├── context_processors.py   # Navegación, breadcrumb y topbar global
 │   ├── utils.py                 # Auditoría y permisos RBAC
 │   ├── admin.py                 # Panel de administración Django
-│   ├── migrations/              # Historial de migraciones (49)
-│   └── management/commands/     # Comandos de gestión (seed, etc.)
+│   ├── migrations/              # Historial de migraciones
+│   └── management/commands/     # Comandos de gestión personalizados
 ├── templates/
 │   ├── modulo_puntos/           # Plantillas HTML del sistema
 │   └── registration/            # Login
@@ -39,9 +39,8 @@ software-puntos-vive-digital/
 │   ├── css/pvd-theme.css        # Tema visual completo
 │   ├── js/                      # Scripts de frontend
 │   └── img/                     # Logos institucionales
-├── deploy/                      # Configuración nginx y systemd
-├── docs/                        # Documentación técnica y funcional
-├── scripts/                     # Scripts de utilidad (seed, pruebas)
+├── deploy/                      # Configuración nginx, systemd y respaldo automático
+├── docs/                        # Documentación entregada a la Alcaldía
 ├── manage.py
 ├── requirements.txt
 └── gunicorn.conf.py
@@ -142,12 +141,10 @@ Los archivos de configuración para producción están en `deploy/`:
 
 La carpeta `docs/` contiene:
 
-- `DESCRIPCION_FUNCIONAL.md` — descripción funcional del sistema
-- `MANUAL_USUARIO.md` — manual de uso por rol
-- `DOCUMENTACION_BASE_DE_DATOS.md` — esquema y relaciones de la BD
-- `ESTRUCTURA_BASE_DE_DATOS.md` — detalle de cada tabla
+- `Manual_Usuario_PVD.pdf` — manual de uso del sistema para administradores de PVD
+- `Requisitos_Infraestructura_PVD.pdf` — requisitos técnicos entregados al área de Sistemas/TIC para levantar el servidor de producción
 - `RESPALDOS.md` — estrategia de respaldo y restauración de la base de datos
-- `SOLICITUD_SERVIDOR.md` — requisitos técnicos a entregar al área de Sistemas/TIC para levantar el servidor de producción
+- `Plantilla_Registro_Ciudadanos_PVD.xlsx` — plantilla para recolección de datos de ciudadanos
 
 ---
 

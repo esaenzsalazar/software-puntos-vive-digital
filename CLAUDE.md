@@ -131,6 +131,9 @@ Diseño split-panel:
 python manage.py runserver
 python manage.py makemigrations
 python manage.py migrate
+# Carga masiva de ciudadanos desde la plantilla oficial de Excel:
+python manage.py importar_ciudadanos archivo.xlsx              # simulación (no guarda)
+python manage.py importar_ciudadanos archivo.xlsx --confirmar  # importa de verdad
 # Instalar dependencias en el entorno virtual (Windows):
 & ".\entorno\Scripts\pip.exe" install <paquete>
 ```

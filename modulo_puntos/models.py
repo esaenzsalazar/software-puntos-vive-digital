@@ -13,7 +13,7 @@ class PuntoViveDigital(models.Model):
         ('M', 'En mantenimiento'),
     ]
 
-    nombre = models.CharField(max_length=128, null=True, blank=True, verbose_name='Nombre del Punto Vive Digital')
+    nombre = models.CharField(max_length=128, unique=True, verbose_name='Nombre del Punto Vive Digital')
     direccion = models.CharField(max_length=128, null=True, blank=True, verbose_name='Dirección')
     barrio = models.CharField(max_length=64, null=True, blank=True, verbose_name='Barrio/Vereda')
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
@@ -75,7 +75,7 @@ class Ciudadano(models.Model):
     zona_rural = models.CharField(max_length=64, null=True, blank=True, verbose_name='Zona Rural')
     estrato = models.IntegerField(default=1, verbose_name='Estrato Socioeconómico')
     estado = models.CharField(max_length=1, default='A', choices=ESTADO_CHOICES, verbose_name='Estado')
-    correo = models.CharField(max_length=128, default='', blank=True, verbose_name='Correo Electrónico')
+    correo = models.EmailField(max_length=128, default='', blank=True, verbose_name='Correo Electrónico')
     telefono = models.CharField(max_length=32, null=True, blank=True, verbose_name='Teléfono')
     fecha_registro = models.DateTimeField(auto_now_add=True, null=True, verbose_name='Fecha de Registro')
     autorizacion_datos = models.BooleanField(

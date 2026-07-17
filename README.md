@@ -101,7 +101,7 @@ software-puntos-vive-digital/
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/alcaldiaesteban/software-puntos-vive-digital.git
+git clone https://github.com/esaenzsalazar/software-puntos-vive-digital.git
 cd software-puntos-vive-digital
 
 # 2. Crear y activar el entorno virtual

@@ -427,7 +427,7 @@ def gestionar_servicios_pvd(request):
     if fecha_hasta:
         servicios = servicios.filter(atencion__fecha__lte=fecha_hasta)
 
-    from .forms import TIPO_SERVICIO_CHOICES
+    from ..forms import TIPO_SERVICIO_CHOICES
     tipos = [c for c in TIPO_SERVICIO_CHOICES if c[0]]
 
     total = servicios.count()

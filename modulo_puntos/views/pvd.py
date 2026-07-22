@@ -86,7 +86,7 @@ def lista_pvd(request):
     )
 
     # Admins por PVD en una sola query
-    from .models import UserProfile
+    from ..models import UserProfile
     profiles = UserProfile.objects.select_related('usuario', 'punto_asignado').filter(punto_asignado__isnull=False)
     admin_por_pvd = {}
     for p in profiles:
